@@ -1,0 +1,30 @@
+{
+  "name": "playground-tanstack-start",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TanStack Start playground for best-i18n, on the plain Vite plugin",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "build:zh": "I18N_STATIC_LOCALE=zh vite build",
+    "start": "node .output/server/index.mjs",
+    "extract": "i18n-extract --locales en,zh --src src --messages messages",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-start": "^1.168.49",
+    "best-i18n": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "nitro": "^3.0.260610-beta",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "Nav": {
+    "home": "Home",
+    "about": "About"
+  },
+  "HomePage": {
+    "title": "A small starter with room to grow.",
+    "server": "This paragraph was rendered on the server."
+  },
+  "AboutPage": {
+    "title": "About",
+    "inlines": "{name} inlines every translation at the call site.",
+    "runtime": "Nothing is looked up at runtime, so nothing has to be loaded."
+  },
+  "Counter": {
+    "add": "Add one",
+    "items": "You have {count} items"
+  }
+}

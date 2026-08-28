@@ -1,0 +1,17 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=utf-8\n"
+"Language: en\n"
+"mime-version: 1.0\n"
+
+msgctxt "NivRfIR0"
+msgid "A small starter with room to grow."
+msgstr ""
+
+msgctxt "Rn4qt86Z"
+msgid "Hi {0}, you have {1} items"
+msgstr ""
+
+msgctxt "NinIfQ5A"
+msgid "This message must never reach the bundle."
+msgstr ""

@@ -1,0 +1,27 @@
+{
+  "name": "playground-nextjs",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Next.js App Router playground for best-i18n",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "build:zh": "I18N_STATIC_LOCALE=zh next build",
+    "start": "next start",
+    "extract": "i18n-extract --locales en,zh --src src --messages messages",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "best-i18n": "workspace:*",
+    "next": "^16.3.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^6.0.2"
+  }
+}

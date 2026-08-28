@@ -1,0 +1,60 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language: en\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/app/[locale]/about/page.tsx:9
+#: src/components/site-header.tsx:16
+msgctxt "Tvyg0Qxf"
+msgid "About"
+msgstr ""
+
+#: src/app/[locale]/about/page.tsx:10
+msgctxt "y_B_ITb_"
+msgid "{0} inlines every translation at the call site."
+msgstr ""
+
+#: src/app/[locale]/about/page.tsx:11
+msgctxt "PNN4fOJj"
+msgid "Nothing is looked up at runtime, so nothing has to be loaded."
+msgstr ""
+
+#: src/app/[locale]/about/page.tsx:18
+msgctxt "z3zr1zPX"
+msgid "Read the <0>README</0> to learn more."
+msgstr ""
+
+#: src/app/[locale]/page.tsx:12
+msgctxt "NivRfIR0"
+msgid "A small starter with room to grow."
+msgstr ""
+
+#: src/app/[locale]/page.tsx:13
+msgctxt "_35UupBI"
+msgid "This paragraph was rendered on the server."
+msgstr ""
+
+#: src/components/counter.tsx:18
+msgctxt "FW4pTV3N"
+msgid "Add one"
+msgstr ""
+
+#: src/components/counter.tsx:20
+msgctxt "AcBJLC0i"
+msgid "You have {0} items"
+msgstr ""
+
+#: src/components/counter.tsx:24
+msgctxt "ht7UUCJq"
+msgid "Counting is <0>not</0> translation."
+msgstr ""
+
+#: src/components/site-header.tsx:15
+msgctxt "OnhpU4iz"
+msgid "Home"
+msgstr ""

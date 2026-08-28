@@ -1,0 +1,25 @@
+{
+  "name": "playground-nextjs-intl",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same app as playground/nextjs, built with next-intl, for size comparison",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.3.3",
+    "next-intl": "^4.14.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^6.0.2"
+  }
+}

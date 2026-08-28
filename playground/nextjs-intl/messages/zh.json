@@ -1,0 +1,19 @@
+{
+  "Nav": {
+    "home": "首页",
+    "about": "关于"
+  },
+  "HomePage": {
+    "title": "一个小而可长的起始模板。",
+    "server": "这段文字是在服务端渲染的。"
+  },
+  "AboutPage": {
+    "title": "关于",
+    "inlines": "{name} 会把每条翻译内联到调用处。",
+    "runtime": "运行时不做任何查表，因此也没有任何东西需要加载。"
+  },
+  "Counter": {
+    "add": "加一",
+    "items": "你有 {count} 项"
+  }
+}
