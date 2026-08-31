@@ -79,7 +79,9 @@ function serializable<T extends object>(options: T): T {
 
 // Turbopack and webpack disagree about how to spell "not node_modules": a glob
 // plus a built-in condition on one side, a test/exclude pair on the other.
-const TURBOPACK_GLOB = '*.{ts,tsx,mts,js,jsx,mjs}'
+// Keep the two extension sets identical, or a file transforms under one
+// bundler and reaches runtime under the other.
+const TURBOPACK_GLOB = '*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'
 const WEBPACK_TEST = /\.[cm]?[jt]sx?$/
 
 /**

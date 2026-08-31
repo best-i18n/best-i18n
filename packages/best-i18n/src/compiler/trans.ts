@@ -77,6 +77,67 @@ export function cleanJsxText(text: string): string {
   return out
 }
 
+/**
+ * The named entities JSX text is likely to carry. Not the full HTML list -
+ * an unknown entity passes through untouched rather than failing - but the
+ * ones that show up in real copy.
+ */
+const ENTITIES = new Map<string, string>([
+  ['amp', '&'],
+  ['lt', '<'],
+  ['gt', '>'],
+  ['quot', '"'],
+  ['apos', "'"],
+  ['nbsp', ' '],
+  ['copy', '©'],
+  ['reg', '®'],
+  ['trade', '™'],
+  ['hellip', '…'],
+  ['mdash', '—'],
+  ['ndash', '–'],
+  ['lsquo', '‘'],
+  ['rsquo', '’'],
+  ['ldquo', '“'],
+  ['rdquo', '”'],
+  ['laquo', '«'],
+  ['raquo', '»'],
+  ['times', '×'],
+  ['middot', '·'],
+  ['bull', '•'],
+  ['deg', '°'],
+  ['plusmn', '±'],
+  ['sect', '§'],
+  ['para', '¶'],
+  ['euro', '€'],
+  ['pound', '£'],
+  ['yen', '¥'],
+  ['cent', '¢'],
+])
+
+/**
+ * Decodes HTML entities in JSX text, the way JSX itself renders them.
+ *
+ * The message ends up in a template literal, where `&amp;` means five
+ * characters - so leaving entities encoded changes what pre-existing correct
+ * JSX renders. The translator also deserves to see `Tom & Jerry`, not markup.
+ */
+export function decodeEntities(text: string): string {
+  return text.replace(
+    /&(#x?[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g,
+    (whole, body: string) => {
+      if (body.startsWith('#x') || body.startsWith('#X')) {
+        const code = Number.parseInt(body.slice(2), 16)
+        return Number.isNaN(code) ? whole : String.fromCodePoint(code)
+      }
+      if (body.startsWith('#')) {
+        const code = Number.parseInt(body.slice(1), 10)
+        return Number.isNaN(code) ? whole : String.fromCodePoint(code)
+      }
+      return ENTITIES.get(body) ?? whole
+    },
+  )
+}
+
 /** Turns the children of a `<Trans>` into a message plus its raw material. */
 export function serializeTrans(
   children: readonly unknown[],
@@ -109,7 +170,7 @@ function serializeChildren(
   for (const child of children) {
     switch (child.type) {
       case 'JSXText': {
-        out += cleanJsxText(child.value ?? child.raw ?? '')
+        out += decodeEntities(cleanJsxText(child.value ?? child.raw ?? ''))
         break
       }
 
@@ -406,8 +467,21 @@ function hasElement(parts: MessagePart[]): boolean {
   return parts.some((part) => part.kind === 'element')
 }
 
-/** A run of text and expressions, as one template literal. */
+/**
+ * A run of text and expressions, as one template literal.
+ *
+ * A run that is exactly one expression stays an expression: template-literal
+ * interpolation would stringify it, turning a ReactNode into
+ * `[object Object]` and `null` into the visible word "null". Only a run that
+ * mixes text and expressions has to concatenate, which is inherently
+ * stringly - don't put ReactNodes in the middle of a sentence.
+ */
 function renderFlat(parts: MessagePart[], expressions: string[]): string {
+  const only = parts.length === 1 ? parts[0] : undefined
+  if (only !== undefined && only.kind === 'expression') {
+    return `(${expressions[only.index]!})`
+  }
+
   let body = ''
 
   for (const part of parts) {

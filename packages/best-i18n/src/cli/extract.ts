@@ -27,8 +27,10 @@ const HELP = `
     --messages <dir>   catalog directory                 (default: messages)
     --tag <name>       macro export to collect           (default: t)
     --component <name> component macro to collect        (default: Trans)
+    --hook <name>      hook macro export to collect      (default: useI18n)
     --from <list>      modules exporting the macro
     --component-from <list>  modules exporting the component macro
+    --hook-from <list> modules exporting the hook macro
     --check            write nothing, exit 1 if out of date
     --force            allow a write that reduces the number of translations
     -h, --help
@@ -36,7 +38,16 @@ const HELP = `
 
 const MACRO_MODULE = 'best-i18n/macro'
 const COMPONENT_MODULE = 'best-i18n/react/macro'
-const EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs'])
+const EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+])
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.output', '.wrangler'])
 
 function fail(message: string): never {
@@ -51,8 +62,10 @@ let baseOverride: string | undefined
 let messagesDir = 'messages'
 let tag = 't'
 let component = 'Trans'
+let hook = 'useI18n'
 let from: string[] = [MACRO_MODULE]
 let componentFrom: string[] = [COMPONENT_MODULE]
+let hookFrom: string[] = [COMPONENT_MODULE]
 let check = false
 let force = false
 
@@ -74,8 +87,10 @@ for (let index = 0; index < argv.length; index++) {
   else if (arg === '--messages') messagesDir = next()
   else if (arg === '--tag') tag = next()
   else if (arg === '--component') component = next()
+  else if (arg === '--hook') hook = next()
   else if (arg === '--from') from = next().split(',')
   else if (arg === '--component-from') componentFrom = next().split(',')
+  else if (arg === '--hook-from') hookFrom = next().split(',')
   else if (arg === '--check') check = true
   else if (arg === '--force') force = true
   else fail(`unknown option ${arg}`)
@@ -107,7 +122,9 @@ for (const root of roots) {
     // is proof that there is nothing here to collect - and the only such proof
     // that survives an aliased import.
     if (
-      ![...from, ...componentFrom].some((specifier) => code.includes(specifier))
+      ![...from, ...componentFrom, ...hookFrom].some((specifier) =>
+        code.includes(specifier),
+      )
     ) {
       continue
     }
@@ -117,6 +134,8 @@ for (const root of roots) {
     for (const message of extract(code, file, {
       tag,
       from,
+      hook,
+      hookFrom,
       component,
       componentFrom,
     })) {

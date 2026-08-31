@@ -135,13 +135,19 @@ const DEFAULT_COMPONENT_FROM = ['best-i18n/react/macro']
 
 type Lang = 'ts' | 'tsx' | 'js' | 'jsx'
 
+// Plain `.js` (and `.mjs`/`.cjs`) parses as JSX: Next.js and CRA-style code
+// put JSX in `.js` routinely, and JSX is a syntactic superset of JS, so
+// nothing is lost by assuming it. TypeScript is the opposite - JSX in `.ts`
+// is ambiguous with type assertions - so only `.tsx` gets it there.
 const LANGS = new Map<string, Lang>([
   ['ts', 'ts'],
   ['tsx', 'tsx'],
-  ['js', 'js'],
-  ['jsx', 'jsx'],
   ['mts', 'ts'],
-  ['mjs', 'js'],
+  ['cts', 'ts'],
+  ['js', 'jsx'],
+  ['jsx', 'jsx'],
+  ['mjs', 'jsx'],
+  ['cjs', 'jsx'],
 ])
 
 function walk(
@@ -414,7 +420,16 @@ function analyze(
 
     const text = quasi.quasis
       .map((piece, index) => {
-        const chunk = piece.value.cooked ?? piece.value.raw
+        let chunk = piece.value.cooked ?? piece.value.raw
+        // A line break that exists in the source - as opposed to a written
+        // `\n` escape, which is not a real newline in `raw` - is code
+        // formatting, not message content. Collapse it and the indentation
+        // around it to one space, the way <Trans> already does, so
+        // re-indenting a component never changes a msgid and orphans its
+        // translations. A message that wants a literal newline writes `\n`.
+        if (/[\r\n]/.test(piece.value.raw)) {
+          chunk = chunk.replace(/[ \t]*(?:\r\n|\n|\r)[ \t]*/g, ' ')
+        }
         return index < expressions.length ? `${chunk}{${index}}` : chunk
       })
       .join('')

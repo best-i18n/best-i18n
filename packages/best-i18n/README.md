@@ -208,6 +208,11 @@ Both are compile-time macros: the binding can only be used as a tagged
 template. Storing it, passing it around, destructuring `useI18n()` or shadowing
 the name is a build error with a file and offset, not a runtime surprise.
 
+A line break inside a template is code formatting, not content: it collapses
+to a single space - the same rule JSX applies to `<Trans>` - so re-indenting a
+component never changes a message or orphans its translations. Write `\n` for
+a literal newline.
+
 ### Messages with markup
 
 A tagged template cannot hold JSX, so a sentence with a link or a bold run in
