@@ -55,10 +55,14 @@ pnpm add best-i18n
 Pick the integration for your framework. Everything below it - the macros, the
 PO workflow, the URL helpers - is the same either way.
 
-| Framework                                                                 | Integration      |
-| ------------------------------------------------------------------------- | ---------------- |
-| Vite, and anything on it (TanStack Start, React Router, SvelteKit, Astro) | `best-i18n/vite` |
-| Next.js (App Router, Turbopack or webpack)                                | `best-i18n/next` |
+| Framework                                                                 | Integration          |
+| ------------------------------------------------------------------------- | -------------------- |
+| Vite, and anything on it (TanStack Start, React Router, SvelteKit, Astro) | `best-i18n/vite`     |
+| Next.js (App Router, Turbopack or webpack)                                | `best-i18n/next`     |
+| Rolldown used directly, and tools built on it (tsdown, ...)               | `best-i18n/rolldown` |
+
+rolldown-vite keeps the Vite plugin API, so it takes `best-i18n/vite`
+unchanged; `best-i18n/rolldown` is for Rolldown without Vite around it.
 
 ### Vite
 
@@ -80,6 +84,29 @@ export default defineConfig({
     // ...other plugins
   ],
 })
+```
+
+### Rolldown
+
+The same options as the Vite plugin. The plugin declares Rolldown hook
+filters, so files that never name a macro module are skipped in Rust and the
+JavaScript plugin is not even called for them.
+
+```ts
+// rolldown.config.ts
+import { i18n } from 'best-i18n/rolldown'
+
+export default {
+  input: 'src/main.ts',
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+  ],
+}
 ```
 
 ### Next.js

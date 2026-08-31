@@ -14,6 +14,7 @@ export default defineConfig({
     'request': 'src/request.ts',
     'locale-url': 'src/locale-url.ts',
     'vite': 'src/integrations/vite.ts',
+    'rolldown': 'src/integrations/rolldown.ts',
     'next': 'src/integrations/next/index.ts',
     'next-config': 'src/integrations/next/config.ts',
     'next-loader': 'src/integrations/next/loader.ts',

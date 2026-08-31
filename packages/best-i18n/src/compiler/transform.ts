@@ -174,6 +174,23 @@ const DEFAULT_FROM = ['best-i18n/macro']
 const DEFAULT_HOOK_FROM = ['best-i18n/react/macro']
 const DEFAULT_COMPONENT_FROM = ['best-i18n/react/macro']
 
+/**
+ * Every module specifier whose presence in a file means it may contain a
+ * message. The one text-level signal a bundler can prefilter on - Rolldown's
+ * hook filters use it to skip the JS plugin entirely for the other files.
+ */
+export function macroSpecifiers(
+  options: Pick<TransformOptions, 'from' | 'hookFrom' | 'componentFrom'>,
+): string[] {
+  return [
+    ...new Set([
+      ...(options.from ?? DEFAULT_FROM),
+      ...(options.hookFrom ?? DEFAULT_HOOK_FROM),
+      ...(options.componentFrom ?? DEFAULT_COMPONENT_FROM),
+    ]),
+  ]
+}
+
 type Lang = 'ts' | 'tsx' | 'js' | 'jsx'
 
 // Plain `.js` (and `.mjs`/`.cjs`) parses as JSX: Next.js and CRA-style code
@@ -835,9 +852,6 @@ export function transform(
   options: TransformOptions,
 ): TransformResult | null {
   const tag = options.tag ?? 't'
-  const from = options.from ?? DEFAULT_FROM
-  const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
-  const componentFrom = options.componentFrom ?? DEFAULT_COMPONENT_FROM
 
   // Whether to parse at all. Text, not AST, because deciding by AST would mean
   // parsing every file to find out that almost none of them need it.
@@ -853,7 +867,7 @@ export function transform(
   // parse. That is deliberate: a file that imports a macro is inspected even
   // with no tagged template in it, otherwise misuse like `foo(t)` would slip
   // through to runtime.
-  const imports = [...from, ...hookFrom, ...componentFrom]
+  const imports = macroSpecifiers(options)
   if (!imports.some((specifier) => code.includes(specifier))) return null
 
   const { messages, hookCalls, directiveEnd, directives } = analyze(
