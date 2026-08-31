@@ -103,11 +103,11 @@ let scanned = 0
 for (const root of roots) {
   for (const file of walk(root)) {
     const code = readFileSync(file, 'utf8')
+    // A macro has to be imported to be used, so naming none of these modules
+    // is proof that there is nothing here to collect - and the only such proof
+    // that survives an aliased import.
     if (
-      !code.includes(`${tag}\``) &&
-      !code.includes(`<${component}`) &&
-      !from.some((specifier) => code.includes(specifier)) &&
-      !componentFrom.some((specifier) => code.includes(specifier))
+      ![...from, ...componentFrom].some((specifier) => code.includes(specifier))
     ) {
       continue
     }
