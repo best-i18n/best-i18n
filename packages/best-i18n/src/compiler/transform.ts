@@ -116,6 +116,12 @@ export interface TransformResult {
   messages: Message[]
   /** Messages with no translation for a locale, reported rather than hidden. */
   missing: Array<{ text: string; locale: string }>
+  /**
+   * The module's directive prologue. An integration may need it: on Next.js a
+   * client module resolves its locale through React, a server one through the
+   * request, and only the directive says which this is.
+   */
+  directives: string[]
 }
 
 const DEFAULT_FROM = ['best-i18n/macro']
@@ -191,11 +197,15 @@ export function extract(
  * statement in the file is just a string expression, so prepending would
  * silently turn a client component into a server one.
  */
-function directivePrologueEnd(program: unknown): number {
+function directivePrologue(program: unknown): {
+  end: number
+  directives: string[]
+} {
   const body =
     (program as { body?: Array<Record<string, unknown>> } | undefined)?.body ??
     []
   let end = 0
+  const directives: string[] = []
 
   for (const statement of body) {
     if (statement.type !== 'ExpressionStatement') break
@@ -208,9 +218,10 @@ function directivePrologueEnd(program: unknown): number {
       break
     }
     end = statement.end as number
+    directives.push(expression.value)
   }
 
-  return end
+  return { end, directives }
 }
 
 /** Shared by extract() and transform(): messages plus useI18n() call sites. */
@@ -218,7 +229,12 @@ function analyze(
   code: string,
   filename: string,
   options: ExtractOptions = {},
-): { messages: Message[]; hookCalls: HookCall[]; directiveEnd: number } {
+): {
+  messages: Message[]
+  hookCalls: HookCall[]
+  directiveEnd: number
+  directives: string[]
+} {
   const tag = options.tag ?? 't'
   const from = options.from ?? DEFAULT_FROM
   const hook = options.hook ?? 'useI18n'
@@ -271,14 +287,14 @@ function analyze(
     )
   }
 
-  const directiveEnd = directivePrologueEnd(parsed.program)
+  const { end: directiveEnd, directives } = directivePrologue(parsed.program)
 
   if (
     locals.size === 0 &&
     hookLocals.size === 0 &&
     componentLocals.size === 0
   ) {
-    return { messages: [], hookCalls: [], directiveEnd }
+    return { messages: [], hookCalls: [], directiveEnd, directives }
   }
 
   const messages: Message[] = []
@@ -494,7 +510,7 @@ function analyze(
     }
   }
 
-  return { messages, hookCalls, directiveEnd }
+  return { messages, hookCalls, directiveEnd, directives }
 }
 
 /**
@@ -531,14 +547,18 @@ export function transform(
   const imports = [...from, ...hookFrom, ...componentFrom]
   if (!imports.some((specifier) => code.includes(specifier))) return null
 
-  const { messages, hookCalls, directiveEnd } = analyze(code, filename, {
-    tag,
-    from: options.from,
-    hook: options.hook,
-    hookFrom: options.hookFrom,
-    component: options.component,
-    componentFrom: options.componentFrom,
-  })
+  const { messages, hookCalls, directiveEnd, directives } = analyze(
+    code,
+    filename,
+    {
+      tag,
+      from: options.from,
+      hook: options.hook,
+      hookFrom: options.hookFrom,
+      component: options.component,
+      componentFrom: options.componentFrom,
+    },
+  )
   if (messages.length === 0 && hookCalls.length === 0) return null
 
   const runtimeModule = options.runtimeModule ?? 'best-i18n/runtime'
@@ -682,5 +702,6 @@ export function transform(
     map: source.generateMap({ hires: true, source: filename }),
     messages,
     missing,
+    directives,
   }
 }

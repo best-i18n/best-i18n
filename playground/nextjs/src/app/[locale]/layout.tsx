@@ -8,6 +8,11 @@ import '../globals.css'
 
 import type { ReactNode } from 'react'
 
+/** Relative `alternates` need a base to resolve against. */
+export const metadata = {
+  metadataBase: new URL('https://best-i18n.example'),
+}
+
 /** Both locales prerender; the proxy points `/about` at the `en` one. */
 export function generateStaticParams() {
   return i18n.locales.map((locale) => ({ locale }))

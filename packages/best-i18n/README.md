@@ -299,9 +299,11 @@ pattern for paths that must never be localized (`/api/...`).
 - On Next.js, a Client Component has to take its locale from `useI18n()`.
   Plain `t` and a `<Trans>` with no `useI18n()` above it read `getLocale()`,
   and client components render in a module graph where nothing has bound the
-  request's locale - so they quietly fall back to the base one. Server
-  Components are the other way round: they cannot call a hook, and do not need
-  to.
+  request's locale - so they would fall back to the base one, on the server
+  only, and React patches the difference at hydration without a word. The
+  loader refuses to compile that, naming the file, the line and the message.
+  Server Components are the other way round: they cannot call a hook, and do
+  not need to.
 - ICU plural/select is not built in yet; write complex messages as separate
   entries or handle counts in code.
 - `from`/`hookFrom` match import specifiers as written in the source, so if
@@ -309,7 +311,8 @@ pattern for paths that must never be localized (`/api/...`).
 - On Next.js, `best-i18n/next/server` reads the locale out of Next's internal
   render storage, because `t` has to resolve synchronously while `params` and
   `headers()` are async. That is a private API, so a Next.js major version can
-  break it.
+  break it. The field it reads, `rootParams`, arrived in 15.2, which is the
+  peer floor.
 - In a Client Component use `useI18n`. Plain `t` there reads the ambient client
   locale, which `LocaleProvider` does not set.
 

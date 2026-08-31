@@ -1,7 +1,7 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { resolveClientLocale } from 'best-i18n/client'
 import { deLocalizeUrl, localizeUrl } from 'best-i18n/locale-url'
-import { getLocale, setLocale } from 'best-i18n/runtime'
+import { getLocale, isServer, setLocale } from 'best-i18n/runtime'
 
 import { i18n } from './i18n'
 import { routeTree } from './routeTree.gen'
@@ -9,7 +9,7 @@ import { routeTree } from './routeTree.gen'
 // Before hydration, so the first client render agrees with the server's. The
 // order `resolveClientLocale` uses is the same one the server used, which is
 // what makes the two agree on an unprefixed URL.
-if (typeof window !== 'undefined') {
+if (!isServer) {
   setLocale(
     resolveClientLocale({
       pathname: window.location.pathname,

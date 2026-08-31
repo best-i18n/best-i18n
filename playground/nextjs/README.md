@@ -24,6 +24,35 @@ Then open http://localhost:3000 and http://localhost:3000/zh.
 `t` needs nothing per file: the locale is the route param, read synchronously,
 so a Server Component resolves it during a static prerender too.
 
+## SEO
+
+`generateMetadata` runs inside the same render as the page, so `t` works there
+with no setup - and the title is compiled away per locale exactly like the body
+copy:
+
+```tsx
+export function generateMetadata(): Metadata {
+  return {
+    title: t`best-i18n - compile-time internationalization`,
+    description: t`Translations inlined at the call site…`,
+    alternates: localeAlternates('/'),
+  }
+}
+```
+
+`src/seo.ts` builds `canonical` and the `hreflang` set from the route as it is
+authored - `/about`, unprefixed - using the same `localizePathname` the
+navigation helpers use, so nothing there has to know Chinese lives under `/zh`:
+
+```html
+<link rel="canonical" href="https://…/zh/about" />
+<link rel="alternate" hreflang="en" href="https://…/about" />
+<link rel="alternate" hreflang="zh" href="https://…/zh/about" />
+<link rel="alternate" hreflang="x-default" href="https://…/about" />
+```
+
+Relative alternates need `metadataBase`, which the layout sets.
+
 ## Messages
 
 ```bash

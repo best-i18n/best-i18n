@@ -14,7 +14,14 @@ export type RequestLocaleSource = () => Locale | undefined
 
 let requestLocale: RequestLocaleSource | undefined
 
-const isServer = typeof window === 'undefined'
+/**
+ * True where there is no browser: a server render, a worker, a build step.
+ *
+ * Exported because it is the same question every caller has to ask before
+ * touching client-only state, and it should have one answer - `setLocale`
+ * refusing to run on the server is the load-bearing use of it.
+ */
+export const isServer = typeof window === 'undefined'
 
 /** Locale used on the client, and as the server fallback outside a request. */
 let ambientLocale: Locale | undefined

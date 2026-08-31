@@ -1,6 +1,18 @@
 import { t } from 'best-i18n/macro'
 import { Trans } from 'best-i18n/react/macro'
 
+import { localeAlternates } from '@/seo'
+
+import type { Metadata } from 'next'
+
+export function generateMetadata(): Metadata {
+  return {
+    title: t`About best-i18n`,
+    description: t`How a message becomes a string literal at build time.`,
+    alternates: localeAlternates('/about'),
+  }
+}
+
 export default function AboutPage() {
   const name = 'best-i18n'
 

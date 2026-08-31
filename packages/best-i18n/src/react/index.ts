@@ -7,7 +7,12 @@ import {
   useSyncExternalStore,
 } from 'react'
 
-import { getLocale, setLocale, subscribeLocale } from '../runtime/index.ts'
+import {
+  getLocale,
+  isServer,
+  setLocale,
+  subscribeLocale,
+} from '../runtime/index.ts'
 
 import type { ReactNode } from 'react'
 import type { UrlConfig } from '../locale-url.ts'
@@ -57,7 +62,7 @@ export function LocaleProvider(props: {
   // locale it is set. Nothing is subscribed yet on the render that matters -
   // hydration - and `setLocale` is a no-op when the value has not changed, so
   // this cannot notify anyone mid-render.
-  if (typeof window !== 'undefined') setLocale(props.locale)
+  if (!isServer) setLocale(props.locale)
 
   return createElement(
     LocaleContext.Provider,

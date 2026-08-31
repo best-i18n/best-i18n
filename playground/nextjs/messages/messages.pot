@@ -8,33 +8,55 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/app/[locale]/about/page.tsx:9
+#: src/app/[locale]/about/page.tsx:10
+msgctxt "qVBD-Xf6"
+msgid "About best-i18n"
+msgstr ""
+
+#: src/app/[locale]/about/page.tsx:11
+msgctxt "xR3w2JIy"
+msgid "How a message becomes a string literal at build time."
+msgstr ""
+
+#: src/app/[locale]/about/page.tsx:21
 #: src/components/site-header.tsx:16
 msgctxt "Tvyg0Qxf"
 msgid "About"
 msgstr ""
 
-#: src/app/[locale]/about/page.tsx:10
+#: src/app/[locale]/about/page.tsx:22
 msgctxt "y_B_ITb_"
 msgid "{0} inlines every translation at the call site."
 msgstr ""
 
-#: src/app/[locale]/about/page.tsx:11
+#: src/app/[locale]/about/page.tsx:23
 msgctxt "PNN4fOJj"
 msgid "Nothing is looked up at runtime, so nothing has to be loaded."
 msgstr ""
 
-#: src/app/[locale]/about/page.tsx:18
+#: src/app/[locale]/about/page.tsx:30
 msgctxt "z3zr1zPX"
 msgid "Read the <0>README</0> to learn more."
 msgstr ""
 
-#: src/app/[locale]/page.tsx:12
+#: src/app/[locale]/page.tsx:15
+msgctxt "MiHW3q30"
+msgid "best-i18n - compile-time internationalization"
+msgstr ""
+
+#: src/app/[locale]/page.tsx:16
+msgctxt "UfYi0OP_"
+msgid ""
+"Translations inlined at the call site, with no runtime catalog and nothing "
+"to load."
+msgstr ""
+
+#: src/app/[locale]/page.tsx:28
 msgctxt "NivRfIR0"
 msgid "A small starter with room to grow."
 msgstr ""
 
-#: src/app/[locale]/page.tsx:13
+#: src/app/[locale]/page.tsx:29
 msgctxt "_35UupBI"
 msgid "This paragraph was rendered on the server."
 msgstr ""

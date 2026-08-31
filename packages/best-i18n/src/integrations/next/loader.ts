@@ -4,7 +4,7 @@ import { loadCatalog } from '../../compiler/catalog.ts'
 import { transform } from '../../compiler/transform.ts'
 
 import type { LoadedCatalog } from '../../compiler/catalog.ts'
-import type { TransformOptions } from '../../compiler/transform.ts'
+import type { Message, TransformOptions } from '../../compiler/transform.ts'
 
 /**
  * Everything the loader needs, and nothing that cannot survive a round trip
@@ -29,6 +29,53 @@ export interface I18nLoaderOptions extends Omit<
    * transformed.
    */
   version?: string
+}
+
+/**
+ * Rejects a message in a Client Component that has no `useI18n()` above it.
+ *
+ * Such a message compiles to `getLocale()`, and a client module is rendered
+ * twice from two different module graphs: on the server, where nothing has
+ * bound the request's locale, and in the browser, where `LocaleProvider` has.
+ * The server half therefore falls back to the base locale - so the page is
+ * served in the wrong language, flips after hydration, and says nothing about
+ * it. React does not even warn: it patches the text and moves on.
+ *
+ * There is no version of this that works, which is why it is an error and not
+ * a warning. `useI18n()` reads the locale through React, the one channel both
+ * graphs share.
+ *
+ * A per-locale build has no locale to read at all, so the question does not
+ * arise there.
+ */
+export function clientModuleError(options: {
+  filename: string
+  directives: string[]
+  messages: Message[]
+  staticLocale?: string | undefined
+}): string | undefined {
+  const { filename, directives, messages, staticLocale } = options
+
+  if (staticLocale !== undefined) return undefined
+  if (!directives.includes('use client')) return undefined
+
+  const unbound = messages.filter((message) => message.localeVar === undefined)
+  if (unbound.length === 0) return undefined
+
+  const where = unbound
+    .map((message) => `    ${filename}:${message.line}  "${message.text}"`)
+    .join('\n')
+
+  return (
+    `best-i18n: a Client Component has to take its locale from the hook, or ` +
+    `the server renders it in the base language and the browser silently ` +
+    `disagrees.\n\n` +
+    `  const t = useI18n()\n\n` +
+    `${where}\n\n` +
+    `  If this file is never server-rendered, move the message inside a ` +
+    `component and use the hook there anyway - a message read at module ` +
+    `scope is resolved once, for every request.`
+  )
 }
 
 /** The slice of the webpack loader API Turbopack also implements. */
@@ -122,6 +169,18 @@ export default function bestI18nLoader(
 
   if (result === null) {
     this.callback(null, code)
+    return
+  }
+
+  const violation = clientModuleError({
+    filename: this.resourcePath,
+    directives: result.directives,
+    messages: result.messages,
+    staticLocale: options.staticLocale,
+  })
+
+  if (violation !== undefined) {
+    this.callback(new Error(violation))
     return
   }
 
