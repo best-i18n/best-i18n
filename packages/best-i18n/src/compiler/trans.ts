@@ -267,6 +267,120 @@ export function parseMessage(text: string, describe: string): MessagePart[] {
   return root
 }
 
+/** The `{n}` indices a template message mentions. */
+function templateIndices(text: string): Set<number> {
+  return new Set(
+    [...text.matchAll(/\{(\d+)\}/g)].map((match) => Number(match[1])),
+  )
+}
+
+/**
+ * Checks that a translation uses exactly the placeholders the source has.
+ *
+ * A dropped `{0}` silently loses the value it stood for; an invented one has
+ * nothing to substitute. Both are translator mistakes, and both must fail at
+ * build time with the message named rather than ship. The comparison is
+ * against the source *text*, not the expression count, so a literal `{n}`
+ * that was never a placeholder is treated the same on both sides.
+ */
+export function validateTemplateTranslation(
+  translation: string,
+  source: string,
+  describe: string,
+): void {
+  if (translation === source) return
+
+  const wanted = templateIndices(source)
+  const got = templateIndices(translation)
+
+  for (const index of wanted) {
+    if (!got.has(index)) {
+      throw new Error(
+        `best-i18n: ${describe}: the translation drops {${index}} - its ` +
+          `value would silently disappear. Translation: "${translation}"`,
+      )
+    }
+  }
+  for (const index of got) {
+    if (!wanted.has(index)) {
+      throw new Error(
+        `best-i18n: ${describe}: the translation uses {${index}}, which the ` +
+          `source message does not have. Translation: "${translation}"`,
+      )
+    }
+  }
+}
+
+/** Every `{n}` and `<n>` index mentioned in a parsed message. */
+function collectIndices(
+  parts: MessagePart[],
+  expressions: Set<number>,
+  elements: Set<number>,
+): void {
+  for (const part of parts) {
+    if (part.kind === 'expression') {
+      expressions.add(part.index)
+    } else if (part.kind === 'element') {
+      elements.add(part.index)
+      collectIndices(part.children, expressions, elements)
+    }
+  }
+}
+
+/**
+ * Checks that a `<Trans>` translation mentions exactly the placeholders and
+ * elements the source produced. `<Trans>` placeholders are always generated -
+ * JSX text cannot contain a bare `{` - so the source sets are simply
+ * `0..count-1` on both axes.
+ */
+function validateTransParts(
+  parts: MessagePart[],
+  expressionCount: number,
+  elementCount: number,
+  describe: string,
+): void {
+  const expressions = new Set<number>()
+  const elements = new Set<number>()
+  collectIndices(parts, expressions, elements)
+
+  const complain = (what: string): never => {
+    throw new Error(`best-i18n: ${describe}: ${what}`)
+  }
+
+  for (let index = 0; index < expressionCount; index++) {
+    if (!expressions.has(index)) {
+      complain(
+        `the translation drops {${index}} - its value would silently ` +
+          'disappear.',
+      )
+    }
+  }
+  for (const index of expressions) {
+    if (index >= expressionCount) {
+      complain(
+        `the translation uses {${index}}, which the source message does ` +
+          'not have.',
+      )
+    }
+  }
+  for (let index = 0; index < elementCount; index++) {
+    if (!elements.has(index)) {
+      complain(
+        `the translation drops <${index}> - the element and everything on ` +
+          'it would silently disappear.',
+      )
+    }
+  }
+  for (const index of elements) {
+    if (index >= elementCount) {
+      complain(
+        `the translation uses <${index}>, which the source message does ` +
+          'not have.',
+      )
+    }
+  }
+}
+
 /** Escapes text so it can be embedded in a template literal. */
 export function escapeTemplate(text: string): string {
   return text
@@ -381,6 +495,7 @@ export function renderTrans(
   describe: string,
 ): string {
   const parts = parseMessage(text, describe)
+  validateTransParts(parts, expressions.length, elements.length, describe)
 
   if (!hasElement(parts)) return renderFlat(parts, expressions)
 

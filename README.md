@@ -119,3 +119,15 @@ Client Component about 6 bytes each gzipped for both languages.
 [`playground/nextjs-intl`](./playground/nextjs-intl#readme) and
 [`playground/tanstack-start-paraglide`](./playground/tanstack-start-paraglide#readme)
 carry the full numbers and the caveats.
+
+## Thanks
+
+The ideas here are inherited, not invented: [GNU
+gettext](https://www.gnu.org/software/gettext/) for the PO workflow,
+[Lingui](https://lingui.dev/) for the macro shape and the `<0>...</0>` markup
+convention, [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJS)
+for proving compile-time i18n with per-locale tree-shaking, and
+[next-intl](https://next-intl.dev/) as the reference for a complete Next.js
+integration. The last two also serve as the honest halves of the size
+comparison above. The full list lives in
+[`packages/best-i18n`](./packages/best-i18n#thanks).

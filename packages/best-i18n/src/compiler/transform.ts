@@ -2,7 +2,12 @@ import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
 
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
-import { renderTemplate, renderTrans, serializeTrans } from './trans.ts'
+import {
+  renderTemplate,
+  renderTrans,
+  serializeTrans,
+  validateTemplateTranslation,
+} from './trans.ts'
 
 import type { StaticImport } from './bindings.ts'
 import type { TransElement } from './trans.ts'
@@ -301,10 +306,10 @@ function analyze(
   const hookCalls: HookCall[] = []
   const tagNodes = new Set<unknown>()
 
-  // `const t = useI18n()` declares a locale-holding variable. Matching later tag
-  // uses is by name within the file; any other reference to these names is
-  // rejected below, so a same-named unrelated variable fails loudly rather
-  // than being silently rewritten.
+  // `const t = useI18n()` declares a locale-holding variable. Matching later
+  // tag uses is by scope, not by name across the file: an imported macro that
+  // happens to share the variable's name must not be compiled against it, and
+  // an unrelated same-named variable in another function is not a misuse.
   const localeVars = new Set<string>()
   const allowedHookNodes = new Set<unknown>()
   const scopes: Scope[] = []
@@ -362,13 +367,31 @@ function analyze(
 
   // A hook variable belongs to the function that declares it. Closures see it
   // too, which is why the lookup below walks outwards rather than demanding an
-  // exact match.
+  // exact match. A call outside any function claims the whole module.
+  let moduleScope: Scope | undefined
   for (const call of hookCalls) {
-    const scope = innermost(call.start, scopes)
-    if (scope !== undefined) scope.localeVar = call.name
+    let scope = innermost(call.start, scopes)
+    if (scope === undefined) {
+      moduleScope ??= { start: 0, end: code.length }
+      scope = moduleScope
+    }
+    scope.localeVar = call.name
   }
+  if (moduleScope !== undefined) scopes.push(moduleScope)
 
   const withLocaleVar = scopes.filter((scope) => scope.localeVar !== undefined)
+
+  /**
+   * The hook variable named `name` visible at `offset`, if any. Scope-aware on
+   * purpose: `t` from `useI18n()` in one component and an imported macro `t`
+   * used in the next are different bindings, and compiling the macro against
+   * the hook variable would emit a locale check that reads a function.
+   */
+  const hookScopeAt = (offset: number, name: string): Scope | undefined =>
+    innermost(
+      offset,
+      withLocaleVar.filter((scope) => scope.localeVar === name),
+    )
 
   walk(parsed.program, (node) => {
     if (node.type !== 'TaggedTemplateExpression') return
@@ -376,7 +399,7 @@ function analyze(
     const tagNode = node.tag as { type?: string; name?: string } | undefined
     if (tagNode?.type !== 'Identifier') return
     const name = tagNode.name ?? ''
-    const isHookVar = localeVars.has(name)
+    const isHookVar = hookScopeAt(node.start as number, name) !== undefined
     if (!locals.has(name) && !isHookVar) return
     tagNodes.add(node.tag)
 
@@ -476,10 +499,12 @@ function analyze(
     if (
       !locals.has(name) &&
       !hookLocals.has(name) &&
-      !localeVars.has(name) &&
       !componentLocals.has(name)
     ) {
-      return
+      if (!localeVars.has(name)) return
+      // A hook variable's name is only reserved inside the function that
+      // declared it; an unrelated variable elsewhere in the file is fine.
+      if (hookScopeAt(node.start as number, name) === undefined) return
     }
     if (tagNodes.has(node)) return
     if (allowedHookNodes.has(node)) return
@@ -613,9 +638,18 @@ export function transform(
     let replacement: string
 
     // `<Trans>` rebuilds markup; `t` only ever produces a template literal.
+    // Both validate the translation's placeholders against the source first:
+    // a dropped or invented `{n}` must fail here, named, not ship silently.
     const render =
       message.elements === undefined
-        ? (text: string) => renderTemplate(text, message.expressions)
+        ? (text: string, locale: string) => {
+            validateTemplateTranslation(
+              text,
+              message.text,
+              `${filename}:${message.line} (${locale}) "${message.text}"`,
+            )
+            return renderTemplate(text, message.expressions)
+          }
         : (text: string, locale: string) =>
             renderTrans(
               text,

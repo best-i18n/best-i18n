@@ -53,6 +53,19 @@ describe('resolveClientLocale', () => {
     expect(client({ pathname: '/about', cookie: 'LOCALE=fr' })).toBe('en')
   })
 
+  it('falls through a malformed cookie instead of throwing', () => {
+    // This runs at module scope in router bootstraps - a URIError here is a
+    // blank page for as long as the cookie persists.
+    expect(client({ pathname: '/about', cookie: 'LOCALE=%' })).toBe('en')
+    expect(
+      client({
+        pathname: '/about',
+        cookie: 'LOCALE=%E0%A4%A',
+        languages: ['zh'],
+      }),
+    ).toBe('zh')
+  })
+
   it('falls back to the base locale', () => {
     expect(client({ pathname: '/about' })).toBe('en')
   })

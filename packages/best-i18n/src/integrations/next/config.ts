@@ -1,3 +1,5 @@
+import { configure } from '../../runtime/index.ts'
+
 import type { RequestConfig } from '../../request.ts'
 
 /**
@@ -45,6 +47,10 @@ let active: NextI18nConfig | undefined
  */
 export function defineI18nConfig<T extends NextI18nConfig>(config: T): T {
   active = config
+  // Teach the runtime the real base locale. Without this, getLocale() outside
+  // any bound request falls back to its hardcoded 'en' - which, for an app
+  // whose base locale is not English, matches the wrong ternary branch.
+  configure({ baseLocale: config.baseLocale, locales: config.locales })
   return config
 }
 

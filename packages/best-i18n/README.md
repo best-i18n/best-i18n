@@ -272,6 +272,15 @@ no compile step in between. Editing a message file in dev triggers a full
 reload. An extract run never reduces the number of translations; if it would,
 it refuses and asks for `--force`.
 
+Fuzzy translations do not build — standard gettext behaviour. A carried-over
+translation stays in the catalog marked `fuzzy`, the message falls back to the
+base locale, and the build reports it as missing until someone reviews it. A
+translation whose `{0}`/`<0>` placeholders do not match the source is a build
+error naming the file, locale and message; `i18n-extract` reports the same
+mismatch when it merges, so a bad TMS import is visible before anyone builds.
+Comments, flags, plural entries and headers written by translators or a TMS
+survive a rewrite untouched.
+
 ## Locale resolution and URLs
 
 On any server that owns its own request handler - a Vite-based framework, a
@@ -313,8 +322,30 @@ pattern for paths that must never be localized (`/api/...`).
   `headers()` are async. That is a private API, so a Next.js major version can
   break it. The field it reads, `rootParams`, arrived in 15.2, which is the
   peer floor.
-- In a Client Component use `useI18n`. Plain `t` there reads the ambient client
-  locale, which `LocaleProvider` does not set.
+- In a Client Component prefer `useI18n`. Plain `t` there reads the ambient
+  client locale, which `LocaleProvider` mirrors on the client - but only from
+  the nearest provider, and without re-rendering on a locale change the way
+  `useI18n` does.
+
+## Thanks
+
+best-i18n did not invent its best ideas, it inherited them:
+
+- [GNU gettext](https://www.gnu.org/software/gettext/) — the PO workflow this
+  package speaks: source text as the message, `fuzzy` instead of data loss,
+  `#~` instead of deletion. Decades of translator tooling work because these
+  conventions are respected.
+- [Lingui](https://lingui.dev/) — the macro shape and the `<0>...</0>`
+  placeholder convention for markup in messages, adopted here for the same
+  reason it exists there: a translator should never see a JSX attribute.
+- [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJS) —
+  the proof that compile-time i18n with per-locale tree-shaking is viable, and
+  the bar for what a locale-strategy API can look like.
+- [next-intl](https://next-intl.dev/) — the reference for what a complete
+  Next.js App Router integration covers; its playground twin in this repo is
+  what keeps the size claims honest.
+- [gettext-parser](https://github.com/smhg/gettext-parser) — the PO codec
+  underneath `i18n-extract`.
 
 ## License
 

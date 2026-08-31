@@ -25,7 +25,14 @@ function fromCookie(
   for (const part of header.split(';')) {
     const [key, ...value] = part.trim().split('=')
     if (key !== name) continue
-    const candidate = decodeURIComponent(value.join('='))
+    // A cookie is attacker-supplied input: a malformed %-escape must fall
+    // through to the next source, not throw a URIError on every request.
+    let candidate: string
+    try {
+      candidate = decodeURIComponent(value.join('='))
+    } catch {
+      continue
+    }
     if (config.locales.includes(candidate)) return candidate
   }
 
@@ -49,7 +56,10 @@ function fromHeader(
         .find((param) => param.startsWith('q='))
       return { tag: (tag ?? '').toLowerCase(), q: q ? Number(q.slice(2)) : 1 }
     })
-    .filter((entry) => entry.tag !== '' && !Number.isNaN(entry.q))
+    // `q=0` means explicitly not acceptable, so it must not win by existing.
+    .filter(
+      (entry) => entry.tag !== '' && !Number.isNaN(entry.q) && entry.q > 0,
+    )
     .sort((a, b) => b.q - a.q)
 
   for (const { tag } of ranked) {

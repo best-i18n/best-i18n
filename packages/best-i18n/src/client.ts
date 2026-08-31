@@ -35,7 +35,14 @@ export function resolveClientLocale(options: {
   for (const part of cookie.split(';')) {
     const [key, ...value] = part.trim().split('=')
     if (key !== name) continue
-    const candidate = decodeURIComponent(value.join('='))
+    // A malformed %-escape must fall through, not throw at module scope in
+    // whatever router bootstrap called this.
+    let candidate: string
+    try {
+      candidate = decodeURIComponent(value.join('='))
+    } catch {
+      continue
+    }
     if (config.locales.includes(candidate)) return candidate
   }
 

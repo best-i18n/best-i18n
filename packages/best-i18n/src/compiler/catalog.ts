@@ -55,7 +55,12 @@ export function loadCatalog(options: CatalogOptions): LoadedCatalog {
     const po = parsePo(readFileSync(file, 'utf8'), locale)
 
     for (const entry of po.entries) {
-      if (entry.obsolete || entry.target === '') continue
+      // A fuzzy translation was written for a different wording - the merge
+      // flagged it for review, so shipping it verbatim would be wrong in a way
+      // nobody would see. Standard gettext behaviour: fuzzy does not build.
+      // The message then falls back to the base locale and is reported as
+      // missing by the transform, which is the visible version of the truth.
+      if (entry.obsolete || entry.fuzzy || entry.target === '') continue
       const source = sourceOf.get(entry.id)
       if (source === undefined) continue
       catalog[source]![locale] = entry.target

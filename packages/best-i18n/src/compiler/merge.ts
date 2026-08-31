@@ -76,6 +76,13 @@ export function mergeMessages(options: {
         references: message.references,
         // The translation was written for the old wording: needs a human look.
         fuzzy: true,
+        // What msgmerge would write: the old wording, so the reviewer can see
+        // what the carried translation was actually written for.
+        previous: `msgid ${JSON.stringify(reworded.source)}`,
+        ...(reworded.translator === undefined
+          ? {}
+          : { translator: reworded.translator }),
+        ...(reworded.flags === undefined ? {} : { flags: reworded.flags }),
         obsolete: false,
       })
       continue

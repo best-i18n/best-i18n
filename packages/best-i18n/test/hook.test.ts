@@ -35,18 +35,75 @@ describe('useI18n hook macro', () => {
   })
 
   it('keeps each component on its own hook variable', () => {
+    // Distinct names on purpose: identical names would pass even if scoping
+    // were broken, which is exactly the bug this test exists to catch.
     const code = [
       `import { useI18n } from '${REACT}'`,
-      'function A() { const t = useI18n(); return t`About` }',
-      'function B() { const t = useI18n(); return t`Hi ${name}` }',
+      'function A() { const ta = useI18n(); return ta`About` }',
+      'function B() { const tb = useI18n(); return tb`Hi ${name}` }',
     ].join('\n')
 
     const result = transform(code, 'a.tsx', OPTIONS)!
 
     expect(result.code.match(/__i18nUseLocale\(\)/g)).toHaveLength(2)
+    expect(result.code).toContain('(ta === "zh" ? `关于` : `About`)')
     expect(result.code).toContain(
-      '(t === "zh" ? `你好 ${name}` : `Hi ${name}`)',
+      '(tb === "zh" ? `你好 ${name}` : `Hi ${name}`)',
     )
+  })
+
+  it('does not compile an imported macro against a same-named hook variable', () => {
+    // A's `t` is the hook variable; B's `t` is the imported macro. Compiling
+    // B's message against the hook variable would emit `t === "zh"` where `t`
+    // is a function - always false, base locale in every language, silently.
+    const code = [
+      `import { t } from 'best-i18n/macro'`,
+      `import { useI18n } from '${REACT}'`,
+      'function A() { const t = useI18n(); return t`About` }',
+      'function B() { return t`Hi ${name}` }',
+    ].join('\n')
+
+    const result = transform(code, 'a.tsx', OPTIONS)!
+
+    // A reads its hook variable; B falls back to getLocale().
+    expect(result.code).toContain('(t === "zh" ? `关于` : `About`)')
+    expect(result.code).toContain(
+      '(__i18nGetLocale() === "zh" ? `你好 ${name}` : `Hi ${name}`)',
+    )
+  })
+
+  it('leaves an unrelated same-named variable in another function alone', () => {
+    const code = [
+      `import { useI18n } from '${REACT}'`,
+      'function A() { const t = useI18n(); return t`About` }',
+      'function B() { const t = other(); return t.title }',
+    ].join('\n')
+
+    const result = transform(code, 'a.tsx', OPTIONS)!
+
+    expect(result.code).toContain('return t.title')
+  })
+
+  it('still rejects shadowing inside the declaring component', () => {
+    expect(() =>
+      transform(
+        component('const t = useI18n(); const inner = () => { foo(t) }'),
+        'a.tsx',
+        OPTIONS,
+      ),
+    ).toThrow(/only be used as a tagged template/)
+  })
+
+  it('supports a module-level hook variable', () => {
+    // Invalid React, but the transform should stay consistent: a hook variable
+    // declared outside any function is visible to the whole module.
+    const result = transform(
+      `import { useI18n } from '${REACT}'\nconst t = useI18n()\nexport const a = t\`About\``,
+      'a.tsx',
+      OPTIONS,
+    )!
+
+    expect(result.code).toContain('(t === "zh" ? `关于` : `About`)')
   })
 
   it('collapses to the literal locale in a per-locale build', () => {

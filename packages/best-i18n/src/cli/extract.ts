@@ -163,6 +163,37 @@ function readPo(locale: string) {
 
 let dirty = false
 let untranslated = 0
+let mismatched = 0
+
+/**
+ * Placeholder sets of msgid and msgstr must agree: a dropped `{0}` or `<1>`
+ * silently loses content, an invented one fails the build. Reported here so a
+ * TMS import surfaces the problem before anyone runs a build.
+ */
+function placeholderIssue(source: string, target: string): string | undefined {
+  const collect = (text: string, pattern: RegExp) =>
+    new Set([...text.matchAll(pattern)].map((match) => Number(match[1])))
+
+  const compare = (
+    pattern: RegExp,
+    render: (index: number) => string,
+  ): string | undefined => {
+    const wanted = collect(source, pattern)
+    const got = collect(target, pattern)
+    for (const index of wanted) {
+      if (!got.has(index)) return `drops ${render(index)}`
+    }
+    for (const index of got) {
+      if (!wanted.has(index)) return `adds ${render(index)}`
+    }
+    return undefined
+  }
+
+  return (
+    compare(/\{(\d+)\}/g, (index) => `{${index}}`) ??
+    compare(/<\/?(\d+)\s*\/?>/g, (index) => `<${index}>`)
+  )
+}
 
 // The template carries the source texts with empty msgstr.
 const templateFile = path.join(messagesDir, 'messages.pot')
@@ -239,6 +270,15 @@ for (const locale of locales.filter((item) => item !== base)) {
     out(`    ~ carried (fuzzy): "${change.from}" -> "${change.to}"`)
   }
 
+  // Fuzzy entries are already counted as needing work and do not build.
+  for (const entry of merged.entries) {
+    if (entry.obsolete || entry.fuzzy || entry.target === '') continue
+    const issue = placeholderIssue(entry.source, entry.target)
+    if (issue === undefined) continue
+    mismatched++
+    out(`    ! placeholder mismatch (${issue}): "${entry.source}"`)
+  }
+
   let changed = true
   try {
     changed = !samePo(parsePo(readFileSync(file, 'utf8'), locale), {
@@ -260,12 +300,20 @@ for (const locale of locales.filter((item) => item !== base)) {
 }
 
 if (check) {
-  if (dirty || untranslated > 0) {
+  if (dirty || untranslated > 0 || mismatched > 0) {
     out('\n  catalogs are out of date or incomplete')
     process.exitCode = 1
   } else {
     out('  up to date')
   }
-} else if (untranslated > 0) {
-  out(`\n  ${untranslated} message(s) need translation - edit the .po files`)
+} else if (untranslated > 0 || mismatched > 0) {
+  if (untranslated > 0) {
+    out(`\n  ${untranslated} message(s) need translation - edit the .po files`)
+  }
+  if (mismatched > 0) {
+    out(
+      `  ${mismatched} translation(s) have mismatched placeholders - ` +
+        'the build will refuse them',
+    )
+  }
 }

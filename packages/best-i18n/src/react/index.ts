@@ -8,6 +8,7 @@ import {
 } from 'react'
 
 import {
+  configure,
   getLocale,
   isServer,
   setLocale,
@@ -56,6 +57,11 @@ export function LocaleProvider(props: {
   config?: UrlConfig
   children?: ReactNode
 }): ReactNode {
+  // The config knows the app's real base locale; without this, getLocale()
+  // before any setLocale falls back to the hardcoded 'en'. Plain assignments,
+  // idempotent, safe during render.
+  if (props.config !== undefined) configure(props.config)
+
   // During render rather than in an effect, and deliberately: an effect runs
   // after the first paint, which would leave that paint in the wrong language.
   // The provider renders above its children, so by the time anything reads the

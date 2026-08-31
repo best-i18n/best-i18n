@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { resolveLocale } from '../request.ts'
-import { setRequestLocaleSource } from './index.ts'
+import { configure, setRequestLocaleSource } from './index.ts'
 
 import type { RequestConfig } from '../request.ts'
 import type { Locale } from './index.ts'
@@ -50,5 +50,10 @@ export function withRequestLocale<T>(
   config: RequestConfig,
   fn: () => T,
 ): T {
+  // The config passing through here is the one place the server half learns
+  // the app's real base locale; getLocale() outside a bound request would
+  // otherwise fall back to the hardcoded 'en'. Idempotent, so per-request is
+  // fine.
+  configure(config)
   return withLocale(resolveLocale(request, config), fn)
 }
