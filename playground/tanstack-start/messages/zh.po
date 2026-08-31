@@ -9,47 +9,38 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/components/counter.tsx:15
-msgctxt "FW4pTV3N"
 msgid "Add one"
 msgstr "加一"
 
 #: src/components/counter.tsx:17
-msgctxt "AcBJLC0i"
-msgid "You have {0} items"
-msgstr "你有 {0} 项"
+msgid "You have {count} items"
+msgstr "你有 {count} 项"
 
 #: src/components/site-header.tsx:14
-msgctxt "OnhpU4iz"
 msgid "Home"
 msgstr "首页"
 
 #: src/components/site-header.tsx:15
 #: src/routes/about.tsx:14
-msgctxt "Tvyg0Qxf"
 msgid "About"
 msgstr "关于"
 
 #: src/routes/about.tsx:15
-msgctxt "y_B_ITb_"
-msgid "{0} inlines every translation at the call site."
-msgstr "{0} 会把每条翻译内联到调用处。"
+msgid "{name} inlines every translation at the call site."
+msgstr "{name} 会把每条翻译内联到调用处。"
 
 #: src/routes/about.tsx:16
-msgctxt "PNN4fOJj"
 msgid "Nothing is looked up at runtime, so nothing has to be loaded."
 msgstr "运行时不做任何查表，因此也没有任何东西需要加载。"
 
 #: src/routes/about.tsx:20
-msgctxt "z3zr1zPX"
-msgid "Read the <0>README</0> to learn more."
-msgstr "请阅读 <0>README</0> 了解更多。"
+msgid "Read the <a>README</a> to learn more."
+msgstr "请阅读 <a>README</a> 了解更多。"
 
 #: src/routes/index.tsx:13
-msgctxt "NivRfIR0"
 msgid "A small starter with room to grow."
 msgstr "一个小而可长的起始模板。"
 
 #: src/routes/index.tsx:14
-msgctxt "_35UupBI"
 msgid "This paragraph was rendered on the server."
 msgstr "这段文字是在服务端渲染的。"

@@ -76,7 +76,10 @@ function read(file: string, locale: string) {
   }
 }
 
-function write(locale: string, catalog: Record<string, string>): void {
+function write(
+  locale: string,
+  catalog: Record<string, string | string[]>,
+): void {
   mkdirSync(target, { recursive: true })
   const sorted = Object.fromEntries(
     Object.keys(catalog)
@@ -94,28 +97,40 @@ function write(locale: string, catalog: Record<string, string>): void {
   out(`  ${file}  (${Object.keys(sorted).length} message(s))`)
 }
 
+// Keyed the way gettext identifies entries: the source text, prefixed by
+// the context when there is one. Plural entries map to their msgstr array.
+const keyOf = (entry: { context: string; source: string }) =>
+  entry.context === '' ? entry.source : `${entry.context}\u0004${entry.source}`
+
 const template = read(path.join(messagesDir, 'messages.pot'), base)
-const sources: Record<string, string> = {}
+const sources: Record<string, string | string[]> = {}
 for (const entry of template.entries) {
-  if (!entry.obsolete) sources[entry.id] = entry.source
+  if (entry.obsolete) continue
+  sources[keyOf(entry)] =
+    entry.pluralSource === undefined
+      ? entry.source
+      : [entry.source, entry.pluralSource]
 }
 
 write(base, sources)
 
 for (const locale of locales.filter((item) => item !== base)) {
   const po = read(path.join(messagesDir, `${locale}.po`), locale)
-  const catalog: Record<string, string> = {}
+  const catalog: Record<string, string | string[]> = {}
   let fuzzySkipped = 0
 
   for (const entry of po.entries) {
     if (entry.obsolete) continue
-    if (!(entry.id in sources)) continue
+    if (!(keyOf(entry) in sources)) continue
     if (entry.target === '') continue
     if (entry.fuzzy && skipFuzzy) {
       fuzzySkipped++
       continue
     }
-    catalog[entry.id] = entry.target
+    catalog[keyOf(entry)] =
+      entry.pluralSource === undefined
+        ? entry.target
+        : [entry.target, ...(entry.pluralTargets ?? [])]
   }
 
   write(locale, catalog)

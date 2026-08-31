@@ -8,22 +8,22 @@ const OPTIONS = {
   locales: ['en', 'zh'],
   baseLocale: 'en',
   catalog: {
-    'Read the <0>docs</0> to learn more.': {
-      en: 'Read the <0>docs</0> to learn more.',
-      zh: '阅读<0>文档</0>了解更多。',
+    'Read the <a>docs</a> to learn more.': {
+      en: 'Read the <a>docs</a> to learn more.',
+      zh: '阅读<a>文档</a>了解更多。',
     },
-    'Hi {0}, you have <0>{1} items</0>.': {
-      en: 'Hi {0}, you have <0>{1} items</0>.',
-      zh: '你好 {0}，你有 <0>{1} 项</0>。',
+    'Hi {name}, you have <b>{count} items</b>.': {
+      en: 'Hi {name}, you have <b>{count} items</b>.',
+      zh: '你好 {name}，你有 <b>{count} 项</b>。',
     },
     'Just words.': { en: 'Just words.', zh: '只有文字。' },
-    'A <0>b <1>c</1></0> d': {
-      en: 'A <0>b <1>c</1></0> d',
-      zh: 'D <0><1>C</1> B</0> A',
+    'A <i>b <b>c</b></i> d': {
+      en: 'A <i>b <b>c</b></i> d',
+      zh: 'D <i><b>C</b> B</i> A',
     },
-    'Line one<0/>line two': {
-      en: 'Line one<0/>line two',
-      zh: '第一行<0/>第二行',
+    'Line one<br/>line two': {
+      en: 'Line one<br/>line two',
+      zh: '第一行<br/>第二行',
     },
   },
 }
@@ -33,7 +33,7 @@ function file(body: string) {
 }
 
 describe('<Trans>', () => {
-  it('stores markup as numbered placeholders', () => {
+  it('stores markup as named placeholders', () => {
     const [message] = extract(
       file(
         '<p><Trans>Read the <a href={url}>docs</a> to learn more.</Trans></p>',
@@ -41,7 +41,7 @@ describe('<Trans>', () => {
       'a.tsx',
     )
 
-    expect(message?.text).toBe('Read the <0>docs</0> to learn more.')
+    expect(message?.text).toBe('Read the <a>docs</a> to learn more.')
   })
 
   it('collapses JSX whitespace the way JSX itself does', () => {
@@ -56,7 +56,7 @@ describe('<Trans>', () => {
 
     // Indentation and the surrounding newlines are not part of the message,
     // or re-indenting a component would orphan every translation of it.
-    expect(message?.text).toBe('Read the <0>docs</0> to learn more.')
+    expect(message?.text).toBe('Read the <a>docs</a> to learn more.')
   })
 
   it('drops the space a newline swallows, as JSX does', () => {
@@ -73,7 +73,7 @@ describe('<Trans>', () => {
     // JSX renders this without a space, which is the reason `{' '}` exists.
     // The message has to say so, otherwise the translation would read better
     // than the page does.
-    expect(message?.text).toBe('Read the <0>docs</0>to learn more.')
+    expect(message?.text).toBe('Read the <a>docs</a>to learn more.')
   })
 
   it('rebuilds the markup around a reordered translation', () => {
@@ -95,13 +95,13 @@ describe('<Trans>', () => {
     expect(result.code).toContain('<p>{(__i18nGetLocale() === "zh" ?')
   })
 
-  it('keeps expressions positional across markup', () => {
+  it('names expressions across markup', () => {
     const source = file(
       '<p><Trans>Hi {name}, you have <b>{count} items</b>.</Trans></p>',
     )
 
     expect(extract(source, 'a.tsx')[0]?.text).toBe(
-      'Hi {0}, you have <0>{1} items</0>.',
+      'Hi {name}, you have <b>{count} items</b>.',
     )
 
     const result = transform(source, 'a.tsx', OPTIONS)!

@@ -95,10 +95,6 @@
       "types": "./dist/po.d.mts",
       "default": "./dist/po.mjs"
     },
-    "./id": {
-      "types": "./dist/id.d.mts",
-      "default": "./dist/id.mjs"
-    },
     "./package.json": "./package.json"
   },
   "bin": {

@@ -15,9 +15,9 @@ const OPTIONS = {
       en: 'A small starter with room to grow.',
       zh: '一个小而可长的起始模板。',
     },
-    'Hi {0}, you have {1} items': {
-      en: 'Hi {0}, you have {1} items',
-      zh: '你好 {0}，你有 {1} 项',
+    'Hi {name}, you have {count} items': {
+      en: 'Hi {name}, you have {count} items',
+      zh: '你好 {name}，你有 {count} 项',
     },
   },
 }
@@ -30,7 +30,7 @@ describe('extract', () => {
     )
 
     expect(messages).toHaveLength(1)
-    expect(messages[0]!.text).toBe('Hi {0}, you have {1} items')
+    expect(messages[0]!.text).toBe('Hi {name}, you have {count} items')
     expect(messages[0]!.expressions).toEqual(['name', 'count'])
   })
 
@@ -48,12 +48,24 @@ describe('extract', () => {
     expect(messages.map((message) => message.text)).toEqual(['Hi'])
   })
 
-  it('keeps interpolation positional', () => {
-    const result = transform(
-      src('const a = t`Hi ${user.name}, you have ${count} items`'),
-      'a.ts',
-      { ...OPTIONS, staticLocale: 'zh' },
-    )!
+  it('numbers complex expressions and names identifiers', () => {
+    const source = src('const a = t`Hi ${user.name}, you have ${count} items`')
+
+    // `user.name` is not an identifier, so it stays positional; `count` names
+    // its own placeholder.
+    expect(extract(source, 'a.ts')[0]!.text).toBe(
+      'Hi {0}, you have {count} items',
+    )
+
+    const result = transform(source, 'a.ts', {
+      ...OPTIONS,
+      staticLocale: 'zh',
+      catalog: {
+        'Hi {0}, you have {count} items': {
+          zh: '你好 {0}，你有 {count} 项',
+        },
+      },
+    })!
 
     expect(result.code).toContain('`你好 ${user.name}，你有 ${count} 项`')
   })

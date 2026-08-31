@@ -1,3 +1,5 @@
+import type { TranslateMacro } from '../macro.ts'
+
 /**
  * Hook-shaped compile-time macro, modelled on Lingui's `useLingui()`.
  *
@@ -19,10 +21,7 @@
  *     return <h1>{t`A small starter with room to grow.`}</h1>
  *   }
  */
-export function useI18n(): (
-  strings: TemplateStringsArray,
-  ...values: Array<string | number>
-) => string {
+export function useI18n(): TranslateMacro {
   throw new Error(
     'best-i18n: useI18n() reached runtime, which means this file was never ' +
       'transformed. Is the bundler plugin installed?',
@@ -52,7 +51,11 @@ export function useI18n(): (
  *     </Trans>
  *   </p>
  */
-export function Trans(props: { children?: unknown }): never {
+export function Trans(props: {
+  children?: unknown
+  /** Disambiguation context (gettext `msgctxt`). Must be a string literal. */
+  ctx?: string
+}): never {
   throw new Error(
     'best-i18n: <Trans> reached runtime, which means this file was never ' +
       'transformed. Is the bundler plugin installed?',

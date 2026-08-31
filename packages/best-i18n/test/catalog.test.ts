@@ -10,7 +10,7 @@ import { formatPo } from '../src/compiler/po.ts'
 import type { PoEntry } from '../src/compiler/po.ts'
 
 const entry = (overrides: Partial<PoEntry>): PoEntry => ({
-  id: 'abc12345',
+  context: '',
   source: 'Hello',
   target: '',
   references: [],
@@ -19,7 +19,11 @@ const entry = (overrides: Partial<PoEntry>): PoEntry => ({
   ...overrides,
 })
 
-function writeCatalog(entries: { template: PoEntry[]; zh: PoEntry[] }): string {
+function writeCatalog(entries: {
+  template: PoEntry[]
+  zh: PoEntry[]
+  zhHeaders?: Record<string, string>
+}): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'best-i18n-'))
   writeFileSync(
     path.join(dir, 'messages.pot'),
@@ -27,7 +31,13 @@ function writeCatalog(entries: { template: PoEntry[]; zh: PoEntry[] }): string {
   )
   writeFileSync(
     path.join(dir, 'zh.po'),
-    formatPo({ locale: 'zh', entries: entries.zh }),
+    formatPo({
+      locale: 'zh',
+      entries: entries.zh,
+      ...(entries.zhHeaders === undefined
+        ? {}
+        : { headers: entries.zhHeaders }),
+    }),
   )
   return dir
 }
@@ -64,5 +74,61 @@ describe('loadCatalog', () => {
     })
 
     expect(catalog.Hello).toEqual({ en: 'Hello' })
+  })
+
+  it('keys contexts separately and loads plural entries', () => {
+    const dir = writeCatalog({
+      template: [
+        entry({ context: 'verb', source: 'Open' }),
+        entry({ source: 'One item', pluralSource: '{n} items' }),
+      ],
+      zh: [
+        entry({ context: 'verb', source: 'Open', target: '打开' }),
+        entry({
+          source: 'One item',
+          pluralSource: '{n} items',
+          target: '{n} 件',
+        }),
+      ],
+      zhHeaders: { 'Plural-Forms': 'nplurals=1; plural=0;' },
+    })
+
+    const { catalog, plurals } = loadCatalog({
+      messagesDir: dir,
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+    })
+
+    expect(catalog['verb\u0004Open']).toEqual({ en: 'Open', zh: '打开' })
+    expect(catalog['One item\u0005{n} items']).toEqual({
+      en: ['One item', '{n} items'],
+      zh: ['{n} 件'],
+    })
+    expect(plurals.zh).toEqual({ nplurals: 1, formula: '0' })
+    // Base locale defaults to the builtin rule.
+    expect(plurals.en).toEqual({ nplurals: 2, formula: 'n != 1' })
+  })
+
+  it('drops a plural entry whose form count disagrees with the header', () => {
+    const dir = writeCatalog({
+      template: [entry({ source: 'One item', pluralSource: '{n} items' })],
+      zh: [
+        entry({
+          source: 'One item',
+          pluralSource: '{n} items',
+          target: '一件',
+          pluralTargets: ['{n} 件'],
+        }),
+      ],
+      zhHeaders: { 'Plural-Forms': 'nplurals=1; plural=0;' },
+    })
+
+    const { catalog } = loadCatalog({
+      messagesDir: dir,
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+    })
+
+    expect(catalog['One item\u0005{n} items']!.zh).toBeUndefined()
   })
 })

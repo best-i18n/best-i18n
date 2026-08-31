@@ -72,15 +72,15 @@ client entry over through a manifest rather than a script tag.
 | variant                            | client JS (gzip) | raw      | HTML /zh (gzip) |
 | ---------------------------------- | ---------------- | -------- | --------------- |
 | no i18n at all                     | 173.4 kB         | 562.0 kB | 1.9 kB          |
-| best-i18n                          | 174.2 kB         | 564.6 kB | 2.1 kB          |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.1 kB         | 564.4 kB | 2.1 kB          |
+| best-i18n                          | 174.3 kB         | 564.9 kB | 2.4 kB          |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.2 kB         | 564.7 kB | 2.4 kB          |
 | next-intl                          | 187.4 kB         | 607.4 kB | 2.4 kB          |
 
 ### TanStack Start
 
 | variant                            | client JS (gzip) | raw      |
 | ---------------------------------- | ---------------- | -------- |
-| best-i18n                          | 99.0 kB          | 310.2 kB |
+| best-i18n                          | 99.0 kB          | 310.3 kB |
 | best-i18n, `I18N_STATIC_LOCALE=zh` | 98.8 kB          | 309.7 kB |
 | paraglide                          | 106.9 kB         | 334.9 kB |
 
@@ -94,8 +94,10 @@ They are not the same kind of gap, and the difference matters more than the
 numbers.
 
 **next-intl's ~13 kB is a message runtime** - an ICU formatter, the catalog and
-the lookup. It buys plurals, select, dates, numbers and rich text, none of
-which best-i18n does yet. Its catalog also travels in _every_ page's HTML by
+the lookup. It buys plurals, select, dates, numbers and rich text. best-i18n
+has since grown plurals of its own - gettext plurals, compiled to an inlined
+per-locale formula rather than an ICU runtime - but select, dates and numbers
+it still does not do. Its catalog also travels in _every_ page's HTML by
 default: adding 300 messages nobody on the home page renders still grew that
 page from 2.4 kB to 4.4 kB gzip.
 

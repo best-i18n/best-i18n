@@ -3,7 +3,6 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-import { hashId } from '../compiler/id.ts'
 import { mergeMessages } from '../compiler/merge.ts'
 import { formatPo, parsePo, samePo } from '../compiler/po.ts'
 import { extract } from '../compiler/transform.ts'
@@ -112,8 +111,11 @@ function* walk(dir: string): Generator<string> {
 
 // ---------------------------------------------------------------- collect
 
-const byId = new Map<string, SourceMessage>()
+const byKey = new Map<string, SourceMessage>()
 let scanned = 0
+
+const keyOf = (context: string, text: string, pluralText?: string) =>
+  `${context}\u0004${text}${pluralText === undefined ? '' : `\u0005${pluralText}`}`
 
 for (const root of roots) {
   for (const file of walk(root)) {
@@ -139,22 +141,42 @@ for (const root of roots) {
       component,
       componentFrom,
     })) {
-      // The id is derived here and nowhere else: the build looks messages up by
-      // their source text, so the two can never disagree.
-      const id = hashId(message.text)
+      // Identified the way gettext identifies an entry: context plus text
+      // (plus plural form). The build keys its catalog the same way, so the
+      // two can never disagree.
+      const key = keyOf(message.context, message.text, message.plural?.other)
       const reference = `${file}:${message.line}`
-      const seen = byId.get(id)
+      const seen = byKey.get(key)
 
       if (seen === undefined) {
-        byId.set(id, { id, text: message.text, references: [reference] })
-      } else if (!seen.references.includes(reference)) {
-        seen.references.push(reference)
+        byKey.set(key, {
+          context: message.context,
+          text: message.text,
+          ...(message.plural === undefined
+            ? {}
+            : { pluralText: message.plural.other }),
+          ...(message.description === undefined
+            ? {}
+            : { description: message.description }),
+          references: [reference],
+        })
+      } else {
+        if (!seen.references.includes(reference)) {
+          seen.references.push(reference)
+        }
+        // The same message may carry its description at only one call site.
+        if (
+          seen.description === undefined &&
+          message.description !== undefined
+        ) {
+          seen.description = message.description
+        }
       }
     }
   }
 }
 
-const found = [...byId.values()]
+const found = [...byKey.values()]
 out(`  scanned ${scanned} file(s), ${found.length} message(s)`)
 
 // ---------------------------------------------------------------- write
@@ -191,26 +213,26 @@ let mismatched = 0
  */
 function placeholderIssue(source: string, target: string): string | undefined {
   const collect = (text: string, pattern: RegExp) =>
-    new Set([...text.matchAll(pattern)].map((match) => Number(match[1])))
+    new Set([...text.matchAll(pattern)].map((match) => match[1]!))
 
   const compare = (
     pattern: RegExp,
-    render: (index: number) => string,
+    render: (token: string) => string,
   ): string | undefined => {
     const wanted = collect(source, pattern)
     const got = collect(target, pattern)
-    for (const index of wanted) {
-      if (!got.has(index)) return `drops ${render(index)}`
+    for (const token of wanted) {
+      if (!got.has(token)) return `drops ${render(token)}`
     }
-    for (const index of got) {
-      if (!wanted.has(index)) return `adds ${render(index)}`
+    for (const token of got) {
+      if (!wanted.has(token)) return `adds ${render(token)}`
     }
     return undefined
   }
 
   return (
-    compare(/\{(\d+)\}/g, (index) => `{${index}}`) ??
-    compare(/<\/?(\d+)\s*\/?>/g, (index) => `<${index}>`)
+    compare(/(?<!\$)\{([A-Za-z0-9_$]+)\}/g, (token) => `{${token}}`) ??
+    compare(/<\/?([A-Za-z0-9_$]+)\s*\/?>/g, (token) => `<${token}>`)
   )
 }
 
@@ -219,9 +241,15 @@ const templateFile = path.join(messagesDir, 'messages.pot')
 const template = formatPo({
   locale: base,
   entries: found.map((message) => ({
-    id: message.id,
+    context: message.context,
     source: message.text,
     target: '',
+    ...(message.pluralText === undefined
+      ? {}
+      : { pluralSource: message.pluralText, pluralTargets: [''] }),
+    ...(message.description === undefined
+      ? {}
+      : { extracted: message.description }),
     references: message.references,
     fuzzy: false,
     obsolete: false,
@@ -270,7 +298,9 @@ for (const locale of locales.filter((item) => item !== base)) {
   }
 
   const missing = merged.entries.filter(
-    (entry) => !entry.obsolete && entry.target === '',
+    (entry) =>
+      !entry.obsolete &&
+      (entry.target === '' || (entry.pluralTargets ?? []).includes('')),
   ).length
   const fuzzy = merged.entries.filter(
     (entry) => !entry.obsolete && entry.fuzzy,
@@ -290,8 +320,11 @@ for (const locale of locales.filter((item) => item !== base)) {
   }
 
   // Fuzzy entries are already counted as needing work and do not build.
+  // Plural forms may legitimately drop placeholders, so only singular
+  // entries are compared here; the build validates plural forms itself.
   for (const entry of merged.entries) {
     if (entry.obsolete || entry.fuzzy || entry.target === '') continue
+    if (entry.pluralSource !== undefined) continue
     const issue = placeholderIssue(entry.source, entry.target)
     if (issue === undefined) continue
     mismatched++

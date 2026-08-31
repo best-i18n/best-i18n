@@ -75,12 +75,12 @@ describe('macro misuse is a build error', () => {
   it('rejects storing the binding', () => {
     expect(() =>
       run(`import { t } from '${MACRO}'\nconst f = t\nconst a = f\`About\``),
-    ).toThrow(/only be used as a tagged template/)
+    ).toThrow(/only be used at its call site/)
   })
 
   it('rejects passing the binding, even with no tagged template in the file', () => {
     expect(() => run(`import { t } from '${MACRO}'\nfoo(t)`)).toThrow(
-      /only be used as a tagged template/,
+      /only be used at its call site/,
     )
   })
 

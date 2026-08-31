@@ -13,7 +13,7 @@ import type { Message, TransformOptions } from '../../compiler/transform.ts'
  */
 export interface I18nLoaderOptions extends Omit<
   TransformOptions,
-  'catalog' | 'staticLocale'
+  'catalog' | 'plurals' | 'staticLocale'
 > {
   /** Directory holding `messages.pot` and `<locale>.po`. */
   messagesDir: string
@@ -152,7 +152,7 @@ export default function bestI18nLoader(
   let result: ReturnType<typeof transform>
 
   try {
-    const { catalog, files } = catalogFor(options)
+    const { catalog, plurals, files } = catalogFor(options)
 
     // Without this a translator's edit only shows up after a cold restart.
     for (const file of files) this.addDependency?.(file)
@@ -160,6 +160,7 @@ export default function bestI18nLoader(
     result = transform(code, this.resourcePath, {
       ...options,
       catalog,
+      plurals,
       staticLocale: options.staticLocale,
     })
   } catch (error) {

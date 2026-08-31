@@ -17,9 +17,9 @@ describe('translation placeholder validation', () => {
       transform(
         `import { t } from '${MACRO}'\nconst a = t\`Hi \${name}\``,
         'a.ts',
-        options({ 'Hi {0}': { zh: '你好' } }),
+        options({ 'Hi {name}': { zh: '你好' } }),
       ),
-    ).toThrow(/drops \{0\}/)
+    ).toThrow(/drops \{name\}/)
   })
 
   it('rejects a t translation that invents a placeholder', () => {
@@ -27,9 +27,9 @@ describe('translation placeholder validation', () => {
       transform(
         `import { t } from '${MACRO}'\nconst a = t\`Hi \${name}\``,
         'a.ts',
-        options({ 'Hi {0}': { zh: '你好 {0} {1}' } }),
+        options({ 'Hi {name}': { zh: '你好 {name} {extra}' } }),
       ),
-    ).toThrow(/uses \{1\}/)
+    ).toThrow(/uses \{extra\}/)
   })
 
   it('names the file, locale and message in the error', () => {
@@ -37,16 +37,16 @@ describe('translation placeholder validation', () => {
       transform(
         `import { t } from '${MACRO}'\nconst a = t\`Hi \${name}\``,
         'a.ts',
-        options({ 'Hi {0}': { zh: '你好' } }),
+        options({ 'Hi {name}': { zh: '你好' } }),
       ),
-    ).toThrow(/a\.ts:2 \(zh\) "Hi \{0\}"/)
+    ).toThrow(/a\.ts:2 \(zh\) "Hi \{name\}"/)
   })
 
   it('allows reordering and repeating placeholders', () => {
     const result = transform(
       `import { t } from '${MACRO}'\nconst a = t\`\${a} and \${b}\``,
       'a.ts',
-      options({ '{0} and {1}': { zh: '{1}、{0}、再一次 {0}' } }),
+      options({ '{a} and {b}': { zh: '{b}、{a}、再一次 {a}' } }),
     )!
 
     expect(result.code).toContain('`${b}、${a}、再一次 ${a}`')
@@ -64,6 +64,18 @@ describe('translation placeholder validation', () => {
     expect(result.code).toContain('`使用 {0} 语法`')
   })
 
+  it('ignores a literal ${...} in a translation', () => {
+    // `${` is text, not a placeholder - it must neither substitute nor fail
+    // validation.
+    const result = transform(
+      `import { t } from '${MACRO}'\nconst a = t\`weird\``,
+      'a.ts',
+      options({ weird: { zh: '一个 ${notAnExpr} 字面量' } }),
+    )!
+
+    expect(result.code).toContain('\\${notAnExpr}')
+  })
+
   it('rejects a <Trans> translation that drops an element', () => {
     const code = [
       `import { Trans } from '${REACT}'`,
@@ -74,9 +86,9 @@ describe('translation placeholder validation', () => {
       transform(
         code,
         'a.tsx',
-        options({ 'Read the <0>docs</0> now': { zh: '现在就读文档' } }),
+        options({ 'Read the <a>docs</a> now': { zh: '现在就读文档' } }),
       ),
-    ).toThrow(/drops <0>/)
+    ).toThrow(/drops <a>/)
   })
 
   it('rejects a <Trans> translation that drops an expression', () => {
@@ -89,9 +101,9 @@ describe('translation placeholder validation', () => {
       transform(
         code,
         'a.tsx',
-        options({ 'Hi <0>{0}</0>!': { zh: '你好<0></0>!' } }),
+        options({ 'Hi <b>{name}</b>!': { zh: '你好<b></b>!' } }),
       ),
-    ).toThrow(/drops \{0\}/)
+    ).toThrow(/drops \{name\}/)
   })
 
   it('rejects a <Trans> translation that invents an expression', () => {
@@ -100,11 +112,15 @@ describe('translation placeholder validation', () => {
       'export const a = <p><Trans>Hi {name}</Trans></p>',
     ].join('\n')
 
-    // `{1}` has no expression behind it; this used to emit `${}` - a syntax
-    // error in generated code - instead of a named build error.
+    // `{extra}` has no expression behind it; this used to emit `${}` - a
+    // syntax error in generated code - instead of a named build error.
     expect(() =>
-      transform(code, 'a.tsx', options({ 'Hi {0}': { zh: '你好 {0} {1}' } })),
-    ).toThrow(/uses \{1\}/)
+      transform(
+        code,
+        'a.tsx',
+        options({ 'Hi {name}': { zh: '你好 {name} {extra}' } }),
+      ),
+    ).toThrow(/uses \{extra\}/)
   })
 
   it('allows a <Trans> translation to reorder elements', () => {
@@ -116,7 +132,7 @@ describe('translation placeholder validation', () => {
     const result = transform(
       code,
       'a.tsx',
-      options({ 'a <0>x</0> b <1>y</1>': { zh: '<1>乙</1>丙<0>甲</0>' } }),
+      options({ 'a <b>x</b> b <i>y</i>': { zh: '<i>乙</i>丙<b>甲</b>' } }),
     )!
 
     expect(result.code).toContain('<i>')

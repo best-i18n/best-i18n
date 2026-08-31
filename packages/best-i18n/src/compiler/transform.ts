@@ -2,21 +2,39 @@ import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
 
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
+import { GERMANIC } from './plural.ts'
 import {
   renderTemplate,
   renderTrans,
   serializeTrans,
+  tokenForExpression,
+  validatePluralForm,
   validateTemplateTranslation,
 } from './trans.ts'
 
 import type { StaticImport } from './bindings.ts'
+import type { PluralRule } from './plural.ts'
 import type { TransElement } from './trans.ts'
 
 export interface Message {
-  /** Source text with positional placeholders, e.g. `Hi {0}, you have {1}`. */
+  /** Source text with named placeholders, e.g. `Hi {name}`. */
   text: string
-  /** Source of each interpolated expression, in order. */
+  /** Source of each interpolated expression, deduplicated. */
   expressions: string[]
+  /** Token for each expression, in parallel: `name` for `${name}`, else `0`. */
+  placeholders: string[]
+  /**
+   * `msgctxt` - disambiguates two messages with identical text that must
+   * translate differently. Empty for none.
+   */
+  context: string
+  /** A `// i18n:` comment above the message, for the translator (`#.`). */
+  description?: string
+  /**
+   * Set for `plural(count, one, other)`: `text` holds the singular form,
+   * `other` the plural one, `count` the expression the forms dispatch on.
+   */
+  plural?: { count: string; other: string }
   start: number
   end: number
   /** 1-based line of the macro call, for PO `#:` references. */
@@ -60,18 +78,39 @@ const FUNCTIONS = new Set([
   'ArrowFunctionExpression',
 ])
 
+/**
+ * The catalog key for a message: the source text, prefixed by the context
+ * when there is one (separated by an EOT, gettext's own convention), and
+ * suffixed by the plural form for plural entries. Context-free singular
+ * messages are keyed by their bare text, which is the common case.
+ */
+export function catalogKey(
+  context: string,
+  text: string,
+  pluralText?: string,
+): string {
+  const base = context === '' ? text : `${context}\u0004${text}`
+  return pluralText === undefined ? base : `${base}\u0005${pluralText}`
+}
+
 export interface TransformOptions {
   /** Every locale. `baseLocale` is the fallback for missing translations. */
   locales: string[]
   baseLocale: string
   /**
-   * `source text -> locale -> translation`.
+   * `catalogKey(context, text, plural) -> locale -> translation`.
    *
    * Keyed by the source text, not by an id: the transform therefore never
-   * computes an id, so it cannot disagree with the extractor about how ids are
-   * derived. Ids live only in the PO files.
+   * computes an id, so it cannot disagree with the extractor about how
+   * entries are keyed. A plural entry's value is its `msgstr[n]` array.
    */
-  catalog: Record<string, Record<string, string> | undefined>
+  catalog: Record<string, Record<string, string | string[]> | undefined>
+  /**
+   * Per-locale plural rule, from each catalog's `Plural-Forms` header (via
+   * `loadCatalog`). A locale with no rule falls back to the Germanic one,
+   * exactly as GNU gettext does.
+   */
+  plurals?: Record<string, PluralRule>
   /**
    * Emit only this locale and drop the runtime lookup entirely (per-locale
    * build). Leave undefined to emit a locale ternary instead.
@@ -93,6 +132,8 @@ export interface TransformOptions {
    * @default ['best-i18n/macro']
    */
   from?: string[]
+  /** Name of the plural macro export, resolved from the same `from`. */
+  plural?: string
   /** Name of the hook-shaped macro export. */
   hook?: string
   /**
@@ -186,6 +227,7 @@ function lineAt(code: string, offset: number): number {
 export interface ExtractOptions {
   tag?: string
   from?: string[]
+  plural?: string
   hook?: string
   hookFrom?: string[]
   component?: string
@@ -235,6 +277,45 @@ function directivePrologue(program: unknown): {
   return { end, directives }
 }
 
+interface TemplatePiece {
+  value: { cooked: string | null; raw: string }
+}
+
+/**
+ * The message text of a template literal, with interpolations replaced by
+ * `{token}` placeholders registered in the shared pools.
+ *
+ * A line break that exists in the source - as opposed to a written `\n`
+ * escape, which is not a real newline in `raw` - is code formatting, not
+ * message content. It collapses, with the indentation around it, to one
+ * space, the way <Trans> already treats JSX text, so re-indenting a component
+ * never changes a msgid and orphans its translations.
+ */
+function templateText(
+  quasis: TemplatePiece[],
+  expressionSources: string[],
+  expressions: string[],
+  placeholders: string[],
+): string {
+  return quasis
+    .map((piece, index) => {
+      let chunk = piece.value.cooked ?? piece.value.raw
+      if (/[\r\n]/.test(piece.value.raw)) {
+        chunk = chunk.replace(/[ \t]*(?:\r\n|\n|\r)[ \t]*/g, ' ')
+      }
+      if (index < expressionSources.length) {
+        const token = tokenForExpression(
+          expressionSources[index]!,
+          expressions,
+          placeholders,
+        )
+        return `${chunk}{${token}}`
+      }
+      return chunk
+    })
+    .join('')
+}
+
 /** Shared by extract() and transform(): messages plus useI18n() call sites. */
 function analyze(
   code: string,
@@ -248,6 +329,7 @@ function analyze(
 } {
   const tag = options.tag ?? 't'
   const from = options.from ?? DEFAULT_FROM
+  const pluralName = options.plural ?? 'plural'
   const hook = options.hook ?? 'useI18n'
   const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
   const component = options.component ?? 'Trans'
@@ -275,6 +357,11 @@ function analyze(
     from,
     exportName: tag,
   })
+  const { locals: pluralLocals } = resolveMacroBindings({
+    staticImports,
+    from,
+    exportName: pluralName,
+  })
   const { locals: hookLocals, namespaces: hookNamespaces } =
     resolveMacroBindings({
       staticImports,
@@ -288,7 +375,9 @@ function analyze(
       exportName: component,
     })
 
-  const namespaced = [...namespaces, ...hookNamespaces, ...componentNamespaces]
+  const namespaced = [
+    ...new Set([...namespaces, ...hookNamespaces, ...componentNamespaces]),
+  ]
 
   if (namespaced.length > 0) {
     throw new Error(
@@ -302,15 +391,37 @@ function analyze(
 
   if (
     locals.size === 0 &&
+    pluralLocals.size === 0 &&
     hookLocals.size === 0 &&
     componentLocals.size === 0
   ) {
     return { messages: [], hookCalls: [], directiveEnd, directives }
   }
 
+  // `// i18n: why this wording` above a message becomes a `#.` comment in the
+  // catalogs - the translator's context, kept next to the code it describes.
+  const notes: Array<{ line: number; text: string }> = []
+  for (const comment of (parsed.comments ?? []) as Array<{
+    value: string
+    end: number
+  }>) {
+    const match = /^\s*i18n:\s*([\s\S]+?)\s*$/.exec(comment.value)
+    if (match === null) continue
+    notes.push({ line: lineAt(code, comment.end), text: match[1]! })
+  }
+
+  const descriptionFor = (messageLine: number): string | undefined => {
+    const attached = notes.filter(
+      (note) => note.line === messageLine - 1 || note.line === messageLine,
+    )
+    if (attached.length === 0) return undefined
+    return attached.map((note) => note.text).join('\n')
+  }
+
   const messages: Message[] = []
   const hookCalls: HookCall[] = []
   const tagNodes = new Set<unknown>()
+  const allowedPluralNodes = new Set<unknown>()
 
   // `const t = useI18n()` declares a locale-holding variable. Matching later
   // tag uses is by scope, not by name across the file: an imported macro that
@@ -402,47 +513,174 @@ function analyze(
   walk(parsed.program, (node) => {
     if (node.type !== 'TaggedTemplateExpression') return
 
-    const tagNode = node.tag as { type?: string; name?: string } | undefined
-    if (tagNode?.type !== 'Identifier') return
-    const name = tagNode.name ?? ''
+    // The tag is either the bare macro - t`...` - or a context call:
+    // t.ctx('verb')`...`, which disambiguates two identical texts (msgctxt).
+    const tagNode = node.tag as
+      | {
+          type?: string
+          name?: string
+          callee?: {
+            type?: string
+            computed?: boolean
+            object?: { type?: string; name?: string }
+            property?: { type?: string; name?: string }
+          }
+          arguments?: Array<{ type?: string; value?: unknown }>
+        }
+      | undefined
+
+    let nameNode: { type?: string; name?: string } | undefined
+    if (tagNode?.type === 'Identifier') {
+      nameNode = tagNode
+    } else if (tagNode?.type === 'CallExpression') {
+      const callee = tagNode.callee
+      if (callee?.type !== 'MemberExpression') return
+      if (callee.computed === true) return
+      if (callee.property?.type !== 'Identifier') return
+      if (callee.property.name !== 'ctx') return
+      if (callee.object?.type !== 'Identifier') return
+      nameNode = callee.object
+    } else {
+      return
+    }
+
+    const name = nameNode.name ?? ''
     const isHookVar = hookScopeAt(node.start as number, name) !== undefined
     if (!locals.has(name) && !isHookVar) return
-    tagNodes.add(node.tag)
+
+    let context = ''
+    if (tagNode!.type === 'CallExpression') {
+      const args = tagNode!.arguments ?? []
+      const argument = args[0]
+      if (
+        args.length !== 1 ||
+        argument?.type !== 'Literal' ||
+        typeof argument.value !== 'string' ||
+        argument.value === ''
+      ) {
+        throw new Error(
+          `best-i18n: ${name}.ctx() takes exactly one non-empty string ` +
+            `literal (${filename} offset ${node.start as number}) - the ` +
+            'context has to be statically visible.',
+        )
+      }
+      context = argument.value
+    }
+
+    tagNodes.add(nameNode)
 
     const quasi = node.quasi as {
-      quasis: Array<{ value: { cooked: string | null; raw: string } }>
+      quasis: TemplatePiece[]
       expressions: Array<{ start: number; end: number }>
     }
 
-    const expressions = quasi.expressions.map((expression) =>
+    const expressionSources = quasi.expressions.map((expression) =>
       code.slice(expression.start, expression.end),
     )
 
-    const text = quasi.quasis
-      .map((piece, index) => {
-        let chunk = piece.value.cooked ?? piece.value.raw
-        // A line break that exists in the source - as opposed to a written
-        // `\n` escape, which is not a real newline in `raw` - is code
-        // formatting, not message content. Collapse it and the indentation
-        // around it to one space, the way <Trans> already does, so
-        // re-indenting a component never changes a msgid and orphans its
-        // translations. A message that wants a literal newline writes `\n`.
-        if (/[\r\n]/.test(piece.value.raw)) {
-          chunk = chunk.replace(/[ \t]*(?:\r\n|\n|\r)[ \t]*/g, ' ')
-        }
-        return index < expressions.length ? `${chunk}{${index}}` : chunk
-      })
-      .join('')
+    const expressions: string[] = []
+    const placeholders: string[] = []
+    const text = templateText(
+      quasi.quasis,
+      expressionSources,
+      expressions,
+      placeholders,
+    )
 
     const start = node.start as number
+    const line = lineAt(code, start)
+    const description = descriptionFor(line)
 
     messages.push({
       text,
       expressions,
+      placeholders,
+      context,
+      ...(description === undefined ? {} : { description }),
       start,
       end: node.end as number,
-      line: lineAt(code, start),
+      line,
       ...(isHookVar ? { localeVar: name } : {}),
+    })
+  })
+
+  // plural(count, `One item`, `${count} items`) - the gettext plural pair.
+  walk(parsed.program, (node) => {
+    if (node.type !== 'CallExpression') return
+
+    const callee = node.callee as { type?: string; name?: string } | undefined
+    if (callee?.type !== 'Identifier') return
+    if (!pluralLocals.has(callee.name ?? '')) return
+
+    allowedPluralNodes.add(callee)
+
+    const start = node.start as number
+    const args = (node.arguments ?? []) as Array<Record<string, unknown>>
+
+    if (
+      args.length !== 3 ||
+      args.some((argument) => argument.type === 'SpreadElement')
+    ) {
+      throw new Error(
+        `best-i18n: ${pluralName}(count, one, other) takes exactly three ` +
+          `arguments (${filename} offset ${start}).`,
+      )
+    }
+
+    const [countNode, oneNode, otherNode] = args
+    const count = code.slice(
+      countNode!.start as number,
+      countNode!.end as number,
+    )
+
+    const expressions: string[] = []
+    const placeholders: string[] = []
+    // The count is always addressable in a translation - `{n}` in a Chinese
+    // single form, say - whether or not the source forms interpolate it.
+    tokenForExpression(count, expressions, placeholders)
+
+    const formText = (form: Record<string, unknown>, which: string): string => {
+      if (form.type === 'Literal' && typeof form.value === 'string') {
+        return form.value
+      }
+      if (form.type === 'TemplateLiteral') {
+        const sources = (
+          form.expressions as Array<{ start: number; end: number }>
+        ).map((expression) => code.slice(expression.start, expression.end))
+        return templateText(
+          form.quasis as TemplatePiece[],
+          sources,
+          expressions,
+          placeholders,
+        )
+      }
+      throw new Error(
+        `best-i18n: the ${which} form of ${pluralName}() must be a template ` +
+          `literal or string literal (${filename} offset ${start}) - the ` +
+          'message has to be statically visible.',
+      )
+    }
+
+    const one = formText(oneNode!, 'singular')
+    const other = formText(otherNode!, 'plural')
+
+    const line = lineAt(code, start)
+    const description = descriptionFor(line)
+    // Inside a component that called useI18n(), dispatch on its variable so
+    // the message re-renders on locale change and is client-safe on Next.
+    const localeVar = innermost(start, withLocaleVar)?.localeVar
+
+    messages.push({
+      text: one,
+      plural: { count, other },
+      expressions,
+      placeholders,
+      context: '',
+      ...(description === undefined ? {} : { description }),
+      start,
+      end: node.end as number,
+      line,
+      ...(localeVar === undefined ? {} : { localeVar }),
     })
   })
 
@@ -452,7 +690,7 @@ function analyze(
     const opening = node.openingElement as
       | {
           name?: { type?: string; name?: string }
-          attributes?: unknown[]
+          attributes?: Array<Record<string, unknown>>
           selfClosing?: boolean
         }
       | undefined
@@ -464,11 +702,32 @@ function analyze(
 
     // Attributes would have to survive translation, and none of them can:
     // there is nowhere in the message to put them. `key` included - wrap the
-    // <Trans> in the element that needs it.
-    if ((opening.attributes?.length ?? 0) > 0) {
+    // <Trans> in the element that needs it. `ctx` is the one exception: it is
+    // message metadata, not a prop.
+    let context = ''
+    for (const attribute of opening.attributes ?? []) {
+      const attributeName = (attribute.name as { name?: string } | undefined)
+        ?.name
+      if (attribute.type === 'JSXAttribute' && attributeName === 'ctx') {
+        const value = attribute.value as
+          { type?: string; value?: unknown } | null | undefined
+        if (
+          value?.type !== 'Literal' ||
+          typeof value.value !== 'string' ||
+          value.value === ''
+        ) {
+          throw new Error(
+            `best-i18n: <${component} ctx> must be a non-empty string ` +
+              `literal (${filename} offset ${start}).`,
+          )
+        }
+        context = value.value
+        continue
+      }
       throw new Error(
-        `best-i18n: <${component}> takes no props (${filename} offset ` +
-          `${start}). Wrap it in an element if you need one.`,
+        `best-i18n: <${component}> takes no props other than ctx ` +
+          `(${filename} offset ${start}). Wrap it in an element if you ` +
+          'need one.',
       )
     }
 
@@ -479,7 +738,7 @@ function analyze(
       )
     }
 
-    const { text, expressions, elements } = serializeTrans(
+    const { text, expressions, placeholders, elements } = serializeTrans(
       node.children as unknown[],
       code,
       filename,
@@ -491,13 +750,19 @@ function analyze(
     // place they do. Without one it falls back to `getLocale()`.
     const localeVar = innermost(start, withLocaleVar)?.localeVar
 
+    const line = lineAt(code, start)
+    const description = descriptionFor(line)
+
     messages.push({
       text,
       expressions,
+      placeholders,
       elements,
+      context,
+      ...(description === undefined ? {} : { description }),
       start,
       end: node.end as number,
-      line: lineAt(code, start),
+      line,
       ...(localeVar === undefined ? {} : { localeVar }),
       // Among JSX children the replacement has to stay an expression; anywhere
       // else - a variable, a prop, a return - it already is one.
@@ -513,6 +778,7 @@ function analyze(
     const name = node.name as string
     if (
       !locals.has(name) &&
+      !pluralLocals.has(name) &&
       !hookLocals.has(name) &&
       !componentLocals.has(name)
     ) {
@@ -523,11 +789,12 @@ function analyze(
     }
     if (tagNodes.has(node)) return
     if (allowedHookNodes.has(node)) return
+    if (allowedPluralNodes.has(node)) return
     if (isNonReferencePosition(parent, node)) return
 
     throw new Error(
       `best-i18n: \`${name}\` is a compile-time macro and can only be ` +
-        `used as a tagged template (${filename} offset ` +
+        `used at its call site (${filename} offset ` +
         `${node.start as number}). It cannot be stored, passed, or shadowed.`,
     )
   })
@@ -544,14 +811,16 @@ function analyze(
     if (current.start < previous.end) {
       throw new Error(
         `best-i18n: nested messages in ${filename} are not supported (at ` +
-          `offset ${current.start}). A ${tag}\`\` or <${component}> cannot ` +
-          'contain another one.',
+          `offset ${current.start}). A ${tag}\`\`, ${pluralName}() or ` +
+          `<${component}> cannot contain another one.`,
       )
     }
   }
 
   return { messages, hookCalls, directiveEnd, directives }
 }
+
+const TOKEN_PATTERN = /(?<!\$)\{([A-Za-z0-9_$]+)\}/g
 
 /**
  * Replaces every `t` tagged template with the compiled message.
@@ -593,6 +862,7 @@ export function transform(
     {
       tag,
       from: options.from,
+      plural: options.plural,
       hook: options.hook,
       hookFrom: options.hookFrom,
       component: options.component,
@@ -610,14 +880,19 @@ export function transform(
 
   // Never inject a bare name: the file may already import or define one
   // (a locale switcher does), which is a duplicate-declaration parse error.
-  let localGetLocale = '__i18nGetLocale'
-  for (let suffix = 2; code.includes(localGetLocale); suffix++) {
-    localGetLocale = `__i18nGetLocale${suffix}`
+  const hygienic = (base: string): string => {
+    let name = base
+    for (let suffix = 2; code.includes(name); suffix++) {
+      name = `${base}${suffix}`
+    }
+    return name
   }
-  let localUseLocale = '__i18nUseLocale'
-  for (let suffix = 2; code.includes(localUseLocale); suffix++) {
-    localUseLocale = `__i18nUseLocale${suffix}`
-  }
+  const localGetLocale = hygienic('__i18nGetLocale')
+  const localUseLocale = hygienic('__i18nUseLocale')
+  const localN = hygienic('__i18nN')
+  const localI = hygienic('__i18nI')
+
+  const ruleFor = (locale: string) => options.plurals?.[locale] ?? GERMANIC
 
   // `const t = useI18n()` becomes `const t = useLocale()`: the variable holds the
   // locale, subscribed through React. In a per-locale build there is nothing
@@ -635,58 +910,106 @@ export function transform(
     }
   }
 
-  const textFor = (message: Message, locale: string): string => {
-    const entry = options.catalog[message.text]
-    const value = entry?.[locale]
+  for (const message of messages) {
+    const describe = (locale: string) =>
+      `${filename}:${message.line} (${locale}) "${message.text}"`
 
-    if (value === undefined) {
-      if (locale !== options.baseLocale) {
-        missing.push({ text: message.text, locale })
+    const entry =
+      options.catalog[
+        catalogKey(message.context, message.text, message.plural?.other)
+      ]
+
+    // What a locale renders when it has no (valid) translation: the source.
+    const sourceValue: string | string[] =
+      message.plural === undefined
+        ? message.text
+        : [message.text, message.plural.other]
+
+    const valueFor = (locale: string): string | string[] => {
+      const value = entry?.[locale]
+
+      const valid =
+        message.plural === undefined
+          ? typeof value === 'string'
+          : Array.isArray(value) &&
+            value.length === ruleFor(locale).nplurals &&
+            value.every((form) => form !== '')
+
+      if (!valid) {
+        if (locale !== options.baseLocale) {
+          missing.push({ text: message.text, locale })
+        }
+        return sourceValue
       }
-      return entry?.[options.baseLocale] ?? message.text
+
+      return value as string | string[]
     }
 
-    return value
-  }
+    // Tokens a plural form may use: every placeholder, plus any literal
+    // `{...}` the source forms themselves carry.
+    const allowedTokens = new Set(message.placeholders)
+    if (message.plural !== undefined) {
+      const combined = `${message.text}\u0000${message.plural.other}`
+      for (const match of combined.matchAll(TOKEN_PATTERN)) {
+        allowedTokens.add(match[1]!)
+      }
+    }
 
-  for (const message of messages) {
+    // `<Trans>` rebuilds markup; `t` produces a template literal; `plural`
+    // produces a per-locale form dispatch. All three validate the
+    // translation's placeholders against the source first: a dropped or
+    // invented `{name}` must fail here, named, not ship silently.
+    const render = (value: string | string[], locale: string): string => {
+      if (message.plural !== undefined) {
+        const forms = Array.isArray(value) ? value : [value]
+        for (const form of forms) {
+          validatePluralForm(form, allowedTokens, describe(locale))
+        }
+
+        const rendered = forms.map((form) =>
+          renderTemplate(form, message.expressions, message.placeholders),
+        )
+        if (rendered.length === 1) return rendered[0]!
+
+        // The locale's gettext formula, inlined. `+()` because a two-form
+        // formula like `n != 1` evaluates to a boolean, which is an index in
+        // C but not under `===` in JavaScript.
+        const formula = ruleFor(locale).formula.replace(/\bn\b/g, localN)
+        const branches = rendered
+          .slice(1)
+          .map((form, index) => `${localI} === ${index + 1} ? ${form} : `)
+          .join('')
+
+        return (
+          `((${localN}, ${localI} = +(${formula})) => ` +
+          `${branches}${rendered[0]!})(${message.plural.count})`
+        )
+      }
+
+      const text = value as string
+      if (message.elements === undefined) {
+        validateTemplateTranslation(text, message.text, describe(locale))
+        return renderTemplate(text, message.expressions, message.placeholders)
+      }
+      return renderTrans(
+        text,
+        message.expressions,
+        message.placeholders,
+        message.elements,
+        describe(locale),
+      )
+    }
+
     let replacement: string
 
-    // `<Trans>` rebuilds markup; `t` only ever produces a template literal.
-    // Both validate the translation's placeholders against the source first:
-    // a dropped or invented `{n}` must fail here, named, not ship silently.
-    const render =
-      message.elements === undefined
-        ? (text: string, locale: string) => {
-            validateTemplateTranslation(
-              text,
-              message.text,
-              `${filename}:${message.line} (${locale}) "${message.text}"`,
-            )
-            return renderTemplate(text, message.expressions)
-          }
-        : (text: string, locale: string) =>
-            renderTrans(
-              text,
-              message.expressions,
-              message.elements!,
-              `${filename}:${message.line} (${locale}) "${message.text}"`,
-            )
-
     if (options.staticLocale !== undefined) {
-      replacement = render(
-        textFor(message, options.staticLocale),
-        options.staticLocale,
-      )
+      replacement = render(valueFor(options.staticLocale), options.staticLocale)
     } else {
       const others = options.locales.filter(
         (locale) => locale !== options.baseLocale,
       )
 
-      const base = render(
-        textFor(message, options.baseLocale),
-        options.baseLocale,
-      )
+      const base = render(valueFor(options.baseLocale), options.baseLocale)
 
       if (others.length === 0) {
         replacement = base
@@ -703,7 +1026,7 @@ export function transform(
           .map(
             (locale) =>
               `${localeExpr} === ${JSON.stringify(locale)} ? ${render(
-                textFor(message, locale),
+                valueFor(locale),
                 locale,
               )} : `,
           )

@@ -3,10 +3,13 @@
  * message whose shape includes markup, so a translator can move a link or a
  * bold run to wherever their language wants it.
  *
- * The message is stored with the markup replaced by numbered placeholders -
- * `Read the <0>docs</0>` - which is the same convention Lingui uses, and for
- * the same reason: a translator should never have to see, or be able to break,
- * a JSX attribute. Only the ordering is theirs.
+ * The message is stored with the markup replaced by placeholders - `Read the
+ * <a>docs</a>` - the convention Lingui arrived at, for the same reason: a
+ * translator should never have to see, or be able to break, a JSX attribute.
+ * Only the ordering is theirs. Placeholders are *named* where the source
+ * gives them a name - the element's tag, an interpolated identifier - and
+ * fall back to numbers where it does not, so `Hi {name}` reads like the
+ * sentence it is instead of `Hi {0}`.
  *
  * Where this parts ways with Lingui is what happens at build time. There is no
  * runtime component putting the pieces back together per render: the parts are
@@ -16,6 +19,8 @@
 
 /** An element placeholder, kept as source so its attributes survive intact. */
 export interface TransElement {
+  /** The `<a>` in `<a>docs</a>` - the token a translation moves around. */
+  token: string
   /** `<a href={url}>`, or the whole element when it is self-closing. */
   open: string
   /** `</a>`, empty for a self-closing element. */
@@ -26,13 +31,15 @@ export interface TransElement {
 export interface TransMessage {
   text: string
   expressions: string[]
+  /** Token for each expression, in parallel: `name` for `${name}`, else `0`. */
+  placeholders: string[]
   elements: TransElement[]
 }
 
 export type MessagePart =
   | { kind: 'text'; value: string }
-  | { kind: 'expression'; index: number }
-  | { kind: 'element'; index: number; children: MessagePart[] }
+  | { kind: 'expression'; token: string }
+  | { kind: 'element'; token: string; children: MessagePart[] }
 
 interface JsxNode {
   type?: string
@@ -42,10 +49,58 @@ interface JsxNode {
   end?: number
   expression?: JsxNode
   children?: JsxNode[]
-  openingElement?: { start?: number; end?: number; selfClosing?: boolean }
+  openingElement?: {
+    start?: number
+    end?: number
+    selfClosing?: boolean
+    name?: { type?: string; name?: string }
+  }
   closingElement?: { start?: number; end?: number } | null
   openingFragment?: { start?: number; end?: number }
   closingFragment?: { start?: number; end?: number } | null
+}
+
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+
+/**
+ * Registers an expression and returns its token.
+ *
+ * A plain identifier names its own placeholder - `${name}` becomes `{name}`,
+ * which is what the translator should see. Anything else gets a number. The
+ * same expression interpolated twice shares one token, so the message reads
+ * `{count} of {count}` rather than `{0} of {1}`.
+ */
+export function tokenForExpression(
+  source: string,
+  expressions: string[],
+  placeholders: string[],
+): string {
+  const existing = expressions.indexOf(source)
+  if (existing !== -1) return placeholders[existing]!
+
+  let token: string
+  if (IDENTIFIER.test(source) && !placeholders.includes(source)) {
+    token = source
+  } else {
+    let index = placeholders.length
+    while (placeholders.includes(String(index))) index++
+    token = String(index)
+  }
+
+  expressions.push(source)
+  placeholders.push(token)
+  return token
+}
+
+/** A token for an element: its tag name if usable and free, else a number. */
+function tokenForElement(name: string | undefined, taken: string[]): string {
+  if (name !== undefined && IDENTIFIER.test(name) && !taken.includes(name)) {
+    return name
+  }
+
+  let index = taken.length
+  while (taken.includes(String(index))) index++
+  return String(index)
 }
 
 /**
@@ -145,6 +200,7 @@ export function serializeTrans(
   filename: string,
 ): TransMessage {
   const expressions: string[] = []
+  const placeholders: string[] = []
   const elements: TransElement[] = []
 
   const text = serializeChildren(
@@ -152,10 +208,11 @@ export function serializeTrans(
     code,
     filename,
     expressions,
+    placeholders,
     elements,
   )
 
-  return { text, expressions, elements }
+  return { text, expressions, placeholders, elements }
 }
 
 function serializeChildren(
@@ -163,6 +220,7 @@ function serializeChildren(
   code: string,
   filename: string,
   expressions: string[],
+  placeholders: string[],
   elements: TransElement[],
 ): string {
   let out = ''
@@ -180,19 +238,16 @@ function serializeChildren(
         if (expression === undefined) break
         if (expression.type === 'JSXEmptyExpression') break
 
-        out += `{${expressions.length}}`
-        expressions.push(
-          code.slice(expression.start as number, expression.end as number),
+        const source = code.slice(
+          expression.start as number,
+          expression.end as number,
         )
+        out += `{${tokenForExpression(source, expressions, placeholders)}}`
         break
       }
 
       case 'JSXElement':
       case 'JSXFragment': {
-        // Reserved before recursing, so the numbering reads outside-in.
-        const index = elements.length
-        elements.push({ open: '', close: '', selfClosing: false })
-
         const isFragment = child.type === 'JSXFragment'
         const opening = isFragment
           ? child.openingFragment
@@ -202,7 +257,22 @@ function serializeChildren(
           : child.closingElement
         const selfClosing = child.openingElement?.selfClosing === true
 
+        // The tag name where there is one - `<a>` stays `<a>` for the
+        // translator - and a number for fragments, member expressions and
+        // repeats. Reserved before recursing, so nesting reads outside-in.
+        const name =
+          child.openingElement?.name?.type === 'JSXIdentifier'
+            ? child.openingElement.name.name
+            : undefined
+        const token = tokenForElement(
+          name,
+          elements.map((element) => element.token),
+        )
+        const index = elements.length
+        elements.push({ token, open: '', close: '', selfClosing: false })
+
         elements[index] = {
+          token,
           open: code.slice(opening?.start as number, opening?.end as number),
           // Null, not undefined, for a self-closing element.
           close:
@@ -219,10 +289,11 @@ function serializeChildren(
               code,
               filename,
               expressions,
+              placeholders,
               elements,
             )
 
-        out += inner === '' ? `<${index}/>` : `<${index}>${inner}</${index}>`
+        out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`
         break
       }
 
@@ -237,6 +308,8 @@ function serializeChildren(
   return out
 }
 
+const TOKEN = String.raw`([A-Za-z0-9_$]+)`
+
 /**
  * Reads a stored message back into parts.
  *
@@ -247,9 +320,14 @@ function serializeChildren(
 export function parseMessage(text: string, describe: string): MessagePart[] {
   const root: MessagePart[] = []
   const stack: MessagePart[][] = [root]
-  const open: number[] = []
+  const open: string[] = []
   let cursor = 0
   let literal = ''
+
+  const selfClosingRe = new RegExp(String.raw`^<${TOKEN}\s*/>`)
+  const openingRe = new RegExp(`^<${TOKEN}>`)
+  const closingRe = new RegExp(String.raw`^</${TOKEN}>`)
+  const valueRe = new RegExp(String.raw`^\{${TOKEN}\}`)
 
   const flush = () => {
     if (literal === '') return
@@ -264,38 +342,38 @@ export function parseMessage(text: string, describe: string): MessagePart[] {
   while (cursor < text.length) {
     const rest = text.slice(cursor)
 
-    const selfClosing = /^<(\d+)\s*\/>/.exec(rest)
+    const selfClosing = selfClosingRe.exec(rest)
     if (selfClosing !== null) {
       flush()
       stack[stack.length - 1]!.push({
         kind: 'element',
-        index: Number(selfClosing[1]),
+        token: selfClosing[1]!,
         children: [],
       })
       cursor += selfClosing[0].length
       continue
     }
 
-    const opening = /^<(\d+)>/.exec(rest)
+    const opening = openingRe.exec(rest)
     if (opening !== null) {
       flush()
       const element: MessagePart = {
         kind: 'element',
-        index: Number(opening[1]),
+        token: opening[1]!,
         children: [],
       }
       stack[stack.length - 1]!.push(element)
       stack.push(element.children)
-      open.push(element.index)
+      open.push(element.token)
       cursor += opening[0].length
       continue
     }
 
-    const closing = /^<\/(\d+)>/.exec(rest)
+    const closing = closingRe.exec(rest)
     if (closing !== null) {
       flush()
       const expected = open.pop()
-      if (expected === undefined || expected !== Number(closing[1])) {
+      if (expected === undefined || expected !== closing[1]) {
         fail(
           expected === undefined
             ? `unmatched </${closing[1]}>`
@@ -307,12 +385,13 @@ export function parseMessage(text: string, describe: string): MessagePart[] {
       continue
     }
 
-    const value = /^\{(\d+)\}/.exec(rest)
-    if (value !== null) {
+    const value = valueRe.exec(rest)
+    // `${...}` is literal text, not a placeholder - skip the brace.
+    if (value !== null && text[cursor - 1] !== '$') {
       flush()
       stack[stack.length - 1]!.push({
         kind: 'expression',
-        index: Number(value[1]),
+        token: value[1]!,
       })
       cursor += value[0].length
       continue
@@ -328,20 +407,26 @@ export function parseMessage(text: string, describe: string): MessagePart[] {
   return root
 }
 
-/** The `{n}` indices a template message mentions. */
-function templateIndices(text: string): Set<number> {
+/**
+ * The `{token}`s a template message mentions. `${...}` is not a placeholder -
+ * it is literal text that happens to contain braces - so a brace preceded by
+ * `$` does not count, on either side of the comparison.
+ */
+function templateTokens(text: string): Set<string> {
   return new Set(
-    [...text.matchAll(/\{(\d+)\}/g)].map((match) => Number(match[1])),
+    [...text.matchAll(new RegExp(String.raw`(?<!\$)\{${TOKEN}\}`, 'g'))].map(
+      (match) => match[1]!,
+    ),
   )
 }
 
 /**
  * Checks that a translation uses exactly the placeholders the source has.
  *
- * A dropped `{0}` silently loses the value it stood for; an invented one has
- * nothing to substitute. Both are translator mistakes, and both must fail at
- * build time with the message named rather than ship. The comparison is
- * against the source *text*, not the expression count, so a literal `{n}`
+ * A dropped `{name}` silently loses the value it stood for; an invented one
+ * has nothing to substitute. Both are translator mistakes, and both must fail
+ * at build time with the message named rather than ship. The comparison is
+ * against the source *text*, not the expression list, so a literal `{n}`
  * that was never a placeholder is treated the same on both sides.
  */
 export function validateTemplateTranslation(
@@ -351,91 +436,112 @@ export function validateTemplateTranslation(
 ): void {
   if (translation === source) return
 
-  const wanted = templateIndices(source)
-  const got = templateIndices(translation)
+  const wanted = templateTokens(source)
+  const got = templateTokens(translation)
 
-  for (const index of wanted) {
-    if (!got.has(index)) {
+  for (const token of wanted) {
+    if (!got.has(token)) {
       throw new Error(
-        `best-i18n: ${describe}: the translation drops {${index}} - its ` +
+        `best-i18n: ${describe}: the translation drops {${token}} - its ` +
           `value would silently disappear. Translation: "${translation}"`,
       )
     }
   }
-  for (const index of got) {
-    if (!wanted.has(index)) {
+  for (const token of got) {
+    if (!wanted.has(token)) {
       throw new Error(
-        `best-i18n: ${describe}: the translation uses {${index}}, which the ` +
+        `best-i18n: ${describe}: the translation uses {${token}}, which the ` +
           `source message does not have. Translation: "${translation}"`,
       )
     }
   }
 }
 
-/** Every `{n}` and `<n>` index mentioned in a parsed message. */
-function collectIndices(
+/**
+ * Checks one plural form. Unlike a plain translation a form may *drop*
+ * placeholders - "One item" legitimately has no count in it - so only
+ * inventions are errors.
+ */
+export function validatePluralForm(
+  form: string,
+  allowed: ReadonlySet<string>,
+  describe: string,
+): void {
+  for (const token of templateTokens(form)) {
+    if (!allowed.has(token)) {
+      throw new Error(
+        `best-i18n: ${describe}: the plural form uses {${token}}, which the ` +
+          `source message does not have. Form: "${form}"`,
+      )
+    }
+  }
+}
+
+/** Every `{token}` and `<token>` mentioned in a parsed message. */
+function collectTokens(
   parts: MessagePart[],
-  expressions: Set<number>,
-  elements: Set<number>,
+  expressions: Set<string>,
+  elements: Set<string>,
 ): void {
   for (const part of parts) {
     if (part.kind === 'expression') {
-      expressions.add(part.index)
+      expressions.add(part.token)
     } else if (part.kind === 'element') {
-      elements.add(part.index)
-      collectIndices(part.children, expressions, elements)
+      elements.add(part.token)
+      collectTokens(part.children, expressions, elements)
     }
   }
 }
 
 /**
  * Checks that a `<Trans>` translation mentions exactly the placeholders and
- * elements the source produced. `<Trans>` placeholders are always generated -
- * JSX text cannot contain a bare `{` - so the source sets are simply
- * `0..count-1` on both axes.
+ * elements the source produced.
  */
 function validateTransParts(
   parts: MessagePart[],
-  expressionCount: number,
-  elementCount: number,
+  placeholders: string[],
+  elements: TransElement[],
   describe: string,
 ): void {
-  const expressions = new Set<number>()
-  const elements = new Set<number>()
-  collectIndices(parts, expressions, elements)
+  const gotExpressions = new Set<string>()
+  const gotElements = new Set<string>()
+  collectTokens(parts, gotExpressions, gotElements)
 
   const complain = (what: string): never => {
     throw new Error(`best-i18n: ${describe}: ${what}`)
   }
 
-  for (let index = 0; index < expressionCount; index++) {
-    if (!expressions.has(index)) {
+  const wantedExpressions = new Set(placeholders)
+  const wantedElements = new Set(elements.map((element) => element.token))
+
+  for (const token of wantedExpressions) {
+    if (!gotExpressions.has(token)) {
       complain(
-        `the translation drops {${index}} - its value would silently ` +
+        `the translation drops {${token}} - its value would silently ` +
           'disappear.',
       )
     }
   }
-  for (const index of expressions) {
-    if (index >= expressionCount) {
+  for (const token of gotExpressions) {
+    if (!wantedExpressions.has(token)) {
       complain(
-        `the translation uses {${index}}, which the source message does ` +
+        `the translation uses {${token}}, which the source message does ` +
           'not have.',
       )
     }
   }
-  for (let index = 0; index < elementCount; index++) {
-    if (!elements.has(index)) {
+  for (const token of wantedElements) {
+    if (!gotElements.has(token)) {
       complain(
-        `the translation drops <${index}> - the element and everything on ` +
+        `the translation drops <${token}> - the element and everything on ` +
           'it would silently disappear.',
       )
     }
   }
-  for (const index of elements) {
-    if (index >= elementCount) {
+  for (const token of gotElements) {
+    if (!wantedElements.has(token)) {
       complain(
-        `the translation uses <${index}>, which the source message does ` +
+        `the translation uses <${token}>, which the source message does ` +
           'not have.',
       )
     }
@@ -450,12 +556,28 @@ export function escapeTemplate(text: string): string {
     .replace(/\$\{/g, '\\${')
 }
 
-/** Builds a template literal for `text`, substituting `{n}` with expressions. */
-export function renderTemplate(text: string, expressions: string[]): string {
+/** The expression a token stands for, or undefined for a literal `{...}`. */
+function expressionFor(
+  token: string,
+  expressions: string[],
+  placeholders: string[],
+): string | undefined {
+  const index = placeholders.indexOf(token)
+  return index === -1 ? undefined : expressions[index]
+}
+
+/** Builds a template literal, substituting `{token}` with expressions. */
+export function renderTemplate(
+  text: string,
+  expressions: string[],
+  placeholders: string[],
+): string {
+  // escapeTemplate turned a literal `${` into `\${`, so a placeholder here
+  // is exactly a brace not preceded by `$`.
   const body = escapeTemplate(text).replace(
-    /\{(\d+)\}/g,
-    (whole, index: string) => {
-      const expression = expressions[Number(index)]
+    new RegExp(String.raw`(?<!\$)\{${TOKEN}\}`, 'g'),
+    (whole, token: string) => {
+      const expression = expressionFor(token, expressions, placeholders)
       return expression === undefined ? whole : `\${${expression}}`
     },
   )
@@ -476,10 +598,14 @@ function hasElement(parts: MessagePart[]): boolean {
  * mixes text and expressions has to concatenate, which is inherently
  * stringly - don't put ReactNodes in the middle of a sentence.
  */
-function renderFlat(parts: MessagePart[], expressions: string[]): string {
+function renderFlat(
+  parts: MessagePart[],
+  expressions: string[],
+  placeholders: string[],
+): string {
   const only = parts.length === 1 ? parts[0] : undefined
   if (only !== undefined && only.kind === 'expression') {
-    return `(${expressions[only.index]!})`
+    return `(${expressionFor(only.token, expressions, placeholders)!})`
   }
 
   let body = ''
@@ -488,7 +614,7 @@ function renderFlat(parts: MessagePart[], expressions: string[]): string {
     if (part.kind === 'text') {
       body += escapeTemplate(part.value)
     } else if (part.kind === 'expression') {
-      body += `\${${expressions[part.index] ?? ''}}`
+      body += `\${${expressionFor(part.token, expressions, placeholders) ?? ''}}`
     }
   }
 
@@ -506,6 +632,7 @@ function renderFlat(parts: MessagePart[], expressions: string[]): string {
 function renderChildren(
   parts: MessagePart[],
   expressions: string[],
+  placeholders: string[],
   elements: TransElement[],
   describe: string,
 ): string {
@@ -514,7 +641,7 @@ function renderChildren(
 
   const flushRun = () => {
     if (run.length === 0) return
-    out += `{${renderFlat(run, expressions)}}`
+    out += `{${renderFlat(run, expressions, placeholders)}}`
     run = []
   }
 
@@ -526,10 +653,10 @@ function renderChildren(
 
     flushRun()
 
-    const element = elements[part.index]
+    const element = elements.find((item) => item.token === part.token)
     if (element === undefined) {
       throw new Error(
-        `best-i18n: ${describe}: <${part.index}> has no matching element in ` +
+        `best-i18n: ${describe}: <${part.token}> has no matching element in ` +
           'the source message.',
       )
     }
@@ -537,7 +664,7 @@ function renderChildren(
     if (element.selfClosing) {
       if (part.children.length > 0) {
         throw new Error(
-          `best-i18n: ${describe}: <${part.index}> is self-closing in the ` +
+          `best-i18n: ${describe}: <${part.token}> is self-closing in the ` +
             'source, so it cannot be given content.',
         )
       }
@@ -547,7 +674,13 @@ function renderChildren(
 
     out +=
       element.open +
-      renderChildren(part.children, expressions, elements, describe) +
+      renderChildren(
+        part.children,
+        expressions,
+        placeholders,
+        elements,
+        describe,
+      ) +
       element.close
   }
 
@@ -565,13 +698,14 @@ function renderChildren(
 export function renderTrans(
   text: string,
   expressions: string[],
+  placeholders: string[],
   elements: TransElement[],
   describe: string,
 ): string {
   const parts = parseMessage(text, describe)
-  validateTransParts(parts, expressions.length, elements.length, describe)
+  validateTransParts(parts, placeholders, elements, describe)
 
-  if (!hasElement(parts)) return renderFlat(parts, expressions)
+  if (!hasElement(parts)) return renderFlat(parts, expressions, placeholders)
 
-  return `<>${renderChildren(parts, expressions, elements, describe)}</>`
+  return `<>${renderChildren(parts, expressions, placeholders, elements, describe)}</>`
 }

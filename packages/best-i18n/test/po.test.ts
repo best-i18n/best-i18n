@@ -5,7 +5,7 @@ import { formatPo, parsePo, samePo } from '../src/compiler/po.ts'
 import type { PoEntry } from '../src/compiler/po.ts'
 
 const entry = (overrides: Partial<PoEntry>): PoEntry => ({
-  id: 'abc12345',
+  context: '',
   source: 'Hello',
   target: '',
   references: ['src/a.tsx:3'],
@@ -20,7 +20,7 @@ describe('pO round-trip', () => {
       locale: 'zh',
       entries: [
         entry({ target: '你好' }),
-        entry({ id: 'def67890', source: 'Bye', target: '再见', fuzzy: true }),
+        entry({ source: 'Bye', target: '再见', fuzzy: true }),
       ],
     }
 
@@ -40,7 +40,6 @@ describe('pO round-trip', () => {
       '# reviewed by Ana',
       '#. Button label on the home page',
       '#: src/a.tsx:3',
-      'msgctxt "abc12345"',
       'msgid "Hello"',
       'msgstr "你好"',
     ].join('\n')
@@ -64,7 +63,6 @@ describe('pO round-trip', () => {
       'msgstr ""',
       '',
       '#, fuzzy, no-wrap',
-      'msgctxt "abc12345"',
       'msgid "Hello"',
       'msgstr "你好"',
     ].join('\n')
@@ -87,7 +85,6 @@ describe('pO round-trip', () => {
       'msgid ""',
       'msgstr ""',
       '',
-      'msgctxt "abc12345"',
       'msgid "One item"',
       'msgid_plural "{0} items"',
       'msgstr[0] "一件"',
@@ -118,7 +115,6 @@ describe('pO round-trip', () => {
       '"Last-Translator: Ana <ana@example.com>\\n"',
       '"X-Generator: Weblate 5.0\\n"',
       '',
-      'msgctxt "abc12345"',
       'msgid "Hello"',
       'msgstr "你好"',
     ].join('\n')
@@ -158,12 +154,10 @@ describe('pO round-trip', () => {
       'msgid ""',
       'msgstr ""',
       '',
-      'msgctxt "live0001"',
       'msgid "Live"',
       'msgstr "活"',
       '',
       '#~| msgid "Old wording"',
-      '#~ msgctxt "dead0001"',
       '#~ msgid "Gone"',
       '#~ msgstr "走了"',
     ].join('\n')

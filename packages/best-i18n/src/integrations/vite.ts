@@ -8,7 +8,7 @@ import type { TransformOptions } from '../compiler/transform.ts'
 
 export interface I18nPluginOptions extends Omit<
   TransformOptions,
-  'catalog' | 'staticLocale'
+  'catalog' | 'plurals' | 'staticLocale'
 > {
   /** Directory holding `messages.pot` and `<locale>.po`. */
   messagesDir: string
@@ -36,7 +36,7 @@ export function i18n(options: I18nPluginOptions): Plugin {
       baseLocale: options.baseLocale,
     })
 
-  let { catalog } = load()
+  let { catalog, plurals } = load()
 
   return {
     name: 'best-i18n',
@@ -52,7 +52,7 @@ export function i18n(options: I18nPluginOptions): Plugin {
       const reload = (file: string) => {
         if (path.relative(dir, file).startsWith('..')) return
         try {
-          catalog = load().catalog
+          ;({ catalog, plurals } = load())
         } catch (error) {
           // A half-saved or deleted .po must not crash the dev server; keep
           // serving the last good catalog and say why.
@@ -80,6 +80,7 @@ export function i18n(options: I18nPluginOptions): Plugin {
       const result = transform(code, id, {
         ...options,
         catalog,
+        plurals,
         staticLocale: options.staticLocale,
       })
 

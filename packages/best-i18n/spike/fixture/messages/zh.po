@@ -4,14 +4,11 @@ msgstr ""
 "Language: zh\n"
 "mime-version: 1.0\n"
 
-msgctxt "NivRfIR0"
 msgid "A small starter with room to grow."
 msgstr "一个小而可长的起始模板。"
 
-msgctxt "Rn4qt86Z"
-msgid "Hi {0}, you have {1} items"
-msgstr "你好 {0}，你有 {1} 项"
+msgid "Hi {name}, you have {count} items"
+msgstr "你好 {name}，你有 {count} 项"
 
-msgctxt "NinIfQ5A"
 msgid "This message must never reach the bundle."
 msgstr "这条消息绝不应进入产物。"

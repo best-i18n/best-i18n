@@ -213,6 +213,50 @@ to a single space - the same rule JSX applies to `<Trans>` - so re-indenting a
 component never changes a message or orphans its translations. Write `\n` for
 a literal newline.
 
+An interpolated identifier names its own placeholder, so the translator sees
+`Hi {name}, you have {count} items` rather than `Hi {0}, you have {1}`.
+Anything more complex than an identifier falls back to a number. A dropped or
+invented placeholder in a translation is a build error naming the file, the
+locale and the message.
+
+### Plurals
+
+```tsx
+import { plural } from 'best-i18n/macro'
+
+const label = plural(count, `One item`, `${count} items`)
+```
+
+The two forms are one gettext entry - `msgid` and `msgid_plural` - and each
+locale's `.po` supplies as many `msgstr[n]` forms as its `Plural-Forms` header
+declares (Russian three, Chinese one; there is a built-in table for catalogs
+that don't set the header). The compiler inlines that locale's selection
+formula at the call site, so what ships is a small arrow function per plural
+message - no ICU runtime, no `Intl.PluralRules`, and a one-form locale gets
+the bare string with no dispatch at all. The count is always available to a
+translation as a placeholder, interpolated or not.
+
+### Context
+
+Two identical texts that must translate differently are different messages.
+`ctx` is gettext's `msgctxt`:
+
+```tsx
+const verb = t.ctx('verb')`Open` // 打开
+const sign = t.ctx('adjective')`Open` // 营业中
+const markup = <Trans ctx='verb'>Open</Trans>
+```
+
+### Comments for the translator
+
+A `// i18n:` comment directly above (or on the line of) a message becomes a
+`#.` extracted comment in the catalogs:
+
+```tsx
+// i18n: Button label on the home page, keep it short
+const label = t`Save`
+```
+
 ### Messages with markup
 
 A tagged template cannot hold JSX, so a sentence with a link or a bold run in
@@ -232,13 +276,13 @@ function About() {
 }
 ```
 
-The catalog stores the markup as numbered placeholders, the way Lingui does and
-for the same reason - a translator moves the pieces, and never sees a JSX
-attribute:
+The catalog stores the markup as named placeholders - the tag's own name
+where it has one, a number where it does not - for the reason Lingui
+established: a translator moves the pieces, and never sees a JSX attribute:
 
 ```po
-msgid "Read the <0>documentation</0> to learn more."
-msgstr "请阅读<0>文档</0>了解更多。"
+msgid "Read the <a>documentation</a> to learn more."
+msgstr "请阅读<a>文档</a>了解更多。"
 ```
 
 Where this parts ways with Lingui is what runs. There is no component walking a
@@ -318,8 +362,9 @@ pattern for paths that must never be localized (`/api/...`).
   loader refuses to compile that, naming the file, the line and the message.
   Server Components are the other way round: they cannot call a hook, and do
   not need to.
-- ICU plural/select is not built in yet; write complex messages as separate
-  entries or handle counts in code.
+- Plurals are gettext plurals (`plural(count, one, other)`), not ICU: there
+  is no `select`/gender construct yet, and no number/date formatting - reach
+  for `Intl` with `getLocale()` for those.
 - `from`/`hookFrom` match import specifiers as written in the source, so if
   you re-export the macros, list your module path in the plugin options.
 - On Next.js, `best-i18n/next/server` reads the locale out of Next's internal

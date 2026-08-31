@@ -22,7 +22,6 @@ export default defineConfig({
     'next-server': 'src/integrations/next/server.ts',
     'transform': 'src/compiler/transform.ts',
     'po': 'src/compiler/po.ts',
-    'id': 'src/compiler/id.ts',
     'cli-extract': 'src/cli/extract.ts',
     'cli-compile': 'src/cli/compile.ts',
   },

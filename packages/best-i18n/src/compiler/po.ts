@@ -1,8 +1,13 @@
 import { po as poCodec } from 'gettext-parser'
 
 export interface PoEntry {
-  /** Message id, carried in `msgctxt`. */
-  id: string
+  /**
+   * `msgctxt` - the developer-supplied disambiguation context, empty for
+   * none. Two messages with the same text and different contexts are
+   * different entries, which is exactly what gettext designed the field for:
+   * "Open" the verb and "Open" the adjective translate differently.
+   */
+  context: string
   /** Source text, carried in `msgid`. */
   source: string
   /** Translation, empty when untranslated. For plurals, `msgstr[0]`. */
@@ -49,7 +54,7 @@ export interface PoFile {
 export function samePo(a: PoFile, b: PoFile): boolean {
   const key = (entry: PoEntry) =>
     JSON.stringify([
-      entry.id,
+      entry.context,
       entry.source,
       entry.target,
       entry.pluralSource ?? null,
@@ -150,7 +155,7 @@ export function parsePo(text: string, locale: string): PoFile {
         const plural = translation.msgid_plural
 
         entries.push({
-          id: translation.msgctxt ?? '',
+          context: translation.msgctxt ?? '',
           source: translation.msgid,
           target: translation.msgstr[0] ?? '',
           ...(plural === undefined || plural === ''
@@ -202,16 +207,19 @@ export function formatPo(file: PoFile): string {
   const obsolete = file.entries.filter((entry) => entry.obsolete)
 
   for (const entry of active) {
-    translations[entry.id] = {
-      [entry.source]: {
-        msgctxt: entry.id,
-        msgid: entry.source,
-        ...(entry.pluralSource === undefined
-          ? {}
-          : { msgid_plural: entry.pluralSource }),
-        msgstr: [entry.target, ...(entry.pluralTargets ?? [])],
-        comments: commentsFor(entry),
-      },
+    // Nested assignment, not replacement: entries with no context share the
+    // '' bucket with the header entry, and entries with the same context
+    // must coexist.
+    const bucket = (translations[entry.context] ??= {})
+    bucket[entry.source] = {
+      // gettext-parser only writes a msgctxt line for a truthy value.
+      ...(entry.context === '' ? {} : { msgctxt: entry.context }),
+      msgid: entry.source,
+      ...(entry.pluralSource === undefined
+        ? {}
+        : { msgid_plural: entry.pluralSource }),
+      msgstr: [entry.target, ...(entry.pluralTargets ?? [])],
+      comments: commentsFor(entry),
     }
   }
 
@@ -271,7 +279,7 @@ function formatObsolete(entry: PoEntry): string {
   }
 
   const body = [
-    `msgctxt "${escapePo(entry.id)}"`,
+    ...(entry.context === '' ? [] : [`msgctxt "${escapePo(entry.context)}"`]),
     `msgid "${escapePo(entry.source)}"`,
     ...(entry.pluralSource === undefined
       ? [`msgstr "${escapePo(entry.target)}"`]

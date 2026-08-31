@@ -9,7 +9,7 @@ const OPTIONS = {
   baseLocale: 'en',
   catalog: {
     'About': { en: 'About', zh: '关于' },
-    'Hi {0}': { en: 'Hi {0}', zh: '你好 {0}' },
+    'Hi {name}': { en: 'Hi {name}', zh: '你好 {name}' },
   },
 }
 
@@ -91,7 +91,7 @@ describe('useI18n hook macro', () => {
         'a.tsx',
         OPTIONS,
       ),
-    ).toThrow(/only be used as a tagged template/)
+    ).toThrow(/only be used at its call site/)
   })
 
   it('supports a module-level hook variable', () => {
@@ -154,7 +154,7 @@ describe('useI18n hook macro', () => {
   it('rejects passing the hook-bound variable around', () => {
     expect(() =>
       transform(component('const t = useI18n(); foo(t)'), 'a.tsx', OPTIONS),
-    ).toThrow(/only be used as a tagged template/)
+    ).toThrow(/only be used at its call site/)
   })
 
   it('rejects passing useI18n itself around', () => {
@@ -164,7 +164,7 @@ describe('useI18n hook macro', () => {
         'a.tsx',
         OPTIONS,
       ),
-    ).toThrow(/only be used as a tagged template/)
+    ).toThrow(/only be used at its call site/)
   })
 
   it('leaves an unrelated useI18n from another library alone', () => {
