@@ -27,7 +27,8 @@
     "dev:intl": "pnpm --filter playground-nextjs-intl dev",
     "build:intl": "pnpm --filter playground-nextjs-intl build",
     "dev:tanstack": "pnpm --filter playground-tanstack-start dev",
-    "build:tanstack": "pnpm --filter playground-tanstack-start build"
+    "build:tanstack": "pnpm --filter playground-tanstack-start build",
+    "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev"
   },
   "devDependencies": {
     "@debbl/eslint-config": "^3.17.3",

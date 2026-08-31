@@ -1,0 +1,14 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "home": "Home",
+  "about": "About",
+  "starter": "A small starter with room to grow.",
+  "rendered_on_server": "This paragraph was rendered on the server.",
+  "inlines": "{name} inlines every translation at the call site.",
+  "no_runtime": "Nothing is looked up at runtime, so nothing has to be loaded.",
+  "add_one": "Add one",
+  "you_have_items": "You have {count} items",
+  "read_the": "Read the ",
+  "readme": "README",
+  "to_learn_more": " to learn more."
+}

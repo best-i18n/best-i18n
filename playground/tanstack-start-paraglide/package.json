@@ -1,0 +1,28 @@
+{
+  "name": "playground-tanstack-start-paraglide",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same app as playground/tanstack-start, built with Paraglide, for size comparison",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inlang/paraglide-js": "^2.25.0",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-start": "^1.168.49",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "nitro": "^3.0.260610-beta",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0"
+  }
+}
