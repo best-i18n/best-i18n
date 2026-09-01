@@ -1,7 +1,7 @@
 {
   "name": "best-i18n",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "packageManager": "pnpm@10.34.5",
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
   "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
