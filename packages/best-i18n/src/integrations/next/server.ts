@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { workUnitAsyncStorage } from 'next/dist/server/app-render/work-unit-async-storage.external.js'
 import { headers } from 'next/headers'
 import { cache } from 'react'
@@ -47,17 +48,49 @@ function localeFromRender(): Locale | undefined {
   )
 }
 
-setRequestLocaleSource(() => requestStore().locale ?? localeFromRender())
+/**
+ * The binding for code that runs outside a React render, where neither of the
+ * stores above exists: statically prerendered route handlers, above all. The
+ * proxy is no help there either - during `next build` there is no request.
+ *
+ * `setRequestLocale` binds it per async context via `enterWith`, so concurrent
+ * prerenders in the same worker cannot see each other's locale - the same
+ * reason `best-i18n/server` refuses a module-level variable.
+ *
+ * An explicit binding outranks the URL: the chain consults it before the
+ * `[locale]` route param.
+ */
+const localeStorage = new AsyncLocalStorage<{ locale: Locale }>()
+
+setRequestLocaleSource(
+  () =>
+    requestStore().locale ??
+    localeStorage.getStore()?.locale ??
+    localeFromRender(),
+)
 
 /**
- * Pins the locale for the current segment, overriding the URL.
+ * Pins the locale for the code that follows, overriding the URL.
  *
  * Rarely needed: a Server Component reads the locale on its own. Reach for it
  * when a route decides its own language - a preview, an embed, a per-user
- * setting resolved from the database.
+ * setting resolved from the database - or in a route handler, where nothing
+ * else knows the locale at all.
+ *
+ * Inside a render the pin lives in React's per-segment cache, exactly as
+ * before. Outside one - a statically prerendered route handler, where that
+ * cache returns a fresh object per call and a write is lost immediately - it
+ * binds the current async context instead, so the pin holds for the rest of
+ * the handler without a wrapper. Calling `requestStore()` twice tells the two
+ * worlds apart: a working cache hands back the same object.
  */
 export function setRequestLocale(locale: Locale): void {
-  requestStore().locale = locale
+  const store = requestStore()
+  if (store === requestStore()) {
+    store.locale = locale
+  } else {
+    localeStorage.enterWith({ locale })
+  }
 }
 
 /**
@@ -67,7 +100,10 @@ export function setRequestLocale(locale: Locale): void {
  * it for `<html lang>` and for `LocaleProvider`; `t` does not need it.
  */
 export function getLocale(config?: NextI18nConfig): Locale {
-  const resolved = requestStore().locale ?? localeFromRender()
+  const resolved =
+    requestStore().locale ??
+    localeStorage.getStore()?.locale ??
+    localeFromRender()
   if (resolved !== undefined) return resolved
 
   const fallback = config ?? getI18nConfig()
@@ -89,7 +125,10 @@ export function getLocale(config?: NextI18nConfig): Locale {
 export async function getRequestLocale(
   config?: NextI18nConfig,
 ): Promise<Locale> {
-  const resolved = requestStore().locale ?? localeFromRender()
+  const resolved =
+    requestStore().locale ??
+    localeStorage.getStore()?.locale ??
+    localeFromRender()
   if (resolved !== undefined) return resolved
 
   const fallback = config ?? getI18nConfig()

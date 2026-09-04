@@ -209,6 +209,47 @@ Why the pieces are what they are:
   visible in the other. The locale is read from the route param instead, which
   is also why static rendering still works.
 
+### Plain JavaScript
+
+No framework required: the Vite or Rolldown plugin plus the `t` macro is the
+whole system. `best-i18n/runtime` is the locale state the compiled messages
+read - it plays the role `@lingui/core` plays for Lingui, minus the catalog,
+because there is nothing to load. It is also, in its entirety, the runtime the
+"no runtime" pitch leaves standing.
+
+```ts
+import { t } from 'best-i18n/macro'
+import { getLocale, setLocale, subscribeLocale } from 'best-i18n/runtime'
+
+function render() {
+  document.querySelector('h1')!.textContent =
+    t`A small starter with room to grow.`
+}
+
+// A message is evaluated where it is called, so a locale change means
+// re-running the code that renders - same as Lingui's activate-then-rerender.
+subscribeLocale(render)
+document.querySelector('select')!.onchange = (e) => {
+  setLocale((e.target as HTMLSelectElement).value)
+}
+render()
+```
+
+`setLocale` is client-only, deliberately: on a server one shared locale would
+leak between concurrent requests. There the locale is bound per request or per
+scope instead - `withRequestLocale(request, config, fn)` in a fetch handler,
+`withLocale(locale, fn)` in a script - both from `best-i18n/server`, both
+feeding the same `getLocale()` the messages compile to.
+
+```ts
+import { t } from 'best-i18n/macro'
+import { withLocale } from 'best-i18n/server'
+
+for (const locale of ['en', 'zh']) {
+  withLocale(locale, () => console.log(t`A small starter with room to grow.`))
+}
+```
+
 ## Writing messages
 
 Anywhere — loaders, server functions, plain modules:
