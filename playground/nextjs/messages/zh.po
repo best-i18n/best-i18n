@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Language: zh\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -32,6 +32,161 @@ msgstr "运行时不做任何查表，因此也没有任何东西需要加载。
 #: src/app/[locale]/about/page.tsx:30
 msgid "Read the <a>README</a> to learn more."
 msgstr "请阅读 <a>README</a> 了解更多。"
+
+#: src/app/[locale]/long/page.tsx:10
+#: src/app/[locale]/long/page.tsx:32
+msgid "Field notes on shipping translations"
+msgstr "翻译交付的现场笔记"
+
+#: src/app/[locale]/long/page.tsx:11
+msgid ""
+"A deliberately long page: many messages, long paragraphs, plurals, context "
+"and markup, all compiled away."
+msgstr "一个刻意做长的页面：大量消息、长段落、复数、上下文与标记，全部在编译期消解。"
+
+#: src/app/[locale]/long/page.tsx:34
+msgid ""
+"Everything on this page is a compiled message. There is no catalog behind "
+"it, no lookup at request time, and no formatter parsing anything in the "
+"browser. If you are reading this in Chinese, the Chinese text below was "
+"chosen by a ternary that the compiler wrote, and in a static-locale build "
+"even the ternary is gone."
+msgstr "这个页面上的每一句话都是一条编译过的消息。它背后没有词表，请求时没有查找，浏览器里也没有任何格式化器在解析什么。如果你正在用中文阅读，下面的中文是由编译器写下的三元表达式选出来的——而在按语言构建里，连三元表达式都不复存在。"
+
+#: src/app/[locale]/long/page.tsx:41
+msgid "Why the source text is the message"
+msgstr "为什么源文本就是消息"
+
+#: src/app/[locale]/long/page.tsx:43
+msgid ""
+"A key like home.hero.subtitle is a pointer into a file somewhere else, and "
+"every pointer can dangle. When the text itself is the identifier there is "
+"nothing to keep in sync: renaming a variable does not orphan a translation, "
+"and a reviewer reading the diff sees the words that will actually render."
+msgstr "home.hero.subtitle 这样的 key 是指向别处某个文件的指针，而所有指针都可能悬空。当文本本身就是标识符时，没有任何东西需要保持同步：重命名变量不会让翻译成为孤儿，看 diff 的评审者看到的就是将要渲染的那些字。"
+
+#: src/app/[locale]/long/page.tsx:50
+msgid ""
+"The cost of that choice is honesty about what a change means. Fixing a typo "
+"in the source text is a new message, because the old string was the id. The "
+"catalog carries the old translation over marked fuzzy, a translator "
+"confirms it, and the history stays visible instead of being silently "
+"rewritten."
+msgstr "这个选择的代价，是对「一次修改意味着什么」保持诚实。改掉源文本里的一个错别字就是一条新消息，因为旧字符串就是 id。词表会把旧翻译带过来并标记为 fuzzy，由翻译者确认，历史保持可见，而不是被悄悄改写。"
+
+#: src/app/[locale]/long/page.tsx:57
+msgid ""
+"{library} stores those messages in {format} files, because the tooling "
+"translators already use has spoken that format for thirty years. Nothing "
+"about the pipeline is proprietary: msgid in, msgstr out, and every "
+"intermediate state survives a round trip through a TMS."
+msgstr "{library} 把这些消息存在 {format} 文件里，因为翻译者手上的工具链讲这门格式已经讲了三十年。整条管线没有任何私有的东西：msgid 进，msgstr 出，任何中间状态都经得起在 TMS 里走一个来回。"
+
+#: src/app/[locale]/long/page.tsx:64
+msgid "What a long paragraph compiles to"
+msgstr "一个长段落会编译成什么"
+
+#: src/app/[locale]/long/page.tsx:66
+msgid ""
+"This paragraph is intentionally much longer than anything a landing page "
+"would carry, because the point of this page is volume. It keeps going for "
+"several sentences, the way documentation prose actually does, so that the "
+"extracted catalog contains realistic entries rather than toy strings. Line "
+"breaks in the source template collapse to single spaces at compile time, "
+"which means re-indenting this file will never orphan the translation you "
+"are reading right now."
+msgstr "这一段被刻意写得远比落地页会放的任何文字都长，因为这个页面的意义就在于体量。它像真实的文档散文一样一连写好几句，好让提取出来的词表装着现实尺寸的条目而不是玩具字符串。源模板里的换行在编译期坍缩为单个空格，也就是说重新缩进这个文件永远不会让你此刻正在读的这条翻译成为孤儿。"
+
+#: src/app/[locale]/long/page.tsx:75
+msgid ""
+"Rendered from a Server Component, all of this text reaches the browser as "
+"HTML and costs exactly zero bytes of client JavaScript. The measured number "
+"from the twin playgrounds: three hundred extra server-rendered messages "
+"added nothing to the client bundle at all."
+msgstr "由 Server Component 渲染时，这些文字全部以 HTML 的形式抵达浏览器，客户端 JavaScript 的成本恰好为零字节。孪生 playground 的实测数字：额外三百条服务端渲染的消息，客户端包一个字节都没涨。"
+
+#: src/app/[locale]/long/page.tsx:82
+msgid "Plurals without a formatter"
+msgstr "没有格式化器的复数"
+
+#: src/app/[locale]/long/page.tsx:84
+msgid ""
+"Each locale's plural formula is inlined at the call site. English has two "
+"forms, Chinese has one, Russian would have three - and the compiled code "
+"for a one-form locale is just the bare string."
+msgstr "每个语言的复数公式都内联在调用处。英语两个形式，中文一个，俄语则会有三个——而单形式语言编译出来的就是裸字符串本身。"
+
+#: src/app/[locale]/long/page.tsx:90
+msgid "You have one message."
+msgid_plural "You have {n} messages."
+msgstr[0] "你有 {n} 条消息。"
+
+#: src/app/[locale]/long/page.tsx:94
+msgid "Context when the same word must differ"
+msgstr "同一个词必须不同译法时的上下文"
+
+#: src/app/[locale]/long/page.tsx:96
+msgid ""
+"Two identical source texts that translate differently are two different "
+"messages, keyed by gettext's msgctxt:"
+msgstr "两段相同却要译得不同的源文本是两条不同的消息，用 gettext 的 msgctxt 区分："
+
+#: src/app/[locale]/long/page.tsx:104
+msgid "Markup stays out of the translator's way"
+msgstr "标记不挡翻译者的路"
+
+#: src/app/[locale]/long/page.tsx:106
+msgid ""
+"A sentence can hold <strong>bold text</strong> and a{0}<a>link</a> at once, "
+"and the translator still only ever sees named placeholders - never a JSX "
+"attribute, never an import, never a prop."
+msgstr "一句话可以同时含有<strong>加粗文本</strong>和{0}一个<a>链接</a>，而翻译者始终只看到具名占位符——看不到 JSX 属性，看不到 import，也看不到 prop。"
+
+#: src/app/[locale]/long/page.tsx:114
+msgid ""
+"What ships is the markup itself, rebuilt per locale at build time - there "
+"is <em>no component</em> walking a message tree on every render."
+msgstr "交付的就是标记本身，构建期按语言重组——<em>没有组件</em>在每次渲染时遍历消息树。"
+
+#: src/app/[locale]/long/page.tsx:121
+msgid "The workflow at volume"
+msgstr "大体量下的工作流"
+
+#: src/app/[locale]/long/page.tsx:123
+msgid ""
+"Extraction scans the source, writes the template, and merges each locale's "
+"catalog without ever reducing the number of translations - if a run would "
+"shrink a catalog, it refuses and asks for an explicit force flag. On a page "
+"like this one, that guard is the difference between a refactor and an "
+"accident."
+msgstr "提取扫描源码、写出模板、合并每个语言的词表，而且永远不会减少翻译的数量——如果一次运行会让词表变小，它会拒绝执行并要求显式的 force 参数。在这样一个页面上，这道守卫就是重构与事故的分界线。"
+
+#: src/app/[locale]/long/page.tsx:130
+msgid ""
+"Validation runs both at merge time and at build time. A translation that "
+"drops a placeholder, invents one, or supplies the wrong number of plural "
+"forms is an error naming the file, the locale and the message - before "
+"anything reaches a user."
+msgstr "校验在合并期和构建期各跑一次。丢占位符、凭空造占位符、复数形式数量不对的翻译，都是指明文件、语言和消息的错误——在任何东西触达用户之前。"
+
+#: src/app/[locale]/long/page.tsx:136
+msgid ""
+"Fuzzy entries do not build. They fall back to the base locale and are "
+"reported as missing, which sounds strict until the alternative is shipping "
+"a stale translation under a reworded source."
+msgstr "fuzzy 条目不参与构建。它们回退到基础语言并被报告为缺失——这听起来严苛，直到你想起另一个选项是把过期翻译顶着改写后的源文本发出去。"
+
+#: src/app/[locale]/long/page.tsx:141
+msgid "What this page proves"
+msgstr "这个页面证明了什么"
+
+#: src/app/[locale]/long/page.tsx:143
+msgid ""
+"If every heading and paragraph above renders in your language, then roughly "
+"fifty messages - including this one - survived extraction, merging, "
+"translation and compilation in one pass. The client bundle for this route "
+"contains none of them."
+msgstr "如果上面的每个标题、每个段落都以你的语言渲染，那么约五十条消息——包括这一条——在一趟流程里完好穿过了提取、合并、翻译和编译。而这个路由的客户端包里一条都没有。"
 
 #: src/app/[locale]/page.tsx:15
 msgid "best-i18n - compile-time internationalization"
@@ -66,3 +221,17 @@ msgstr "计数<strong>不是</strong>翻译。"
 #: src/components/site-header.tsx:15
 msgid "Home"
 msgstr "首页"
+
+#: src/components/site-header.tsx:17
+msgid "Long read"
+msgstr "长文"
+
+#: src/app/[locale]/long/page.tsx:100
+msgctxt "verb"
+msgid "Open"
+msgstr "打开"
+
+#: src/app/[locale]/long/page.tsx:101
+msgctxt "adjective"
+msgid "Open"
+msgstr "营业中"

@@ -22,7 +22,7 @@ import { gzipSync } from 'node:zlib'
 
 const root = path.dirname(fileURLToPath(new URL('.', import.meta.url)))
 
-const PAGES = ['/zh', '/zh/about']
+const PAGES = ['/zh', '/zh/about', '/zh/long']
 
 const VARIANTS = [
   {
@@ -173,17 +173,26 @@ for (const family of [...new Set(results.map((r) => r.family))]) {
   const rows = results.filter((result) => result.family === family)
   const withHtml = rows.some((row) => row.pages.length > 0)
 
+  const htmlColumns = ['/zh', '/zh/long']
+
   process.stdout.write(`\n### ${family}\n\n`)
   process.stdout.write(
-    `| variant | client JS (gzip) | client JS (raw) |${withHtml ? ' HTML /zh (gzip) |' : ''}\n`,
+    `| variant | client JS (gzip) | client JS (raw) |${
+      withHtml ? htmlColumns.map((p) => ` HTML ${p} (gzip) |`).join('') : ''
+    }\n`,
   )
-  process.stdout.write(`| --- | --- | --- |${withHtml ? ' --- |' : ''}\n`)
+  process.stdout.write(
+    `| --- | --- | --- |${withHtml ? ' --- |'.repeat(htmlColumns.length) : ''}\n`,
+  )
 
   for (const row of rows) {
-    const home = row.pages.find((page) => page.page === '/zh')
+    const cells = htmlColumns.map((wanted) => {
+      const page = row.pages.find((p) => p.page === wanted)
+      return ` ${page === undefined ? '-' : kb(page.htmlGzip)} |`
+    })
     process.stdout.write(
       `| ${row.label} | ${kb(row.gzip)} | ${kb(row.raw)} |` +
-        `${withHtml ? ` ${home === undefined ? '-' : kb(home.htmlGzip)} |` : ''}\n`,
+        `${withHtml ? cells.join('') : ''}\n`,
     )
   }
 }

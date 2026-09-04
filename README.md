@@ -63,30 +63,43 @@ pnpm build && pnpm bench
 
 Two families, measured two ways - both apps in a family go through the same
 method, which is what makes a table mean something. On Next.js the numbers are
-every `/_next/static/*.js` the HTML of `/zh` and `/zh/about` references; on
-TanStack Start they are the emitted client assets, because Start hands the
-client entry over through a manifest rather than a script tag.
+every `/_next/static/*.js` the HTML of `/zh`, `/zh/about` and `/zh/long`
+references; on TanStack Start they are the emitted client assets, because
+Start hands the client entry over through a manifest rather than a script tag.
+
+`/zh/long` is the text-heavy case: a deliberately long article of ~30
+server-rendered messages, most of them full paragraphs, mirrored across both
+Next twins - plurals, context and markup included.
 
 ### Next.js
 
-| variant                            | client JS (gzip) | raw      | HTML /zh (gzip) |
-| ---------------------------------- | ---------------- | -------- | --------------- |
-| no i18n at all                     | 173.4 kB         | 562.0 kB | 1.9 kB          |
-| best-i18n                          | 174.3 kB         | 564.9 kB | 2.4 kB          |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.2 kB         | 564.7 kB | 2.4 kB          |
-| next-intl                          | 187.4 kB         | 607.4 kB | 2.4 kB          |
+| variant                            | client JS (gzip) | raw      | HTML /zh (gzip) | HTML /zh/long (gzip) |
+| ---------------------------------- | ---------------- | -------- | --------------- | -------------------- |
+| no i18n at all                     | 173.4 kB         | 562.0 kB | 1.9 kB          | -                    |
+| best-i18n                          | 174.3 kB         | 564.9 kB | 2.4 kB          | 5.0 kB               |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.2 kB         | 564.7 kB | 2.4 kB          | 5.0 kB               |
+| next-intl                          | 187.4 kB         | 607.4 kB | 4.9 kB          | 5.5 kB               |
 
 ### TanStack Start
 
 | variant                            | client JS (gzip) | raw      |
 | ---------------------------------- | ---------------- | -------- |
-| best-i18n                          | 99.0 kB          | 310.3 kB |
+| best-i18n                          | 99.1 kB          | 310.3 kB |
 | best-i18n, `I18N_STATIC_LOCALE=zh` | 98.8 kB          | 309.7 kB |
 | paraglide                          | 106.9 kB         | 334.9 kB |
 
 The first row of the Next table is the same app with every message replaced by
 a literal. It is measured by hand rather than by `pnpm bench`, since there is
-no fourth playground for it.
+no fourth playground for it - and it predates the `/long` page, hence the dash.
+
+The two HTML columns tell the story. Both home pages render the same handful
+of messages, yet `/zh` reads 2.4 kB against 4.9 kB: the difference is the
+catalog, which next-intl ships in every page's payload whether the page
+renders those messages or not. best-i18n's pages carry only the text they
+render - the ~30 long-page messages exist as HTML on `/zh/long` and nowhere
+else, client JS included. The long page itself is close on both (5.0 kB
+against 5.5 kB): a page that actually renders the text pays for the text,
+whoever compiled it.
 
 ### What the two gaps are made of
 
@@ -98,8 +111,9 @@ the lookup. It buys plurals, select, dates, numbers and rich text. best-i18n
 has since grown plurals of its own - gettext plurals, compiled to an inlined
 per-locale formula rather than an ICU runtime - but select, dates and numbers
 it still does not do. Its catalog also travels in _every_ page's HTML by
-default: adding 300 messages nobody on the home page renders still grew that
-page from 2.4 kB to 4.4 kB gzip.
+default: `/zh` renders none of the `/long` page's ~30 messages and still
+carries all of them - the 4.9 kB against best-i18n's 2.4 kB in the table
+above.
 
 **paraglide's ~8 kB is a URL router** - a `URLPattern` matcher, cookie
 handling, `preferredLanguage` detection - not message lookup. On the message

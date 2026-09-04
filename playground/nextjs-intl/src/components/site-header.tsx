@@ -11,6 +11,7 @@ export function SiteHeader() {
       <nav>
         <Link href='/'>{t('home')}</Link>
         <Link href='/about'>{t('about')}</Link>
+        <Link href='/long'>{t('long')}</Link>
       </nav>
       <LocaleSwitcher />
     </header>

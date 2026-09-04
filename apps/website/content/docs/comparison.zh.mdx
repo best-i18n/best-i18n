@@ -28,25 +28,33 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 
 ## 实测体积
 
-同族的两个应用用同一种方式测量——Next.js 上是 `/zh` 和 `/zh/about` 的 HTML
-引用到的全部 `/_next/static/*.js`；TanStack Start 上是产出的客户端资产。
+同族的两个应用用同一种方式测量——Next.js 上是 `/zh`、`/zh/about` 和 `/zh/long`
+的 HTML 引用到的全部 `/_next/static/*.js`；TanStack Start 上是产出的客户端资
+产。`/zh/long` 是多文本场景：一篇刻意做长的文章，约 30 条服务端渲染的消息——
+整段落、复数、上下文、标记俱全——在两个 Next 孪生里各有一份镜像。
 
 ### Next.js——对 next-intl
 
-| 变体                               | 客户端 JS（gzip） | 原始     | HTML `/zh`（gzip） |
-| ---------------------------------- | ----------------- | -------- | ------------------ |
-| 完全没有 i18n                      | 173.4 kB          | 562.0 kB | 1.9 kB             |
-| best-i18n                          | 174.3 kB          | 564.9 kB | 2.4 kB             |
-| best-i18n，`I18N_STATIC_LOCALE=zh` | 174.2 kB          | 564.7 kB | 2.4 kB             |
-| next-intl                          | 187.4 kB          | 607.4 kB | 2.4 kB             |
+| 变体                               | 客户端 JS（gzip） | 原始     | HTML `/zh`（gzip） | HTML `/zh/long`（gzip） |
+| ---------------------------------- | ----------------- | -------- | ------------------ | ----------------------- |
+| 完全没有 i18n                      | 173.4 kB          | 562.0 kB | 1.9 kB             | -                       |
+| best-i18n                          | 174.3 kB          | 564.9 kB | 2.4 kB             | 5.0 kB                  |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 174.2 kB          | 564.7 kB | 2.4 kB             | 5.0 kB                  |
+| next-intl                          | 187.4 kB          | 607.4 kB | 4.9 kB             | 5.5 kB                  |
 
 ### TanStack Start——对 Paraglide
 
 | 变体                               | 客户端 JS（gzip） | 原始     |
 | ---------------------------------- | ----------------- | -------- |
-| best-i18n                          | 99.0 kB           | 310.3 kB |
+| best-i18n                          | 99.1 kB           | 310.3 kB |
 | best-i18n，`I18N_STATIC_LOCALE=zh` | 98.8 kB           | 309.7 kB |
 | paraglide                          | 106.9 kB          | 334.9 kB |
+
+两列 HTML 就是全部故事。两边的首页渲染同样几条消息，`/zh` 却是 2.4 kB 对
+4.9 kB：差额就是 catalog——next-intl 把它装进每个页面的载荷，无论页面渲不渲染
+那些消息。best-i18n 的页面只携带自己渲染的文字——长文页那约 30 条消息只以
+HTML 的形式存在于 `/zh/long`，别处都没有，客户端 JS 里也没有。长文页本身两边
+接近（5.0 kB 对 5.5 kB）：真正渲染这些文字的页面为文字付费，无论是谁编译的。
 
 ## 两个差距各是什么做的
 
@@ -55,8 +63,9 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 **next-intl 的约 13 kB 是消息运行时**——ICU 格式化器、catalog 和查找。它买到
 的是复数、`select`、日期、数字和富文本。best-i18n 后来长出了自己的复数——
 gettext 复数，编译成按语言内联的公式而不是 ICU 运行时——但 `select`、日期和
-数字它仍然不做。next-intl 的 catalog 还默认随**每个**页面的 HTML 传输：加 300
-条首页根本不渲染的消息，那个页面还是从 2.4 kB 涨到了 4.4 kB gzip。
+数字它仍然不做。next-intl 的 catalog 还默认随**每个**页面的 HTML 传输：`/zh`
+一条 `/long` 页的消息都不渲染，却携带着全部约 30 条——就是上表里 4.9 kB 对
+best-i18n 2.4 kB 的那个差距。
 
 **Paraglide 的约 8 kB 是一个 URL 路由器**——`URLPattern` 匹配器、cookie 处理、
 `preferredLanguage` 检测——不是消息查找。消息侧两个库都内联都 tree-shake，
