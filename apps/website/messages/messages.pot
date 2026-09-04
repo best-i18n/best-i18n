@@ -1,0 +1,66 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/app/[lang]/(home)/page.tsx:21
+msgid "No keys"
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:22
+msgid ""
+"The source text is the message; ids are content hashes managed for you in "
+"PO files."
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:25
+msgid "No runtime"
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:26
+msgid ""
+"Messages compile to ternaries or plain literals. Unused messages tree-shake "
+"with the code that used them."
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:29
+msgid "PO workflow"
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:30
+msgid ""
+"messages.pot + <locale>.po — the format translators, TMSes and LLMs already "
+"understand."
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:33
+msgid "SSR-safe"
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:34
+msgid ""
+"The server locale lives in AsyncLocalStorage per request; no isolation "
+"means an error, never shared state."
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:42
+msgid ""
+"Compile-time i18n. Write the source text inline; the compiler inlines every "
+"translation at the call site — no runtime catalog, no lookup, nothing to "
+"load."
+msgstr ""
+
+#: src/app/[lang]/(home)/page.tsx:49
+msgid "Get started"
+msgstr ""
+
+#: src/app/[lang]/layout.tsx:23
+msgid ""
+"Compile-time i18n: no keys, no runtime, no catalog to load. Translations "
+"inline at the call site."
+msgstr ""

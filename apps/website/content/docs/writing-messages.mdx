@@ -1,0 +1,128 @@
+---
+title: Writing messages
+description: The t and useI18n macros, plurals, context and markup
+---
+
+Anywhere — loaders, server functions, plain modules:
+
+```tsx
+import { t } from 'best-i18n/macro'
+
+const title = t`A small starter with room to grow.`
+const greeting = t`Hi ${name}, you have ${count} items`
+```
+
+Inside React components, reactive to locale changes:
+
+```tsx
+import { useI18n } from 'best-i18n/react/macro'
+
+function About() {
+  const t = useI18n()
+  return <p>{t`About`}</p>
+}
+```
+
+Both are compile-time macros: the binding can only be used as a tagged
+template. Storing it, passing it around, destructuring `useI18n()` or shadowing
+the name is a build error with a file and offset, not a runtime surprise.
+
+A line break inside a template is code formatting, not content: it collapses
+to a single space — the same rule JSX applies to `<Trans>` — so re-indenting a
+component never changes a message or orphans its translations. Write `\n` for
+a literal newline.
+
+An interpolated identifier names its own placeholder, so the translator sees
+`Hi {name}, you have {count} items` rather than `Hi {0}, you have {1}`.
+Anything more complex than an identifier falls back to a number. A dropped or
+invented placeholder in a translation is a build error naming the file, the
+locale and the message.
+
+## Plurals
+
+```tsx
+import { plural } from 'best-i18n/macro'
+
+const label = plural(count, `One item`, `${count} items`)
+```
+
+The two forms are one gettext entry — `msgid` and `msgid_plural` — and each
+locale's `.po` supplies as many `msgstr[n]` forms as its `Plural-Forms` header
+declares (Russian three, Chinese one; there is a built-in table for catalogs
+that don't set the header). The compiler inlines that locale's selection
+formula at the call site, so what ships is a small arrow function per plural
+message — no ICU runtime, no `Intl.PluralRules`, and a one-form locale gets
+the bare string with no dispatch at all. The count is always available to a
+translation as a placeholder, interpolated or not.
+
+## Context
+
+Two identical texts that must translate differently are different messages.
+`ctx` is gettext's `msgctxt`:
+
+```tsx
+const verb = t.ctx('verb')`Open` // 打开
+const sign = t.ctx('adjective')`Open` // 营业中
+const markup = <Trans ctx='verb'>Open</Trans>
+```
+
+## Comments for the translator
+
+A `// i18n:` comment directly above (or on the line of) a message becomes a
+`#.` extracted comment in the catalogs:
+
+```tsx
+// i18n: Button label on the home page, keep it short
+const label = t`Save`
+```
+
+## Messages with markup
+
+A tagged template cannot hold JSX, so a sentence with a link or a bold run in
+it has nowhere to go. `<Trans>` is that place:
+
+```tsx
+import { Trans } from 'best-i18n/react/macro'
+
+function About() {
+  return (
+    <p>
+      <Trans>
+        Read the <a href={docsUrl}>documentation</a> to learn more.
+      </Trans>
+    </p>
+  )
+}
+```
+
+The catalog stores the markup as named placeholders — the tag's own name
+where it has one, a number where it does not — for the reason Lingui
+established: a translator moves the pieces, and never sees a JSX attribute:
+
+```
+msgid "Read the <a>documentation</a> to learn more."
+msgstr "请阅读<a>文档</a>了解更多。"
+```
+
+Where this parts ways with Lingui is what runs. There is no component walking a
+message tree per render: each locale's version is reassembled into ordinary JSX
+at build time, so the above compiles to
+
+```jsx
+getLocale() === 'zh' ? (
+  <>
+    请阅读<a href={docsUrl}>文档</a>了解更多。
+  </>
+) : (
+  <>
+    Read the <a href={docsUrl}>documentation</a> to learn more.
+  </>
+)
+```
+
+and, under `staticLocale`, to the one branch on its own.
+
+Whitespace follows JSX's own rules, so the stored message matches what renders
+— including the space a line break swallows, which is why `{' '}` exists.
+`<Trans>` takes no props, `key` included: wrap it in the element that needs
+one.

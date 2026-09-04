@@ -1,0 +1,131 @@
+---
+title: Next.js
+description: best-i18n/next——App Router，Turbopack 或 webpack
+---
+
+Next.js 不跑在 Vite 上，所以它有自己的 loader，也有自己在渲染过程中传递 locale
+的方式。
+
+```ts
+// next.config.ts
+import process from 'node:process'
+import { createI18nPlugin } from 'best-i18n/next'
+
+const withI18n = createI18nPlugin({
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  staticLocale: process.env.I18N_STATIC_LOCALE,
+})
+
+export default withI18n({})
+```
+
+```ts
+// src/i18n.ts - 语言与 URL 形态的唯一描述
+import { defineI18nConfig } from 'best-i18n/next/config'
+
+export const i18n = defineI18nConfig({
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  exclude: '^/(api|_next)/',
+})
+```
+
+```ts
+// src/proxy.ts - 把公开 URL 指向 [locale] 段
+import { createProxy } from 'best-i18n/next/proxy'
+import { i18n } from '@/i18n'
+
+export const proxy = createProxy(i18n)
+export const config = { matcher: ['/((?!_next|.*\\..*).*)'] }
+```
+
+```tsx
+// src/app/[locale]/layout.tsx
+import { getLocale } from 'best-i18n/next/server'
+import { LocaleProvider } from 'best-i18n/react'
+import { i18n } from '@/i18n'
+
+export function generateStaticParams() {
+  return i18n.locales.map((locale) => ({ locale }))
+}
+
+export const dynamicParams = false
+
+export default function LocaleLayout({ children }) {
+  const locale = getLocale()
+
+  return (
+    <html lang={locale}>
+      <body>
+        <LocaleProvider locale={locale} config={i18n}>
+          {children}
+        </LocaleProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+设置到此为止。之后 `t` 在任何 Server Component 里都能用——不需要每个文件调一次
+什么，不需要 `await`，静态渲染完好无损——`useI18n` 则在任何 Client Component
+里可用。
+
+## URL 与导航
+
+路由都在 `[locale]` 段下，但基础语言的 URL 不带前缀：`/about` 是英文，
+`/zh/about` 是中文，`/en/about` 会重定向到规范的 `/about`。链接一律写成不带前缀
+的形式，渲染时按需本地化：
+
+```tsx
+import { Link } from 'best-i18n/next/navigation'
+
+// 中文激活时渲染为 href="/zh/about"。
+function Nav() {
+  return <Link href='/about'>{t`About`}</Link>
+}
+```
+
+`usePathname` 和 `useRouter` 来自同一个模块，分别做前缀剥离和前缀追加。
+
+基础语言不带前缀的前提是有 proxy 把 `/about` 改写到 `[locale]` 段上。没有
+proxy 的部署——静态导出只 serve 磁盘上存在的文件——改在配置里设
+`prefixBase: true`：`/en/about` 成为规范形式，`Link` 对基础语言也照常加前缀，
+proxy（如果碰巧还在跑）会把不带前缀的 URL 重定向出去而不是剥掉 `/en`。本站
+正是这种情况：首页的「开始使用」按钮就是一个由 best-i18n 自己编译的
+`Link href='/docs'`。
+
+## 每个部件为什么是这样
+
+- **根 layout 里调一次 `getLocale()`。** 它拉入的模块教会运行时 Next 把 locale
+  放在哪。跳过它，所有消息都会静默地渲染成基础语言。
+- **服务端明明知道 locale，却还要 `LocaleProvider`。** 客户端组件在另一个模块图
+  里渲染，看不到服务端的渲染状态；把 locale 通过 React 传下去，才能保证服务端
+  HTML 和客户端首次渲染一致。
+- **Server Component 不需要逐文件设置。** App Router 里 layout 和它下面的 page
+  是彼此独立的渲染，一边存下的 locale 另一边看不见。所以 locale 从路由参数读取，
+  这也是静态渲染依然可用的原因。
+
+## Route handler
+
+静态预渲染的 route handler（`dynamic = 'force-static'` 加
+`generateStaticParams`）运行在 React 渲染之外，路由参数对 `t` 不可见。在
+handler 开头显式绑定 locale：
+
+```ts
+// src/app/[locale]/greeting/route.ts
+import { setRequestLocale } from 'best-i18n/next/server'
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ locale: string }> },
+) {
+  const { locale } = await params
+  setRequestLocale(locale)
+  // 此后所有 t 都按 `locale` 解析
+}
+```
+
+`setRequestLocale` 绑定的是当前异步上下文，并发请求彼此隔离。在渲染内部，它就是
+你用来让页面进入静态渲染的那个调用。

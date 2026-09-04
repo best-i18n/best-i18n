@@ -1,0 +1,137 @@
+---
+title: Next.js
+description: best-i18n/next — App Router, Turbopack or webpack
+---
+
+Next.js does not run on Vite, so it gets its own loader and its own way of
+carrying the locale through a render.
+
+```ts
+// next.config.ts
+import process from 'node:process'
+import { createI18nPlugin } from 'best-i18n/next'
+
+const withI18n = createI18nPlugin({
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  staticLocale: process.env.I18N_STATIC_LOCALE,
+})
+
+export default withI18n({})
+```
+
+```ts
+// src/i18n.ts - one description of the languages and the URL shape
+import { defineI18nConfig } from 'best-i18n/next/config'
+
+export const i18n = defineI18nConfig({
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  exclude: '^/(api|_next)/',
+})
+```
+
+```ts
+// src/proxy.ts - points a public URL at the [locale] segment
+import { createProxy } from 'best-i18n/next/proxy'
+import { i18n } from '@/i18n'
+
+export const proxy = createProxy(i18n)
+export const config = { matcher: ['/((?!_next|.*\\..*).*)'] }
+```
+
+```tsx
+// src/app/[locale]/layout.tsx
+import { getLocale } from 'best-i18n/next/server'
+import { LocaleProvider } from 'best-i18n/react'
+import { i18n } from '@/i18n'
+
+export function generateStaticParams() {
+  return i18n.locales.map((locale) => ({ locale }))
+}
+
+export const dynamicParams = false
+
+export default function LocaleLayout({ children }) {
+  const locale = getLocale()
+
+  return (
+    <html lang={locale}>
+      <body>
+        <LocaleProvider locale={locale} config={i18n}>
+          {children}
+        </LocaleProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+That is the whole setup. `t` then works in any Server Component — no per-file
+call, no `await`, static rendering intact — and `useI18n` in any Client
+Component.
+
+## URLs and navigation
+
+Routes live under `[locale]`, but the base locale's URLs stay unprefixed:
+`/about` is English, `/zh/about` is Chinese, and `/en/about` redirects to the
+canonical `/about`. Links are written unprefixed and localized as they render:
+
+```tsx
+import { Link } from 'best-i18n/next/navigation'
+
+// Renders href="/zh/about" while Chinese is active.
+function Nav() {
+  return <Link href='/about'>{t`About`}</Link>
+}
+```
+
+`usePathname` and `useRouter` come from the same module, with the prefix
+stripped and applied respectively.
+
+The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
+the `[locale]` segment. A deployment without one — a static export serves only
+the files that exist — sets `prefixBase: true` in the config instead:
+`/en/about` becomes the canonical form, `Link` prefixes the base locale like
+any other, and a proxy (if one runs anyway) redirects unprefixed URLs out
+rather than stripping `/en`. This site is exactly that case: its "Get started"
+button is a `Link href='/docs'` compiled by best-i18n itself.
+
+## Why the pieces are what they are
+
+- **`getLocale()` in the root layout, once.** It is what pulls in the module
+  that teaches the runtime where Next keeps the locale. Skip it and every
+  message quietly renders in the base locale.
+- **`LocaleProvider` even though the server already knows the locale.** Client
+  components render in a second module graph that cannot see the server's
+  render state; passing the locale through React is what keeps the server's
+  HTML and the first client render identical.
+- **Server Components need no per-file setup.** A layout and the page beneath
+  it are separate renders in the App Router, so a locale stashed in one is not
+  visible in the other. The locale is read from the route param instead, which
+  is also why static rendering still works.
+
+## Route handlers
+
+A statically prerendered route handler (`dynamic = 'force-static'` with
+`generateStaticParams`) runs outside the React render, where the route params
+are not visible to `t`. Bind the locale explicitly at the top of the handler:
+
+```ts
+// src/app/[locale]/greeting/route.ts
+import { setRequestLocale } from 'best-i18n/next/server'
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ locale: string }> },
+) {
+  const { locale } = await params
+  setRequestLocale(locale)
+  // every t after this resolves in `locale`
+}
+```
+
+`setRequestLocale` binds the current async context, so concurrent requests
+stay isolated. Inside a render it is the same call you would use to opt a page
+into static rendering.

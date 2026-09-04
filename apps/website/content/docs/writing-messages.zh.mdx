@@ -1,0 +1,120 @@
+---
+title: 编写消息
+description: t 和 useI18n 宏、复数、上下文与内嵌标记
+---
+
+任何地方都可以——loader、server function、普通模块：
+
+```tsx
+import { t } from 'best-i18n/macro'
+
+const title = t`A small starter with room to grow.`
+const greeting = t`Hi ${name}, you have ${count} items`
+```
+
+在 React 组件内部，对 locale 变化保持响应：
+
+```tsx
+import { useI18n } from 'best-i18n/react/macro'
+
+function About() {
+  const t = useI18n()
+  return <p>{t`About`}</p>
+}
+```
+
+两者都是编译期宏：绑定只能作为 tagged template 使用。把它存起来、传来传去、
+解构 `useI18n()` 或遮蔽这个名字，都是带文件和偏移量的构建错误，而不是运行时的
+意外。
+
+模板内的换行是代码排版，不是内容：它坍缩成一个空格——和 JSX 对 `<Trans>` 的
+规则相同——所以重新缩进组件永远不会改变消息，也不会让翻译成为孤儿。想要真正的
+换行写 `\n`。
+
+插值的标识符用自己的名字充当占位符，所以翻译者看到的是
+`Hi {name}, you have {count} items` 而不是 `Hi {0}, you have {1}`。比标识符更
+复杂的表达式退回数字编号。翻译里丢掉或凭空多出占位符是构建错误，会指出文件、
+语言和消息。
+
+## 复数
+
+```tsx
+import { plural } from 'best-i18n/macro'
+
+const label = plural(count, `One item`, `${count} items`)
+```
+
+两个形式是同一条 gettext 条目——`msgid` 和 `msgid_plural`——每个语言的 `.po`
+按其 `Plural-Forms` 头声明的数量提供 `msgstr[n]`（俄语三个，中文一个；catalog
+没写头时有内置表兜底）。编译器把该语言的选择公式内联到调用处，所以最终产物是
+每条复数消息一个小小的箭头函数——没有 ICU 运行时，没有 `Intl.PluralRules`，
+单形式语言直接拿到裸字符串，连分派都没有。计数值始终可以作为占位符出现在翻译里，
+无论源文本有没有插值它。
+
+## 上下文
+
+两段文本相同但必须翻译得不同，就是两条不同的消息。`ctx` 就是 gettext 的
+`msgctxt`：
+
+```tsx
+const verb = t.ctx('verb')`Open` // 打开
+const sign = t.ctx('adjective')`Open` // 营业中
+const markup = <Trans ctx='verb'>Open</Trans>
+```
+
+## 给翻译者的注释
+
+紧贴消息上方（或同一行）的 `// i18n:` 注释会变成 catalog 里的 `#.` 提取注释：
+
+```tsx
+// i18n: Button label on the home page, keep it short
+const label = t`Save`
+```
+
+## 带标记的消息
+
+tagged template 装不下 JSX，所以带链接或加粗片段的句子无处安放。`<Trans>` 就是
+那个地方：
+
+```tsx
+import { Trans } from 'best-i18n/react/macro'
+
+function About() {
+  return (
+    <p>
+      <Trans>
+        Read the <a href={docsUrl}>documentation</a> to learn more.
+      </Trans>
+    </p>
+  )
+}
+```
+
+catalog 把标记存成具名占位符——标签有名字就用名字，没有就用数字——理由正是
+Lingui 立下的那条：翻译者移动的是片段，永远不会看到 JSX 属性：
+
+```
+msgid "Read the <a>documentation</a> to learn more."
+msgstr "请阅读<a>文档</a>了解更多。"
+```
+
+与 Lingui 分道扬镳的是运行的东西。没有组件在每次渲染时遍历消息树：每个语言的
+版本在构建期就重新组装回普通 JSX，所以上面的代码编译为
+
+```jsx
+getLocale() === 'zh' ? (
+  <>
+    请阅读<a href={docsUrl}>文档</a>了解更多。
+  </>
+) : (
+  <>
+    Read the <a href={docsUrl}>documentation</a> to learn more.
+  </>
+)
+```
+
+在 `staticLocale` 下则只剩那一个分支。
+
+空白遵循 JSX 自己的规则，所以存储的消息与渲染结果一致——包括换行吞掉的那个
+空格，这正是 `{' '}` 存在的原因。`<Trans>` 不接受任何 prop，`key` 也不行：
+把它包在需要 key 的元素里。

@@ -22,6 +22,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "release": "pnpm --filter best-i18n release",
+    "dev:website": "pnpm --filter @apps/website dev",
+    "build:website": "pnpm --filter @apps/website build",
     "dev:next": "pnpm --filter playground-nextjs dev",
     "build:next": "pnpm --filter playground-nextjs build",
     "dev:intl": "pnpm --filter playground-nextjs-intl dev",

@@ -1,0 +1,32 @@
+---
+title: 限制
+description: 设计的边界，直白地说
+---
+
+- 消息必须静态可见——不能动态拼装消息。
+- 在 Next.js 上，Client Component 必须从 `useI18n()` 取 locale。裸 `t` 和上方
+  没有 `useI18n()` 的 `<Trans>` 读的是 `getLocale()`，而客户端组件渲染在一个
+  没有任何东西绑定过请求 locale 的模块图里——它们会回退到基础语言，且只在服务端
+  如此，React 在水合时一声不吭地抹平差异。loader 拒绝编译这种写法，并指出文件、
+  行号和消息。Server Component 正相反：它们不能调 hook，也不需要。
+- 复数是 gettext 复数（`plural(count, one, other)`），不是 ICU：还没有
+  `select`/性别结构，也没有数字/日期格式化——那些用 `Intl` 配合 `getLocale()`。
+- `from`/`hookFrom` 按源码里写下的 import 说明符匹配，重导出宏时要把你的模块
+  路径写进插件选项。
+- 在 Next.js 上，`best-i18n/next/server` 从 Next 的内部渲染存储里读 locale，
+  因为 `t` 必须同步解析而 `params` 和 `headers()` 是异步的。那是私有 API，
+  Next.js 的大版本可能弄坏它。它读取的字段 `rootParams` 出现在 15.2，也就是
+  peer 依赖的下限。
+- Client Component 里优先用 `useI18n`。那里的裸 `t` 读的是环境级客户端 locale，
+  `LocaleProvider` 会在客户端镜像它——但只来自最近的 provider，而且不像
+  `useI18n` 那样在 locale 变化时重新渲染。
+- `best-i18n/server` 需要 `AsyncLocalStorage`。Node 和 Bun 自带；Cloudflare
+  Workers 上它只存在于 `nodejs_compat`（或 `nodejs_als`）兼容性 flag 之后，
+  没开 flag 时 import 直接抛错并把话说明白，而不是在请求之间静默共享一个
+  locale。
+- workerd 不实现 `AsyncLocalStorage.enterWith()`。best-i18n 只在
+  `best-i18n/next/server` 里调用它——React 渲染之外预渲染的 route handler——
+  按定义跑在 Node 上，那里支持完整（Bun 也是）。在 Workers 上 locale 用
+  `best-i18n/server` 的 `withRequestLocale` 绑定，它用的是 `.run()`，不受影响。
+  （`enterWith` 绑定的是当前同步帧的余下部分，这正是 Node 文档建议优先 `run`
+  的原因——而这里那个帧恰好就是 handler 的一次调用，正中意图。）

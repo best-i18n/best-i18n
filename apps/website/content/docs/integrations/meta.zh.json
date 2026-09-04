@@ -1,0 +1,5 @@
+{
+  "title": "集成",
+  "defaultOpen": true,
+  "pages": ["vite", "rolldown", "nextjs", "plain-javascript"]
+}

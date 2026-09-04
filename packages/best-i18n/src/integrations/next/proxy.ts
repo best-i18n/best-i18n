@@ -20,6 +20,10 @@ const ONE_YEAR = 60 * 60 * 24 * 365
  * that scheme, so it redirects to the canonical `/about` rather than serving
  * the same page at two addresses.
  *
+ * Under `prefixBase` the canonical direction flips: `/en/about` is the public
+ * URL - it already matches the route tree, no rewrite needed - and an
+ * unprefixed `/about` redirects to the resolved locale's prefix instead.
+ *
  * @example
  *   // src/proxy.ts
  *   import { createProxy } from 'best-i18n/next/proxy'
@@ -36,7 +40,7 @@ export function createProxy(config: NextI18nConfig) {
 
     const segments = url.pathname.split('/')
 
-    if (segments[1] === config.baseLocale) {
+    if (segments[1] === config.baseLocale && !config.prefixBase) {
       const target = new URL(url)
       target.pathname =
         segments.length > 2 ? `/${segments.slice(2).join('/')}` : '/'
@@ -50,6 +54,14 @@ export function createProxy(config: NextI18nConfig) {
     // route handler.
     const headers = new Headers(request.headers)
     headers.set(LOCALE_HEADER, locale)
+
+    // Prefixed URLs are canonical under `prefixBase`, so the unprefixed form
+    // redirects out instead of quietly serving the same page twice.
+    if (config.prefixBase && fromUrl === undefined) {
+      const target = new URL(url)
+      target.pathname = rest === '/' ? `/${locale}` : `/${locale}${rest}`
+      return NextResponse.redirect(target)
+    }
 
     url.pathname = rest === '/' ? `/${locale}` : `/${locale}${rest}`
 

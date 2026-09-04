@@ -1,0 +1,27 @@
+---
+title: 提取与翻译
+description: i18n-extract CLI 与 PO 工作流
+---
+
+```bash
+i18n-extract --locales en,zh          # 写出 messages/messages.pot + zh.po
+i18n-extract --locales en,zh --check  # CI：过期或未翻译时 exit 1
+i18n-compile --locales en,zh --outdir out --format json   # 可选的 JSON/JS 导出
+```
+
+`.po` 文件就是唯一事实来源——打包器插件直接读取它们，中间没有编译步骤。开发时
+编辑消息文件会触发整页刷新。一次提取永远不会减少翻译的数量；如果会，它拒绝执行
+并要求 `--force`。
+
+## Fuzzy 与校验
+
+Fuzzy 翻译不参与构建——标准 gettext 行为。改写消息时带过来的旧翻译以 `fuzzy`
+标记留在 catalog 里，该消息回退到基础语言，构建把它报告为缺失，直到有人复核。
+翻译的 `{0}`/`<0>` 占位符与源文本不匹配是构建错误，指出文件、语言和消息；
+`i18n-extract` 在合并时报告同样的不匹配，所以一次糟糕的 TMS 导入在任何人构建之前
+就能被看到。翻译者或 TMS 写入的注释、标志、复数条目和头部在重写后原样保留。
+
+## 重导出的宏
+
+`from`/`hookFrom` 按源码里写下的 import 说明符匹配，所以如果你重导出了宏，把你
+的模块路径写进插件选项。提取器有对应的 `--hook`/`--hook-from` 参数。

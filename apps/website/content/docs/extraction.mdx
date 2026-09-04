@@ -1,0 +1,32 @@
+---
+title: Extract and translate
+description: The i18n-extract CLI and the PO workflow
+---
+
+```bash
+i18n-extract --locales en,zh          # writes messages/messages.pot + zh.po
+i18n-extract --locales en,zh --check  # CI: exit 1 when stale or untranslated
+i18n-compile --locales en,zh --outdir out --format json   # optional JSON/JS export
+```
+
+The `.po` files are the source of truth — the bundler plugins read them
+directly, no compile step in between. Editing a message file in dev triggers a
+full reload. An extract run never reduces the number of translations; if it
+would, it refuses and asks for `--force`.
+
+## Fuzzy and validation
+
+Fuzzy translations do not build — standard gettext behaviour. A carried-over
+translation stays in the catalog marked `fuzzy`, the message falls back to the
+base locale, and the build reports it as missing until someone reviews it. A
+translation whose `{0}`/`<0>` placeholders do not match the source is a build
+error naming the file, locale and message; `i18n-extract` reports the same
+mismatch when it merges, so a bad TMS import is visible before anyone builds.
+Comments, flags, plural entries and headers written by translators or a TMS
+survive a rewrite untouched.
+
+## Re-exported macros
+
+`from`/`hookFrom` match import specifiers as written in the source, so if you
+re-export the macros, list your module path in the plugin options. The
+extractor has the matching `--hook`/`--hook-from` flags.

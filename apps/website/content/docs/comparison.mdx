@@ -1,0 +1,91 @@
+---
+title: Comparison
+description: How best-i18n relates to Lingui, next-intl and Paraglide — with measured numbers
+---
+
+best-i18n inherited its best ideas from the libraries it gets compared to, so
+this page is less a contest than a map of trade-offs. The numbers come from
+twin playgrounds in the repo — the same app, the same two pages, the same
+messages, once per library — rebuilt with `pnpm bench`, so they are
+reproducible rather than remembered.
+
+## At a glance
+
+|                                              | best-i18n                            | Lingui                          | next-intl               | Paraglide JS             |
+| -------------------------------------------- | ------------------------------------ | ------------------------------- | ----------------------- | ------------------------ |
+| The message is                               | the source text                      | the source text                 | a key                   | a key (`m.greeting()`)   |
+| Ships at runtime                             | nothing — inlined ternaries/literals | catalog + lookup                | catalog + ICU formatter | one function per message |
+| Catalog format                               | PO                                   | PO                              | JSON                    | inlang messages          |
+| Plurals                                      | gettext, formula inlined per locale  | ICU, at runtime                 | ICU, at runtime         | matching/variants        |
+| `select`, dates, numbers                     | no — reach for `Intl`                | yes (ICU)                       | yes (ICU)               | no built-in formatting   |
+| Markup in messages                           | `<Trans>`, rebuilt to JSX at build   | `<Trans>`, tree walk per render | `t.rich()` at runtime   | strings only             |
+| Per-locale build                             | `staticLocale` — pure literals       | no                              | no                      | yes, per-locale bundles  |
+| Localized pathnames (`/about` → `/de/ueber`) | no                                   | no                              | yes                     | yes                      |
+
+Two of these are best-i18n's direct ancestors: the macro shape and the
+`<0>...</0>` markup convention are Lingui's, and Paraglide proved that
+compile-time i18n with per-locale tree-shaking is viable at all. The deeper
+difference from Lingui is what runs: Lingui looks a message up in a catalog and
+`<Trans>` walks a message tree on every render; here each locale's version is
+ordinary JSX by the time the browser sees it.
+
+## Measured size
+
+Both apps in a family are measured the same way — on Next.js, every
+`/_next/static/*.js` the HTML of `/zh` and `/zh/about` references; on TanStack
+Start, the emitted client assets.
+
+### Next.js — against next-intl
+
+| variant                            | client JS (gzip) | raw      | HTML `/zh` (gzip) |
+| ---------------------------------- | ---------------- | -------- | ----------------- |
+| no i18n at all                     | 173.4 kB         | 562.0 kB | 1.9 kB            |
+| best-i18n                          | 174.3 kB         | 564.9 kB | 2.4 kB            |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.2 kB         | 564.7 kB | 2.4 kB            |
+| next-intl                          | 187.4 kB         | 607.4 kB | 2.4 kB            |
+
+### TanStack Start — against Paraglide
+
+| variant                            | client JS (gzip) | raw      |
+| ---------------------------------- | ---------------- | -------- |
+| best-i18n                          | 99.0 kB          | 310.3 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 98.8 kB          | 309.7 kB |
+| paraglide                          | 106.9 kB         | 334.9 kB |
+
+## What the two gaps are made of
+
+They are not the same kind of gap, and the difference matters more than the
+numbers.
+
+**next-intl's ~13 kB is a message runtime** — an ICU formatter, the catalog
+and the lookup. It buys plurals, `select`, dates, numbers and rich text.
+best-i18n has since grown plurals of its own — gettext plurals, compiled to an
+inlined per-locale formula rather than an ICU runtime — but `select`, dates
+and numbers it still does not do. next-intl's catalog also travels in _every_
+page's HTML by default: adding 300 messages nobody on the home page renders
+still grew that page from 2.4 kB to 4.4 kB gzip.
+
+**Paraglide's ~8 kB is a URL router** — a `URLPattern` matcher, cookie
+handling, `preferredLanguage` detection — not message lookup. On the message
+side both libraries inline and tree-shake, so the gap is fixed rather than
+growing with the catalog. What it buys is real: Paraglide can translate the
+path itself, `/about` becoming `/de/ueber`, which best-i18n cannot do at all.
+
+## Where best-i18n costs more
+
+Messages are inlined at each call site, so a message used many times _in one
+module_ is emitted many times, where Paraglide emits one function and calls
+it. One message used 100 times: +17.6 kB raw here against +3.7 kB there — and
+**+0.5 kB gzip either way**, because gzip flattens the repetition. Over the
+wire it is a wash; what is left is parse time.
+
+Message-side scaling was measured too, at 300 extra messages: rendered from a
+Server Component they cost best-i18n no client JS at all, and from a Client
+Component about 6 bytes each gzipped for both languages.
+
+The rest of the honest list — no ICU `select`, the Next.js private API, where
+`AsyncLocalStorage` has to come from — lives in
+[Limitations](/docs/limitations). The playgrounds
+([`playground/nextjs-intl`](https://github.com/Debbl/best-i18n/tree/main/playground/nextjs-intl),
+[`playground/tanstack-start-paraglide`](https://github.com/Debbl/best-i18n/tree/main/playground/tanstack-start-paraglide))
+carry the full numbers and the caveats.

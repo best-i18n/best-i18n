@@ -1,0 +1,33 @@
+---
+title: Locale resolution and URLs
+description: Per-request locale binding, the resolution chain and URL helpers
+---
+
+On any server that owns its own request handler — a Vite-based framework, a
+Worker, a plain fetch handler — bind the locale per request. Next.js does this
+for you, through the proxy.
+
+```ts
+import { withRequestLocale } from 'best-i18n/server'
+
+export default {
+  async fetch(request: Request) {
+    return withRequestLocale(request, I18N, () => handler.fetch(request))
+  },
+}
+```
+
+Resolution order: URL prefix → cookie → `Accept-Language` → base locale. The
+client mirrors the same order (`resolveClientLocale`) so hydration matches SSR.
+`localizeUrl`/`deLocalizeUrl` plug into router URL rewriting, with an `exclude`
+pattern for paths that must never be localized (`/api/...`).
+
+## Why there is no global locale on the server
+
+`setLocale` from `best-i18n/runtime` is client-only, deliberately: one shared
+locale on a server would leak between concurrent requests. The server-side
+locale lives in `AsyncLocalStorage`, scoped to `withRequestLocale` /
+`withLocale` — and if the runtime cannot provide that isolation, the import
+throws instead of silently sharing state. On Cloudflare Workers that means
+enabling the `nodejs_compat` (or `nodejs_als`) compatibility flag; see
+[Limitations](/docs/limitations).

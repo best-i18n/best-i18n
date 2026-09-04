@@ -1,0 +1,80 @@
+---
+title: 对比
+description: best-i18n 与 Lingui、next-intl、Paraglide 的关系——附实测数字
+---
+
+best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所以这一页与其说是比赛，
+不如说是一张取舍地图。数字来自仓库里的孪生 playground——同一个应用、同样两个
+页面、同样的消息，每个库各一份——用 `pnpm bench` 重新构建即可复现，而不是凭
+记忆写下的。
+
+## 一览
+
+|                                      | best-i18n                   | Lingui                        | next-intl              | Paraglide JS          |
+| ------------------------------------ | --------------------------- | ----------------------------- | ---------------------- | --------------------- |
+| 消息是什么                           | 源文本                      | 源文本                        | key                    | key（`m.greeting()`） |
+| 运行时装载什么                       | 无——内联三元/字面量         | catalog + 查找                | catalog + ICU 格式化器 | 每条消息一个函数      |
+| catalog 格式                         | PO                          | PO                            | JSON                   | inlang messages       |
+| 复数                                 | gettext，公式按语言内联     | ICU，运行时                   | ICU，运行时            | matching/variants     |
+| `select`、日期、数字                 | 无——用 `Intl`               | 有（ICU）                     | 有（ICU）              | 无内置格式化          |
+| 消息内嵌标记                         | `<Trans>`，构建期重组为 JSX | `<Trans>`，每次渲染遍历消息树 | `t.rich()` 运行时      | 仅字符串              |
+| 按语言构建                           | `staticLocale`——纯字面量    | 无                            | 无                     | 有，按语言出包        |
+| 本地化路径（`/about` → `/de/ueber`） | 无                          | 无                            | 有                     | 有                    |
+
+其中两个是 best-i18n 的直系祖先：宏的形态和 `<0>...</0>` 标记约定来自 Lingui，
+而 Paraglide 证明了编译期 i18n 加按语言 tree-shaking 根本上可行。与 Lingui 更深
+的分野在于运行的东西：Lingui 在运行时查 catalog，`<Trans>` 每次渲染都遍历消息
+树；这里每个语言的版本在浏览器看到之前就已经是普通 JSX。
+
+## 实测体积
+
+同族的两个应用用同一种方式测量——Next.js 上是 `/zh` 和 `/zh/about` 的 HTML
+引用到的全部 `/_next/static/*.js`；TanStack Start 上是产出的客户端资产。
+
+### Next.js——对 next-intl
+
+| 变体                               | 客户端 JS（gzip） | 原始     | HTML `/zh`（gzip） |
+| ---------------------------------- | ----------------- | -------- | ------------------ |
+| 完全没有 i18n                      | 173.4 kB          | 562.0 kB | 1.9 kB             |
+| best-i18n                          | 174.3 kB          | 564.9 kB | 2.4 kB             |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 174.2 kB          | 564.7 kB | 2.4 kB             |
+| next-intl                          | 187.4 kB          | 607.4 kB | 2.4 kB             |
+
+### TanStack Start——对 Paraglide
+
+| 变体                               | 客户端 JS（gzip） | 原始     |
+| ---------------------------------- | ----------------- | -------- |
+| best-i18n                          | 99.0 kB           | 310.3 kB |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 98.8 kB           | 309.7 kB |
+| paraglide                          | 106.9 kB          | 334.9 kB |
+
+## 两个差距各是什么做的
+
+它们不是同一种差距，而这一点比数字本身更重要。
+
+**next-intl 的约 13 kB 是消息运行时**——ICU 格式化器、catalog 和查找。它买到
+的是复数、`select`、日期、数字和富文本。best-i18n 后来长出了自己的复数——
+gettext 复数，编译成按语言内联的公式而不是 ICU 运行时——但 `select`、日期和
+数字它仍然不做。next-intl 的 catalog 还默认随**每个**页面的 HTML 传输：加 300
+条首页根本不渲染的消息，那个页面还是从 2.4 kB 涨到了 4.4 kB gzip。
+
+**Paraglide 的约 8 kB 是一个 URL 路由器**——`URLPattern` 匹配器、cookie 处理、
+`preferredLanguage` 检测——不是消息查找。消息侧两个库都内联都 tree-shake，
+所以差距是固定的，不随 catalog 增长。它买到的东西是实打实的：Paraglide 能翻译
+路径本身，`/about` 变成 `/de/ueber`，这是 best-i18n 完全做不到的。
+
+## best-i18n 更贵的地方
+
+消息在每个调用处内联，所以**同一个模块里**用了很多次的消息会被输出很多次，
+而 Paraglide 输出一个函数然后调用它。一条消息用 100 次：这边 +17.6 kB 原始体积
+对那边 +3.7 kB——而 **gzip 后两边都是 +0.5 kB**，因为 gzip 把重复压平了。走网
+络是平手；剩下的是解析时间。
+
+消息侧的规模也测过，加 300 条消息：从 Server Component 渲染时 best-i18n 的客户
+端 JS 成本为零，从 Client Component 渲染时两种语言合计每条约 6 字节 gzip。
+
+诚实清单的其余部分——没有 ICU `select`、Next.js 私有 API、`AsyncLocalStorage`
+从哪来——在[限制](/zh/docs/limitations)。孪生 playground（
+[`playground/nextjs-intl`](https://github.com/Debbl/best-i18n/tree/main/playground/nextjs-intl)、
+[`playground/tanstack-start-paraglide`](https://github.com/Debbl/best-i18n/tree/main/playground/tanstack-start-paraglide)）
+里有完整的数字和全部前提条件。

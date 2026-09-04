@@ -1,0 +1,45 @@
+---
+title: 纯 JavaScript
+description: 不需要框架——一个打包器插件加 t 宏就是整个系统
+---
+
+不需要框架：Vite 或 Rolldown 插件加上 `t` 宏就是整个系统。`best-i18n/runtime`
+是编译后的消息所读取的 locale 状态——它扮演 `@lingui/core` 之于 Lingui 的角色，
+只是没有 catalog，因为没有任何东西需要加载。它也是 "no runtime" 这句口号之下
+仅存的全部运行时。
+
+```ts
+import { t } from 'best-i18n/macro'
+import { getLocale, setLocale, subscribeLocale } from 'best-i18n/runtime'
+
+function render() {
+  document.querySelector('h1')!.textContent =
+    t`A small starter with room to grow.`
+}
+
+// 消息在调用处求值，所以 locale 变化意味着重新运行渲染代码——
+// 和 Lingui 的 activate-then-rerender 一样。
+subscribeLocale(render)
+document.querySelector('select')!.onchange = (e) => {
+  setLocale((e.target as HTMLSelectElement).value)
+}
+render()
+```
+
+## 在服务端
+
+`setLocale` 是刻意只给客户端用的：服务端上一个共享的 locale 会在并发请求之间
+串染。服务端的 locale 按请求或按作用域绑定——fetch handler 里用
+`withRequestLocale(request, config, fn)`，脚本里用 `withLocale(locale, fn)`——
+两者都来自 `best-i18n/server`，都喂给消息编译出来的那个 `getLocale()`。
+
+```ts
+import { t } from 'best-i18n/macro'
+import { withLocale } from 'best-i18n/server'
+
+for (const locale of ['en', 'zh']) {
+  withLocale(locale, () => console.log(t`A small starter with room to grow.`))
+}
+```
+
+请求作用域那一侧见 [locale 解析与 URL](/zh/docs/server)。

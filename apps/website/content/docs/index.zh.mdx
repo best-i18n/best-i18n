@@ -1,0 +1,81 @@
+---
+title: 介绍
+description: 编译期 i18n——没有 key，没有运行时，没有需要加载的 catalog
+---
+
+编译期 i18n。源文本直接写在代码里；编译器把每条翻译内联到调用处，所以没有运行时
+catalog、没有查找、没有任何需要加载的东西。按语言构建时会坍缩成纯字符串字面量。
+
+```tsx
+import { useI18n } from 'best-i18n/react/macro'
+
+function About() {
+  const t = useI18n()
+  return <h1>{t`A small starter with room to grow.`}</h1>
+}
+```
+
+（默认构建）编译为
+
+```js
+const t = useLocale() // locale 变化时重新渲染
+return (
+  <h1>
+    {t === 'zh'
+      ? `一个小而可长的起始模板。`
+      : `A small starter with room to grow.`}
+  </h1>
+)
+```
+
+设置 `staticLocale: 'zh'`（按语言构建）时编译为
+
+```js
+return <h1>{`一个小而可长的起始模板。`}</h1>
+```
+
+## 为什么
+
+- **没有 key。** 源文本就是消息本身；id 是内容哈希，由 PO 文件替你管理。
+- **没有运行时。** 消息编译为三元表达式（单一构建）或字面量（按语言构建）。
+  未使用的消息随使用它的代码一起被 tree-shake 掉。
+- **PO 工作流。** `messages.pot` + `<locale>.po`——翻译者、TMS 和 LLM 早已熟悉的
+  格式。改写一条消息时，旧翻译以 `fuzzy` 的形式保留下来而不是丢失；删掉的消息变成
+  `#~` 废弃条目，从不删除。
+- **SSR 安全。** 服务端 locale 按请求存放在 AsyncLocalStorage 里；如果运行时无法
+  提供隔离，它会直接报错，而不是在请求之间静默共享状态。
+
+## 安装
+
+```bash
+pnpm add best-i18n
+```
+
+按你的框架选择集成方式。集成层之下的一切——宏、PO 工作流、URL 辅助函数——都是
+一样的。
+
+| 框架                                                                         | 集成方式                                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Vite，以及跑在它上面的一切（TanStack Start、React Router、SvelteKit、Astro） | [`best-i18n/vite`](/zh/docs/integrations/vite)          |
+| Next.js（App Router，Turbopack 或 webpack）                                  | [`best-i18n/next`](/zh/docs/integrations/nextjs)        |
+| 直接使用 Rolldown，以及基于它的工具（tsdown 等）                             | [`best-i18n/rolldown`](/zh/docs/integrations/rolldown)  |
+| 不用任何框架                                                                 | [纯 JavaScript](/zh/docs/integrations/plain-javascript) |
+
+rolldown-vite 保留了 Vite 插件 API，所以直接用 `best-i18n/vite`；
+`best-i18n/rolldown` 是给不带 Vite、单独使用 Rolldown 的场景准备的。
+
+## 想法的出处
+
+best-i18n 最好的想法不是自己发明的，而是继承来的：
+
+- [GNU gettext](https://www.gnu.org/software/gettext/)——本包所使用的 PO 工作流：
+  源文本作为消息、用 `fuzzy` 代替数据丢失、用 `#~` 代替删除。正是因为尊重这些约定，
+  几十年积累的翻译工具链才能直接工作。
+- [Lingui](https://lingui.dev/)——宏的形态和消息内嵌标记的 `<0>...</0>` 占位符
+  约定。采用它的理由与它诞生的理由相同：翻译者永远不应该看到 JSX 属性。
+- [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJS)——
+  证明了编译期 i18n 加按语言 tree-shaking 是可行的，也是 locale 策略 API 的标杆。
+- [next-intl](https://next-intl.dev/)——完整的 Next.js App Router 集成应当覆盖
+  什么范围的参照；仓库里与它对照的 playground 让体积数据保持诚实。
+- [gettext-parser](https://github.com/smhg/gettext-parser)——`i18n-extract`
+  底层的 PO 编解码器。

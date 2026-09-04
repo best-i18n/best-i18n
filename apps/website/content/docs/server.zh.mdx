@@ -1,0 +1,29 @@
+---
+title: locale 解析与 URL
+description: 按请求绑定 locale、解析链与 URL 辅助函数
+---
+
+在任何自己掌管请求处理的服务端——基于 Vite 的框架、Worker、普通 fetch
+handler——按请求绑定 locale。Next.js 通过 proxy 替你做了这件事。
+
+```ts
+import { withRequestLocale } from 'best-i18n/server'
+
+export default {
+  async fetch(request: Request) {
+    return withRequestLocale(request, I18N, () => handler.fetch(request))
+  },
+}
+```
+
+解析顺序：URL 前缀 → cookie → `Accept-Language` → 基础语言。客户端按同一顺序
+解析（`resolveClientLocale`），所以水合与 SSR 一致。`localizeUrl`/`deLocalizeUrl`
+可以接入路由器的 URL 重写，`exclude` 模式排除绝不本地化的路径（`/api/...`）。
+
+## 服务端为什么没有全局 locale
+
+`best-i18n/runtime` 的 `setLocale` 刻意只给客户端用：服务端上一个共享的 locale
+会在并发请求之间串染。服务端的 locale 存放在 `AsyncLocalStorage` 里，作用域限定
+在 `withRequestLocale` / `withLocale` 内——如果运行时无法提供这种隔离，import
+时直接报错，而不是静默共享状态。在 Cloudflare Workers 上这意味着要启用
+`nodejs_compat`（或 `nodejs_als`）兼容性 flag；见[限制](/zh/docs/limitations)。

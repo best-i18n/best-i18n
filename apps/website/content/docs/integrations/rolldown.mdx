@@ -1,0 +1,34 @@
+---
+title: Rolldown
+description: best-i18n/rolldown — for Rolldown without Vite around it
+---
+
+The same options as the [Vite plugin](/docs/integrations/vite). The plugin
+declares Rolldown hook filters, so files that never name a macro module are
+skipped in Rust and the JavaScript plugin is not even called for them.
+
+```ts
+// rolldown.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { i18n } from 'best-i18n/rolldown'
+
+export default {
+  input: 'src/main.ts',
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+  ],
+}
+```
+
+This covers Rolldown used directly and tools built on it (tsdown, ...). In
+watch mode the catalog reloads per rebuild, and the catalog files are
+registered as watch dependencies.
+
+Note: rolldown-vite is not this — it keeps the Vite plugin API, so it takes
+`best-i18n/vite` unchanged.

@@ -1,0 +1,37 @@
+---
+title: Vite
+description: best-i18n/vite — for Vite and everything built on it
+---
+
+The Vite plugin covers Vite itself and anything running on it: TanStack
+Start, React Router, SvelteKit, Astro. rolldown-vite keeps the Vite plugin
+API, so it uses this plugin unchanged.
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { i18n } from 'best-i18n/vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      // set (e.g. from an env var) to build a single locale as pure literals
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+    // ...other plugins
+  ],
+})
+```
+
+The `.po` files under `messagesDir` are the source of truth — the plugin reads
+them directly, no compile step in between. Editing a message file in dev
+triggers a full reload.
+
+With `staticLocale` set, the build inlines that one locale as plain string
+literals — one deployable bundle per locale, each with zero i18n overhead. See
+[Writing messages](/docs/writing-messages) for what compiles, and
+[Extract and translate](/docs/extraction) for the catalog workflow.

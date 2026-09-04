@@ -1,0 +1,34 @@
+---
+title: Vite
+description: best-i18n/vite——用于 Vite 以及构建在它之上的一切
+---
+
+Vite 插件覆盖 Vite 本身和所有跑在它上面的框架：TanStack Start、React Router、
+SvelteKit、Astro。rolldown-vite 保留了 Vite 插件 API，所以也直接用这个插件。
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { i18n } from 'best-i18n/vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      // 设置后（比如来自环境变量）只构建一个语言，全部内联为纯字面量
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+    // ...其他插件
+  ],
+})
+```
+
+`messagesDir` 下的 `.po` 文件就是唯一事实来源——插件直接读取它们，中间没有编译
+步骤。开发时编辑消息文件会触发整页刷新。
+
+设置 `staticLocale` 后，构建会把那一个语言内联为纯字符串字面量——每个语言各出一
+份产物，i18n 开销为零。编译产物长什么样见[编写消息](/zh/docs/writing-messages)，
+catalog 工作流见[提取与翻译](/zh/docs/extraction)。

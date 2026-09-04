@@ -49,6 +49,37 @@ describe('localizePathname / deLocalizePathname', () => {
   })
 })
 
+describe('prefixBase', () => {
+  const PREFIXED = { ...CONFIG, prefixBase: true }
+
+  it('prefixes the base locale too', () => {
+    expect(localizePathname('/about', 'en', PREFIXED)).toBe('/en/about')
+    expect(localizePathname('/', 'en', PREFIXED)).toBe('/en')
+    expect(localizePathname('/about', 'zh', PREFIXED)).toBe('/zh/about')
+  })
+
+  it('recognizes the base prefix on the way in', () => {
+    expect(deLocalizePathname('/en/about', PREFIXED)).toBe('/about')
+    expect(deLocalizePathname('/en', PREFIXED)).toBe('/')
+    expect(localeFromPathname('/en/about', PREFIXED)).toBe('en')
+  })
+
+  it('re-localizes across the base locale in both directions', () => {
+    expect(localizePathname('/en/about', 'zh', PREFIXED)).toBe('/zh/about')
+    expect(localizePathname('/zh/about', 'en', PREFIXED)).toBe('/en/about')
+    expect(localizePathname('/en/about', 'en', PREFIXED)).toBe('/en/about')
+  })
+
+  it('still never localizes excluded paths', () => {
+    expect(localizePathname('/api/rpc', 'en', PREFIXED)).toBe('/api/rpc')
+  })
+
+  it('does not confuse a path that merely starts with the base locale', () => {
+    expect(deLocalizePathname('/enigma', PREFIXED)).toBe('/enigma')
+    expect(localeFromPathname('/enigma', PREFIXED)).toBe('en')
+  })
+})
+
 function request(url: string, headers: Record<string, string> = {}) {
   return new Request(url, { headers })
 }

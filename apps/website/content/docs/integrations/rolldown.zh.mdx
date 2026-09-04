@@ -1,0 +1,33 @@
+---
+title: Rolldown
+description: best-i18n/rolldown——不带 Vite、单独使用 Rolldown 时用
+---
+
+选项与 [Vite 插件](/zh/docs/integrations/vite)完全相同。插件声明了 Rolldown 的
+hook filter，所以从未提到宏模块的文件在 Rust 侧就被跳过，JavaScript 插件根本不会
+被调用。
+
+```ts
+// rolldown.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { i18n } from 'best-i18n/rolldown'
+
+export default {
+  input: 'src/main.ts',
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+  ],
+}
+```
+
+它覆盖直接使用 Rolldown 的场景和基于 Rolldown 的工具（tsdown 等）。watch 模式下
+catalog 每次重构建都会重新加载，catalog 文件也注册为 watch 依赖。
+
+注意：rolldown-vite 不属于这里——它保留了 Vite 插件 API，直接用
+`best-i18n/vite`。

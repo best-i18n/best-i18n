@@ -94,6 +94,8 @@ JavaScript plugin is not even called for them.
 
 ```ts
 // rolldown.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { i18n } from 'best-i18n/rolldown'
 
 export default {
@@ -194,6 +196,13 @@ function Nav() {
 
 `usePathname` and `useRouter` come from the same module, with the prefix
 stripped and applied respectively.
+
+The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
+the `[locale]` segment. A deployment without one - a static export serves only
+the files that exist - sets `prefixBase: true` in the config instead:
+`/en/about` becomes the canonical form, `Link` prefixes the base locale like
+any other, and a proxy (if one runs anyway) redirects unprefixed URLs out
+rather than stripping `/en`.
 
 Why the pieces are what they are:
 
@@ -444,6 +453,19 @@ pattern for paths that must never be localized (`/api/...`).
   client locale, which `LocaleProvider` mirrors on the client - but only from
   the nearest provider, and without re-rendering on a locale change the way
   `useI18n` does.
+- `best-i18n/server` needs `AsyncLocalStorage`. Node and Bun ship it; on
+  Cloudflare Workers it exists only behind the `nodejs_compat` (or
+  `nodejs_als`) compatibility flag, and without the flag the import throws
+  with an error saying exactly that, instead of silently sharing one locale
+  between requests.
+- workerd does not implement `AsyncLocalStorage.enterWith()`. best-i18n only
+  calls it in `best-i18n/next/server` - a route handler prerendered outside a
+  React render - which by definition runs on Node, where it is fully
+  supported (Bun too). On Workers the locale is bound with
+  `withRequestLocale` from `best-i18n/server`, which uses `.run()` and is
+  unaffected. (`enterWith` binds the remainder of the current synchronous
+  frame, which is why Node's docs prefer `run` - here that frame is exactly
+  the handler invocation, which is the intent.)
 
 ## Thanks
 

@@ -1,0 +1,41 @@
+---
+title: Limitations
+description: The edges of the design, stated plainly
+---
+
+- Messages must be statically visible — no dynamic message construction.
+- On Next.js, a Client Component has to take its locale from `useI18n()`.
+  Plain `t` and a `<Trans>` with no `useI18n()` above it read `getLocale()`,
+  and client components render in a module graph where nothing has bound the
+  request's locale — so they would fall back to the base one, on the server
+  only, and React patches the difference at hydration without a word. The
+  loader refuses to compile that, naming the file, the line and the message.
+  Server Components are the other way round: they cannot call a hook, and do
+  not need to.
+- Plurals are gettext plurals (`plural(count, one, other)`), not ICU: there
+  is no `select`/gender construct yet, and no number/date formatting — reach
+  for `Intl` with `getLocale()` for those.
+- `from`/`hookFrom` match import specifiers as written in the source, so if
+  you re-export the macros, list your module path in the plugin options.
+- On Next.js, `best-i18n/next/server` reads the locale out of Next's internal
+  render storage, because `t` has to resolve synchronously while `params` and
+  `headers()` are async. That is a private API, so a Next.js major version can
+  break it. The field it reads, `rootParams`, arrived in 15.2, which is the
+  peer floor.
+- In a Client Component prefer `useI18n`. Plain `t` there reads the ambient
+  client locale, which `LocaleProvider` mirrors on the client — but only from
+  the nearest provider, and without re-rendering on a locale change the way
+  `useI18n` does.
+- `best-i18n/server` needs `AsyncLocalStorage`. Node and Bun ship it; on
+  Cloudflare Workers it exists only behind the `nodejs_compat` (or
+  `nodejs_als`) compatibility flag, and without the flag the import throws
+  with an error saying exactly that, instead of silently sharing one locale
+  between requests.
+- workerd does not implement `AsyncLocalStorage.enterWith()`. best-i18n only
+  calls it in `best-i18n/next/server` — a route handler prerendered outside a
+  React render — which by definition runs on Node, where it is fully
+  supported (Bun too). On Workers the locale is bound with
+  `withRequestLocale` from `best-i18n/server`, which uses `.run()` and is
+  unaffected. (`enterWith` binds the remainder of the current synchronous
+  frame, which is why Node's docs prefer `run` — here that frame is exactly
+  the handler invocation, which is the intent.)

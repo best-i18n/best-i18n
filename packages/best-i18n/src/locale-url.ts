@@ -1,7 +1,15 @@
 export interface UrlConfig {
   locales: string[]
-  /** Rendered without a path prefix. */
+  /** Rendered without a path prefix, unless `prefixBase` says otherwise. */
   baseLocale: string
+  /**
+   * Prefix the base locale too, so `/about` becomes `/en/about`.
+   *
+   * For deployments where no proxy rewrites URLs - a static export serves
+   * only the files that exist, and those live under the `[locale]` segment,
+   * so the unprefixed form has nothing behind it.
+   */
+  prefixBase?: boolean
   /**
    * Paths that must never carry a locale prefix, such as API routes. Without
    * this an API client that posts to a fixed path would be rewritten and 404.
@@ -43,7 +51,9 @@ export function splitLocale(
     return { locale: undefined, rest: pathname }
 
   for (const locale of config.locales) {
-    if (locale === config.baseLocale) continue
+    // Unprefixed means base locale, so a base prefix is not a prefix - except
+    // under `prefixBase`, where `/en/about` is the canonical spelling.
+    if (locale === config.baseLocale && !config.prefixBase) continue
     if (pathname === `/${locale}`) return { locale, rest: '/' }
     if (pathname.startsWith(`/${locale}/`)) {
       return { locale, rest: pathname.slice(locale.length + 1) }
@@ -69,7 +79,10 @@ export function deLocalizePathname(
   return splitLocale(pathname, config).rest
 }
 
-/** `/about` + `zh` -> `/zh/about`. The base locale stays unprefixed. */
+/**
+ * `/about` + `zh` -> `/zh/about`. The base locale stays unprefixed, unless
+ * `prefixBase` makes the prefixed form the canonical one.
+ */
 export function localizePathname(
   pathname: string,
   locale: string,
@@ -77,7 +90,7 @@ export function localizePathname(
 ): string {
   const { rest } = splitLocale(pathname, config)
 
-  if (locale === config.baseLocale) return rest
+  if (locale === config.baseLocale && !config.prefixBase) return rest
   if (isPathExcluded(rest, config)) return rest
 
   return rest === '/' ? `/${locale}` : `/${locale}${rest}`
