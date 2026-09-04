@@ -79,18 +79,10 @@ export default function LocaleLayout({ children }) {
 
 路由都在 `[locale]` 段下，但基础语言的 URL 不带前缀：`/about` 是英文，
 `/zh/about` 是中文，`/en/about` 会重定向到规范的 `/about`。链接一律写成不带前缀
-的形式，渲染时经由围绕配置构建一次的导航辅助函数本地化：
-
-```ts
-// src/navigation.ts
-import { createNavigation } from 'best-i18n/next/navigation'
-import { i18n } from './i18n'
-
-export const { Link, usePathname, useRouter } = createNavigation(i18n)
-```
+的形式，渲染时按需本地化：
 
 ```tsx
-import { Link } from '@/navigation'
+import { Link } from 'best-i18n/next/navigation'
 
 // 中文激活时渲染为 href="/zh/about"。
 function Nav() {
@@ -98,8 +90,9 @@ function Nav() {
 }
 ```
 
-`usePathname` 剥前缀，`useRouter` 加前缀。URL 侧的新功能——本地化路径表、
-`redirect`——以后都从这个工厂长出来，调用点不用动。
+`usePathname` 和 `useRouter` 来自同一个模块，分别做前缀剥离和前缀追加。三者都
+从 `LocaleProvider` 读取 URL 布局，所以配置只描述一次、也只传输一次——而且它们
+是逐个导出的，只用链接的应用不会捎带另外两个。
 
 基础语言不带前缀的前提是有 proxy 把 `/about` 改写到 `[locale]` 段上。没有
 proxy 的部署——静态导出只 serve 磁盘上存在的文件——改在配置里设
@@ -114,7 +107,9 @@ proxy（如果碰巧还在跑）会把不带前缀的 URL 重定向出去而不�
   放在哪。跳过它，所有消息都会静默地渲染成基础语言。
 - **服务端明明知道 locale，却还要 `LocaleProvider`。** 客户端组件在另一个模块图
   里渲染，看不到服务端的渲染状态；把 locale 通过 React 传下去，才能保证服务端
-  HTML 和客户端首次渲染一致。
+  HTML 和客户端首次渲染一致。它的 `config` 是必填的，理由相同：`Link` 和
+  `usePathname` 就是从这个通道读取 URL 布局的，所以要保持可序列化
+  （`exclude` 写成字符串）。
 - **Server Component 不需要逐文件设置。** App Router 里 layout 和它下面的 page
   是彼此独立的渲染，一边存下的 locale 另一边看不见。所以 locale 从路由参数读取，
   这也是静态渲染依然可用的原因。

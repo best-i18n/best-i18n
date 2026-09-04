@@ -13,13 +13,13 @@ Then open http://localhost:3000 and http://localhost:3000/zh.
 
 ## What is wired where
 
-| File                          | Role                                                  |
-| ----------------------------- | ----------------------------------------------------- |
-| `src/i18n.ts`                 | the locales and URL shape, in one place               |
-| `src/proxy.ts`                | points a public URL at the `[locale]` segment         |
-| `next.config.ts`              | installs the loader that compiles `t` away            |
-| `src/app/[locale]/layout.tsx` | one `getLocale()` call, plus `LocaleProvider`         |
-| `src/components/*`            | client components: `useT`, localized `Link`, switcher |
+| File                          | Role                                                     |
+| ----------------------------- | -------------------------------------------------------- |
+| `src/i18n.ts`                 | the locales and URL shape, in one place                  |
+| `src/proxy.ts`                | points a public URL at the `[locale]` segment            |
+| `next.config.ts`              | installs the loader that compiles `t` away               |
+| `src/app/[locale]/layout.tsx` | one `getLocale()` call, plus `LocaleProvider`            |
+| `src/components/*`            | client components: `useI18n`, localized `Link`, switcher |
 
 `t` needs nothing per file: the locale is the route param, read synchronously,
 so a Server Component resolves it during a static prerender too.

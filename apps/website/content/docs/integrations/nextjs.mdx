@@ -79,19 +79,10 @@ Component.
 
 Routes live under `[locale]`, but the base locale's URLs stay unprefixed:
 `/about` is English, `/zh/about` is Chinese, and `/en/about` redirects to the
-canonical `/about`. Links are written unprefixed and localized as they render,
-through navigation helpers built once around the config:
-
-```ts
-// src/navigation.ts
-import { createNavigation } from 'best-i18n/next/navigation'
-import { i18n } from './i18n'
-
-export const { Link, usePathname, useRouter } = createNavigation(i18n)
-```
+canonical `/about`. Links are written unprefixed and localized as they render:
 
 ```tsx
-import { Link } from '@/navigation'
+import { Link } from 'best-i18n/next/navigation'
 
 // Renders href="/zh/about" while Chinese is active.
 function Nav() {
@@ -99,9 +90,11 @@ function Nav() {
 }
 ```
 
-`usePathname` strips the prefix, `useRouter` applies it. The factory is also
-where URL features will grow — a localized-pathnames table, a `redirect` —
-without touching call sites.
+`usePathname` and `useRouter` come from the same module, with the prefix
+stripped and applied respectively. All three read the URL layout from
+`LocaleProvider`, so the config is described once and travels once — and they
+are exported one by one, so an app that only links does not carry the other
+two.
 
 The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
 the `[locale]` segment. A deployment without one — a static export serves only
@@ -119,7 +112,9 @@ button is a `Link href='/docs'` compiled by best-i18n itself.
 - **`LocaleProvider` even though the server already knows the locale.** Client
   components render in a second module graph that cannot see the server's
   render state; passing the locale through React is what keeps the server's
-  HTML and the first client render identical.
+  HTML and the first client render identical. Its `config` is required for the
+  same reason: it is the channel `Link` and `usePathname` read the URL layout
+  from, so keep it serializable (`exclude` as a string).
 - **Server Components need no per-file setup.** A layout and the page beneath
   it are separate renders in the App Router, so a locale stashed in one is not
   visible in the other. The locale is read from the route param instead, which

@@ -51,16 +51,18 @@ const UrlConfigContext = createContext<UrlConfig | undefined>(undefined)
 export function LocaleProvider(props: {
   locale: Locale
   /**
-   * Needed by the locale-aware navigation helpers. Keep it serializable
+   * The app's URL layout. Required: it is what the locale-aware navigation
+   * helpers read (a client bundle cannot see the server's module state), and
+   * what teaches the runtime the real base locale. Keep it serializable
    * (`exclude` as a string) so it can cross a server/client boundary.
    */
-  config?: UrlConfig
+  config: UrlConfig
   children?: ReactNode
 }): ReactNode {
   // The config knows the app's real base locale; without this, getLocale()
   // before any setLocale falls back to the hardcoded 'en'. Plain assignments,
   // idempotent, safe during render.
-  if (props.config !== undefined) configure(props.config)
+  configure(props.config)
 
   // During render rather than in an effect, and deliberately: an effect runs
   // after the first paint, which would leave that paint in the wrong language.
