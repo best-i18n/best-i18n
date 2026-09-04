@@ -117,21 +117,6 @@ Next.js does not run on Vite, so it gets its own loader and its own way of
 carrying the locale through a render.
 
 ```ts
-// next.config.ts
-import process from 'node:process'
-import { createI18nPlugin } from 'best-i18n/next'
-
-const withI18n = createI18nPlugin({
-  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-  locales: ['en', 'zh'],
-  baseLocale: 'en',
-  staticLocale: process.env.I18N_STATIC_LOCALE,
-})
-
-export default withI18n({})
-```
-
-```ts
 // src/i18n.ts - one description of the languages and the URL shape
 import { defineI18nConfig } from 'best-i18n/next/config'
 
@@ -141,6 +126,24 @@ export const i18n = defineI18nConfig({
   exclude: '^/(api|_next)/',
 })
 ```
+
+```ts
+// next.config.ts - the same description, imported rather than repeated
+import process from 'node:process'
+import { createI18nPlugin } from 'best-i18n/next'
+import { i18n } from './src/i18n'
+
+const withI18n = createI18nPlugin({
+  ...i18n,
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  staticLocale: process.env.I18N_STATIC_LOCALE,
+})
+
+export default withI18n({})
+```
+
+The locales are spread in rather than repeated: the compiler needs them at
+build time, and `src/i18n.ts` is where they are described once.
 
 ```ts
 // src/proxy.ts - points a public URL at the [locale] segment
@@ -183,10 +186,19 @@ call, no `await`, static rendering intact - and `useI18n` in any Client Componen
 
 Routes live under `[locale]`, but the base locale's URLs stay unprefixed:
 `/about` is English, `/zh/about` is Chinese, and `/en/about` redirects to the
-canonical `/about`. Links are written unprefixed and localized as they render:
+canonical `/about`. Links are written unprefixed and localized as they render,
+through navigation helpers built once around the config:
+
+```ts
+// src/navigation.ts
+import { createNavigation } from 'best-i18n/next/navigation'
+import { i18n } from './i18n'
+
+export const { Link, usePathname, useRouter } = createNavigation(i18n)
+```
 
 ```tsx
-import { Link } from 'best-i18n/next/navigation'
+import { Link } from '@/navigation'
 
 // Renders href="/zh/about" while Chinese is active.
 function Nav() {
@@ -194,8 +206,9 @@ function Nav() {
 }
 ```
 
-`usePathname` and `useRouter` come from the same module, with the prefix
-stripped and applied respectively.
+`usePathname` strips the prefix, `useRouter` applies it. The factory is also
+where URL features will grow - a localized-pathnames table, a `redirect` -
+without touching call sites.
 
 The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
 the `[locale]` segment. A deployment without one - a static export serves only

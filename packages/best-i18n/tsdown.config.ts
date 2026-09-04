@@ -19,6 +19,7 @@ export default defineConfig({
     'next-config': 'src/integrations/next/config.ts',
     'next-loader': 'src/integrations/next/loader.ts',
     'next-navigation': 'src/integrations/next/navigation.ts',
+    'next-navigation-client': 'src/integrations/next/navigation.client.ts',
     'next-proxy': 'src/integrations/next/proxy.ts',
     'next-server': 'src/integrations/next/server.ts',
     'transform': 'src/compiler/transform.ts',

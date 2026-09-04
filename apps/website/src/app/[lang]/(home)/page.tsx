@@ -1,6 +1,6 @@
 'use client'
-import { Link } from 'best-i18n/next/navigation'
 import { useI18n } from 'best-i18n/react/macro'
+import { Link } from '~/lib/navigation'
 import { gitConfig } from '~/lib/shared'
 
 const source = `import { useI18n } from 'best-i18n/react/macro'

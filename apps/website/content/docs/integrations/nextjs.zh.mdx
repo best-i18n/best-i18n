@@ -7,21 +7,6 @@ Next.js 不跑在 Vite 上，所以它有自己的 loader，也有自己在渲�
 的方式。
 
 ```ts
-// next.config.ts
-import process from 'node:process'
-import { createI18nPlugin } from 'best-i18n/next'
-
-const withI18n = createI18nPlugin({
-  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-  locales: ['en', 'zh'],
-  baseLocale: 'en',
-  staticLocale: process.env.I18N_STATIC_LOCALE,
-})
-
-export default withI18n({})
-```
-
-```ts
 // src/i18n.ts - 语言与 URL 形态的唯一描述
 import { defineI18nConfig } from 'best-i18n/next/config'
 
@@ -31,6 +16,24 @@ export const i18n = defineI18nConfig({
   exclude: '^/(api|_next)/',
 })
 ```
+
+```ts
+// next.config.ts - 同一份描述，导入而不是重写一遍
+import process from 'node:process'
+import { createI18nPlugin } from 'best-i18n/next'
+import { i18n } from './src/i18n'
+
+const withI18n = createI18nPlugin({
+  ...i18n,
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  staticLocale: process.env.I18N_STATIC_LOCALE,
+})
+
+export default withI18n({})
+```
+
+这里是展开而不是重写一遍 locales：编译器在构建期需要这些值，而 `src/i18n.ts`
+就是把它们描述一次的地方。
 
 ```ts
 // src/proxy.ts - 把公开 URL 指向 [locale] 段
@@ -76,10 +79,18 @@ export default function LocaleLayout({ children }) {
 
 路由都在 `[locale]` 段下，但基础语言的 URL 不带前缀：`/about` 是英文，
 `/zh/about` 是中文，`/en/about` 会重定向到规范的 `/about`。链接一律写成不带前缀
-的形式，渲染时按需本地化：
+的形式，渲染时经由围绕配置构建一次的导航辅助函数本地化：
+
+```ts
+// src/navigation.ts
+import { createNavigation } from 'best-i18n/next/navigation'
+import { i18n } from './i18n'
+
+export const { Link, usePathname, useRouter } = createNavigation(i18n)
+```
 
 ```tsx
-import { Link } from 'best-i18n/next/navigation'
+import { Link } from '@/navigation'
 
 // 中文激活时渲染为 href="/zh/about"。
 function Nav() {
@@ -87,7 +98,8 @@ function Nav() {
 }
 ```
 
-`usePathname` 和 `useRouter` 来自同一个模块，分别做前缀剥离和前缀追加。
+`usePathname` 剥前缀，`useRouter` 加前缀。URL 侧的新功能——本地化路径表、
+`redirect`——以后都从这个工厂长出来，调用点不用动。
 
 基础语言不带前缀的前提是有 proxy 把 `/about` 改写到 `[locale]` 段上。没有
 proxy 的部署——静态导出只 serve 磁盘上存在的文件——改在配置里设

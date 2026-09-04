@@ -93,10 +93,11 @@ const WEBPACK_TEST = /\.[cm]?[jt]sx?$/
  *   // next.config.ts
  *   import { createI18nPlugin } from 'best-i18n/next'
  *
+ *   import { i18n } from './src/i18n'
+ *
  *   const withI18n = createI18nPlugin({
+ *     ...i18n, // locales and baseLocale, defined once in src/i18n.ts
  *     messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
- *     locales: ['en', 'zh'],
- *     baseLocale: 'en',
  *     staticLocale: process.env.I18N_STATIC_LOCALE,
  *   })
  *
