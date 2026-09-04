@@ -64,8 +64,18 @@ function textsFor(locale) {
   }
   return {
     a_small_starter_with_room_to: pick('A small starter'),
+    hi_name_you_have_count: pick('Hi {name}'),
     only_used_by_dead_code: pick('must never reach'),
   }
+}
+
+/** Occurrences of `needle` in `haystack`, template placeholders ignored. */
+function countText(haystack, needle) {
+  // '你好 {name}，你有 {count} 项' appears in code as '你好 ${...}，你有 ${...} 项';
+  // match on the pieces between placeholders instead of the whole string.
+  const pieces = needle.split(/\{[^}]+\}/).filter((p) => p.trim() !== '')
+  const anchor = pieces.reduce((a, b) => (a.length >= b.length ? a : b))
+  return haystack.split(anchor).length - 1
 }
 
 const checks = []
@@ -116,6 +126,12 @@ for (const locale of LOCALES) {
     '[A] 未用导出被摇掉(两语言都不在)',
     !code.includes(en.only_used_by_dead_code) &&
       !code.includes(zh.only_used_by_dead_code),
+  )
+  expect(
+    '[A] 模块内重复消息只输出一份(hoist)',
+    countText(code, zh.hi_name_you_have_count) === 1 &&
+      countText(code, en.hi_name_you_have_count) === 1,
+    `zh×${countText(code, zh.hi_name_you_have_count)} en×${countText(code, en.hi_name_you_have_count)}`,
   )
 }
 

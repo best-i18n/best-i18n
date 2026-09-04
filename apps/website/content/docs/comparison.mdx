@@ -85,11 +85,13 @@ path itself, `/about` becoming `/de/ueber`, which best-i18n cannot do at all.
 
 ## Where best-i18n costs more
 
-Messages are inlined at each call site, so a message used many times _in one
-module_ is emitted many times, where Paraglide emits one function and calls
-it. One message used 100 times: +17.6 kB raw here against +3.7 kB there — and
-**+0.5 kB gzip either way**, because gzip flattens the repetition. Over the
-wire it is a wash; what is left is parse time.
+Messages are inlined at each call site. Within one module, repeats collapse:
+the call sites of a repeated message share one hoisted module-level function —
+Paraglide's shape — so its translations are emitted once per module. Across
+modules each module carries its own copy, because the transform is per-file by
+design; gzip flattens that repetition (measured at **+0.5 kB gzip** for one
+message used 100 times, inlined or hoisted alike), so over the wire it is a
+wash and what remains is parse time.
 
 Message-side scaling was measured too, at 300 extra messages: rendered from a
 Server Component they cost best-i18n no client JS at all, and from a Client

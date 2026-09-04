@@ -134,6 +134,153 @@ describe('transform: single build', () => {
   })
 })
 
+describe('transform: repeated messages hoist', () => {
+  it('emits one function for a message repeated in a module', () => {
+    const result = transform(
+      src(
+        [
+          'export const a = t`A small starter with room to grow.`',
+          'export const b = t`A small starter with room to grow.`',
+        ].join('\n'),
+      ),
+      'a.ts',
+      OPTIONS,
+    )!
+
+    // The text pair exists once, in a module-level function taking the locale.
+    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(1)
+    expect(result.code).toContain(
+      'const __i18nM1 = (l) => (l === "zh" ? `一个小而可长的起始模板。` : `A small starter with room to grow.`)',
+    )
+    // Both call sites call it, reading the locale at call time.
+    expect(result.code.match(/__i18nM1\(__i18nGetLocale\(\)\)/g)).toHaveLength(
+      2,
+    )
+  })
+
+  it('parameterizes interpolations so call sites keep their own expressions', () => {
+    const result = transform(
+      src(
+        ['const a = t`Hi ${user.name}`', 'const b = t`Hi ${admin.name}`'].join(
+          '\n',
+        ),
+      ),
+      'a.ts',
+      {
+        ...OPTIONS,
+        catalog: { 'Hi {0}': { en: 'Hi {0}', zh: '你好 {0}' } },
+      },
+    )!
+
+    expect(result.code).toContain(
+      'const __i18nM1 = (l, e0) => (l === "zh" ? `你好 ${e0}` : `Hi ${e0}`)',
+    )
+    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), user.name)')
+    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), admin.name)')
+  })
+
+  it('shares one function between hook and non-hook call sites', () => {
+    const code = [
+      `import { t } from '${MACRO}'`,
+      "import { useI18n } from 'best-i18n/react/macro'",
+      'export const a = t`A small starter with room to grow.`',
+      'export function C() {',
+      '  const t2 = useI18n()',
+      '  return <p>{t2`A small starter with room to grow.`}</p>',
+      '}',
+    ].join('\n')
+
+    const result = transform(code, 'a.tsx', OPTIONS)!
+
+    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(1)
+    // The plain site reads the locale, the hook site passes its variable.
+    expect(result.code).toContain('__i18nM1(__i18nGetLocale())')
+    expect(result.code).toContain('{__i18nM1(t2)}')
+  })
+
+  it('hoists a repeated plural with the count as a parameter', () => {
+    const code = [
+      `import { t, plural } from '${MACRO}'`,
+      'const a = plural(x.count, `One item`, `${x.count} items`)',
+      'const b = plural(y.count, `One item`, `${y.count} items`)',
+    ].join('\n')
+
+    const result = transform(code, 'a.ts', {
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      catalog: { 'One item{0} items': { zh: ['{0} 件'] } },
+      plurals: {
+        en: { nplurals: 2, formula: 'n != 1' },
+        zh: { nplurals: 1, formula: '0' },
+      },
+    })!
+
+    // One declaration, dispatching on its own parameter.
+    expect(result.code.match(/ 件/g)).toHaveLength(1)
+    expect(result.code).toContain('const __i18nM1 = (l, e0) =>')
+    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), x.count)')
+    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), y.count)')
+    // The one-form zh branch is the bare string; en dispatches on e0.
+    expect(result.code).toContain('`${e0} 件`')
+    expect(result.code).toContain('(e0)')
+  })
+
+  it('does not hoist <Trans>, even repeated', () => {
+    const code = [
+      "import { Trans } from 'best-i18n/react/macro'",
+      'export const A = () => <p><Trans>Read the <a href={u1}>docs</a>.</Trans></p>',
+      'export const B = () => <p><Trans>Read the <a href={u2}>docs</a>.</Trans></p>',
+    ].join('\n')
+
+    const result = transform(code, 'a.tsx', {
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      catalog: {
+        'Read the <a>docs</a>.': { zh: '请阅读<a>docs</a>。' },
+      },
+    })!
+
+    // Each call site keeps its own JSX branch - the href differs.
+    expect(result.code).not.toContain('__i18nM')
+    expect(result.code.match(/请阅读/g)).toHaveLength(2)
+  })
+
+  it('picks a further prefix when __i18nM is taken', () => {
+    const result = transform(
+      src(
+        [
+          'const __i18nM1 = 1',
+          'export const a = t`A small starter with room to grow.`',
+          'export const b = t`A small starter with room to grow.`',
+        ].join('\n'),
+      ),
+      'a.ts',
+      OPTIONS,
+    )!
+
+    expect(result.code).toContain('const __i18nM21 = (l) =>')
+    expect(result.code.match(/__i18nM21\(__i18nGetLocale\(\)\)/g)).toHaveLength(
+      2,
+    )
+  })
+
+  it('does not hoist under staticLocale, where messages are bare literals', () => {
+    const result = transform(
+      src(
+        [
+          'export const a = t`A small starter with room to grow.`',
+          'export const b = t`A small starter with room to grow.`',
+        ].join('\n'),
+      ),
+      'a.ts',
+      { ...OPTIONS, staticLocale: 'zh' },
+    )!
+
+    expect(result.code).not.toContain('__i18nM')
+    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(2)
+  })
+})
+
 describe('transform: edge cases', () => {
   it('returns null when the file has no messages', () => {
     expect(transform(src('export const a = 1'), 'a.ts', OPTIONS)).toBeNull()

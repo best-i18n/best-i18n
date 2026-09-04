@@ -908,6 +908,32 @@ export function transform(
 
   const ruleFor = (locale: string) => options.plurals?.[locale] ?? GERMANIC
 
+  const others = options.locales.filter(
+    (locale) => locale !== options.baseLocale,
+  )
+
+  // How many call sites share a catalog entry. A message repeated within one
+  // module hoists into a single module-level function - the translations are
+  // emitted once, each call site pays one call. Only the multi-locale ternary
+  // form is worth it: under `staticLocale` (and a single-locale config) the
+  // message is already a bare literal, and a <Trans> branch captures
+  // call-site JSX that a shared function could not.
+  const repeats = new Map<string, number>()
+  if (options.staticLocale === undefined && others.length > 0) {
+    for (const message of messages) {
+      if (message.elements !== undefined) continue
+      const key = catalogKey(
+        message.context,
+        message.text,
+        message.plural?.other,
+      )
+      repeats.set(key, (repeats.get(key) ?? 0) + 1)
+    }
+  }
+  const hoistPrefix = hygienic('__i18nM')
+  const hoistedNames = new Map<string, string>()
+  const hoistedDecls: string[] = []
+
   // `const t = useI18n()` becomes `const t = useLocale()`: the variable holds the
   // locale, subscribed through React. In a per-locale build there is nothing
   // to subscribe to, so the call collapses to the literal locale.
@@ -924,7 +950,10 @@ export function transform(
     }
   }
 
-  for (const message of messages) {
+  // Compiles one message to its replacement expression. `localeExpr` is what
+  // the ternary compares: the hook variable, a `getLocale()` call, or a
+  // hoisted function's own locale parameter.
+  const compileMessage = (message: Message, localeExpr: string): string => {
     const describe = (locale: string) =>
       `${filename}:${message.line} (${locale}) "${message.text}"`
 
@@ -1014,40 +1043,85 @@ export function transform(
       )
     }
 
+    if (options.staticLocale !== undefined) {
+      return render(valueFor(options.staticLocale), options.staticLocale)
+    }
+
+    const base = render(valueFor(options.baseLocale), options.baseLocale)
+    if (others.length === 0) return base
+
+    // A ternary chain, not an object literal and not an IIFE: nothing is
+    // allocated per render.
+    const branches = others
+      .map(
+        (locale) =>
+          `${localeExpr} === ${JSON.stringify(locale)} ? ${render(
+            valueFor(locale),
+            locale,
+          )} : `,
+      )
+      .join('')
+
+    return `(${branches}${base})`
+  }
+
+  for (const message of messages) {
+    const key = catalogKey(message.context, message.text, message.plural?.other)
     let replacement: string
 
-    if (options.staticLocale !== undefined) {
-      replacement = render(valueFor(options.staticLocale), options.staticLocale)
+    if ((repeats.get(key) ?? 0) >= 2 && message.elements === undefined) {
+      let name = hoistedNames.get(key)
+
+      if (name === undefined) {
+        name = `${hoistPrefix}${hoistedNames.size + 1}`
+        hoistedNames.set(key, name)
+
+        // The inline form splices call-site expression source into the
+        // template, which cannot leave its scope - so the hoisted function
+        // takes the locale and one parameter per expression instead. A shared
+        // msgid guarantees a shared placeholder set, so every call site
+        // agrees on the arity. Validation (and `missing`) runs once per
+        // hoisted message, not once per call site.
+        const params = message.expressions.map((_, index) => `e${index}`)
+        const lifted: Message = {
+          ...message,
+          expressions: params,
+          plural:
+            message.plural === undefined
+              ? undefined
+              : {
+                  ...message.plural,
+                  count:
+                    params[message.expressions.indexOf(message.plural.count)]!,
+                },
+        }
+        hoistedDecls.push(
+          `const ${name} = (${['l', ...params].join(', ')}) => ${compileMessage(
+            lifted,
+            'l',
+          )}`,
+        )
+      }
+
+      // Hook-bound call sites pass the variable that already holds the
+      // locale; others read it at call time, so one function serves both.
+      const args = [
+        message.localeVar ?? `${localGetLocale}()`,
+        ...message.expressions,
+      ]
+      if (message.localeVar === undefined) needsRuntime = true
+      replacement = `${name}(${args.join(', ')})`
     } else {
-      const others = options.locales.filter(
-        (locale) => locale !== options.baseLocale,
+      replacement = compileMessage(
+        message,
+        message.localeVar ?? `${localGetLocale}()`,
       )
-
-      const base = render(valueFor(options.baseLocale), options.baseLocale)
-
-      if (others.length === 0) {
-        replacement = base
-      } else {
-        // A ternary chain, not an object literal and not an IIFE: nothing is
-        // allocated per render. Hook-bound messages compare the variable that
-        // already holds the locale; others call getLocale().
-        const localeExpr =
-          message.localeVar !== undefined
-            ? message.localeVar
-            : `${localGetLocale}()`
-
-        const branches = others
-          .map(
-            (locale) =>
-              `${localeExpr} === ${JSON.stringify(locale)} ? ${render(
-                valueFor(locale),
-                locale,
-              )} : `,
-          )
-          .join('')
-
-        replacement = `(${branches}${base})`
-        if (message.localeVar === undefined) needsRuntime = true
+      if (
+        message.localeVar === undefined &&
+        options.staticLocale === undefined &&
+        others.length > 0
+      ) {
+        needsRuntime = true
       }
     }
 
@@ -1081,6 +1155,10 @@ export function transform(
         reactModule,
       )}`,
     )
+  }
+
+  for (const declaration of hoistedDecls) {
+    inject(declaration)
   }
 
   return {
