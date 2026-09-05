@@ -33,7 +33,12 @@ export const translations = i18n
 export function baseOptions(locale: string): BaseLayoutProps {
   return {
     nav: {
-      title: appName,
+      title: (
+        <>
+          <img src='/favicon.svg' width={20} height={20} alt='' />
+          {appName}
+        </>
+      ),
       url: locale === i18n.defaultLanguage ? '/' : `/${locale}`,
     },
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,

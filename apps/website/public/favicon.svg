@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- best-i18n mark: the t`...` tagged template that is the library's API.
+       Colors follow the site's GitHub syntax theme (fg + string-green). -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="#0d1117"/>
+  <g fill="none" stroke-linecap="round" stroke-width="12">
+    <path d="M48 26 L48 80 Q48 98 66 98" stroke="#e6edf3"/>
+    <path d="M28 50 L68 50" stroke="#e6edf3"/>
+    <path d="M82 30 L96 48" stroke="#7ee787"/>
+  </g>
+</svg>
