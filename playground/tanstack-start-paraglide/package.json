@@ -8,7 +8,8 @@
     "dev": "vite dev",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
-    "typecheck": "tsc --noEmit"
+    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --output-structure message-modules --strategy url cookie preferredLanguage baseLocale --silent",
+    "typecheck": "pnpm paraglide:compile && tsc --noEmit"
   },
   "dependencies": {
     "@inlang/paraglide-js": "^2.25.0",
