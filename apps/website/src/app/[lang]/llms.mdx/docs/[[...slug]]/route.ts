@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation'
 import { i18n } from '~/lib/i18n'
-import { getLLMText, getPageMarkdownUrl, source } from '~/lib/source'
+import { withGenerateStaticParams, withGET } from './route.with'
 
 export const revalidate = false
 
@@ -9,22 +8,11 @@ export async function GET(
   { params }: RouteContext<'/[lang]/llms.mdx/docs/[[...slug]]'>,
 ) {
   const { slug, lang } = await params
-  // remove the appended "content.md"
-  const page = source.getPage(slug?.slice(0, -1), lang)
-  if (!page) notFound()
-
-  return new Response(await getLLMText(page), {
-    headers: {
-      'Content-Type': 'text/markdown',
-    },
-  })
+  return withGET(lang, slug)
 }
 
 export function generateStaticParams() {
-  return i18n.languages.flatMap((lang) =>
-    source.getPages(lang).map((page) => ({
-      lang,
-      slug: getPageMarkdownUrl(page).segments,
-    })),
-  )
+  return i18n.languages
+    .filter((lang) => lang !== i18n.defaultLanguage)
+    .flatMap((lang) => withGenerateStaticParams(lang))
 }

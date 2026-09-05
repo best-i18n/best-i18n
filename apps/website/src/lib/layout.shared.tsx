@@ -34,7 +34,7 @@ export function baseOptions(locale: string): BaseLayoutProps {
   return {
     nav: {
       title: appName,
-      url: `/${locale}`,
+      url: locale === i18n.defaultLanguage ? '/' : `/${locale}`,
     },
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
   }

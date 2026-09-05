@@ -6,6 +6,4 @@ export const i18nConfig = defineI18nConfig({
   locales: ['en', 'zh'],
   baseLocale: 'en',
   localeParam: 'lang',
-  // Static export: no proxy rewrites URLs, so /en is spelled out like /zh is.
-  prefixBase: true,
 })

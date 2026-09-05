@@ -5,4 +5,7 @@ import { defineI18n } from 'fumadocs-core/i18n'
 export const i18n = defineI18n({
   defaultLanguage: 'en',
   languages: ['en', 'zh'],
+  // English lives at the root: /docs, with /zh/docs beside it. The `(main)`
+  // route tree serves the unprefixed pages, `[lang]` the prefixed ones.
+  hideLocale: 'default-locale',
 })

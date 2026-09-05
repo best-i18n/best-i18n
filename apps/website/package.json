@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build && node ./scripts/postbuild.mjs",
+    "build": "next build",
     "dev": "next dev",
     "extract": "i18n-extract --locales en,zh --src src --messages messages",
     "start": "serve out",

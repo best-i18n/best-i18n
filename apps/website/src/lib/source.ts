@@ -25,12 +25,21 @@ export const source = loader({
   plugins: [],
 })
 
+// The default locale is unprefixed, mirroring `hideLocale` above.
+function localeSegment(locale: string | undefined) {
+  return locale === i18n.defaultLanguage ? undefined : locale
+}
+
 export function getPageImageUrl(page: (typeof source)['$inferPage']) {
   const segments = [...page.slugs, 'image.png']
 
   return {
     segments,
-    url: `/${[page.locale, ...docsImageRoute.split('/'), ...segments]
+    url: `/${[
+      localeSegment(page.locale),
+      ...docsImageRoute.split('/'),
+      ...segments,
+    ]
       .filter(Boolean)
       .join('/')}`,
   }
@@ -41,7 +50,11 @@ export function getPageMarkdownUrl(page: (typeof source)['$inferPage']) {
 
   return {
     segments,
-    url: `/${[page.locale, ...docsContentRoute.split('/'), ...segments]
+    url: `/${[
+      localeSegment(page.locale),
+      ...docsContentRoute.split('/'),
+      ...segments,
+    ]
       .filter(Boolean)
       .join('/')}`,
   }
