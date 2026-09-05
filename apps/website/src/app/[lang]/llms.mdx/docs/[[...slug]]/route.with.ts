@@ -9,7 +9,9 @@ export async function withGET(lang: string, slug: string[] | undefined) {
 
   return new Response(await getLLMText(page), {
     headers: {
-      'Content-Type': 'text/markdown',
+      // Without an explicit charset browsers fall back to a legacy encoding
+      // and render the Chinese pages as mojibake.
+      'Content-Type': 'text/markdown; charset=utf-8',
     },
   })
 }
