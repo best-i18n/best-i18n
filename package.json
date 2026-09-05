@@ -7,12 +7,12 @@
   "description": "Monorepo for best-i18n: the compile-time i18n toolchain and its playgrounds",
   "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
   "license": "MIT",
-  "homepage": "https://github.com/Debbl/best-i18n#readme",
+  "homepage": "https://github.com/best-i18n/best-i18n#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Debbl/best-i18n.git"
+    "url": "git+https://github.com/best-i18n/best-i18n.git"
   },
-  "bugs": "https://github.com/Debbl/best-i18n/issues",
+  "bugs": "https://github.com/best-i18n/best-i18n/issues",
   "scripts": {
     "build": "pnpm --filter best-i18n build",
     "test": "pnpm --filter best-i18n test",

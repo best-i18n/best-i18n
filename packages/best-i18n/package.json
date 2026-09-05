@@ -6,13 +6,13 @@
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
   "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
   "license": "MIT",
-  "homepage": "https://github.com/Debbl/best-i18n#readme",
+  "homepage": "https://github.com/best-i18n/best-i18n#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Debbl/best-i18n.git",
+    "url": "git+https://github.com/best-i18n/best-i18n.git",
     "directory": "packages/best-i18n"
   },
-  "bugs": "https://github.com/Debbl/best-i18n/issues",
+  "bugs": "https://github.com/best-i18n/best-i18n/issues",
   "keywords": [
     "i18n",
     "internationalization",

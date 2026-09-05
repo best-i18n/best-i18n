@@ -19,7 +19,7 @@ function AboutPage() {
       */}
       <p>
         {m.read_the()}
-        <a href='https://github.com/Debbl/best-i18n'>{m.readme()}</a>
+        <a href='https://github.com/best-i18n/best-i18n'>{m.readme()}</a>
         {m.to_learn_more()}
       </p>
     </>

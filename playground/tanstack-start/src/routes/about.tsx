@@ -18,8 +18,8 @@ function AboutPage() {
           can move, and the element itself is rebuilt per locale at build time. */}
       <p>
         <Trans>
-          Read the <a href='https://github.com/Debbl/best-i18n'>README</a> to
-          learn more.
+          Read the <a href='https://github.com/best-i18n/best-i18n'>README</a>{' '}
+          to learn more.
         </Trans>
       </p>
     </>

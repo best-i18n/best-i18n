@@ -63,7 +63,7 @@ export default function LongPage({
         {t.rich('markupSentence', {
           strong: (chunks) => <strong>{chunks}</strong>,
           link: (chunks) => (
-            <a href='https://github.com/Debbl/best-i18n'>{chunks}</a>
+            <a href='https://github.com/best-i18n/best-i18n'>{chunks}</a>
           ),
         })}
       </p>

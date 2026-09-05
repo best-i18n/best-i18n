@@ -107,8 +107,8 @@ export default function LongPage() {
       <p>
         <Trans>
           A sentence can hold <strong>bold text</strong> and a{' '}
-          <a href='https://github.com/Debbl/best-i18n'>link</a> at once, and the
-          translator still only ever sees named placeholders - never a JSX
+          <a href='https://github.com/best-i18n/best-i18n'>link</a> at once, and
+          the translator still only ever sees named placeholders - never a JSX
           attribute, never an import, never a prop.
         </Trans>
       </p>
