@@ -76,8 +76,31 @@ export function setLocale(locale: Locale): void {
     )
   }
 
-  if (ambientLocale === locale) return
+  if (primeLocale(locale)) notifyLocaleListeners()
+}
+
+/**
+ * Render-phase half of `setLocale`: assigns the ambient locale without waking
+ * subscribers, so `LocaleProvider` can mirror its prop mid-render - notifying
+ * there would setState into components React is still rendering. Pair with
+ * `notifyLocaleListeners` after commit.
+ *
+ * @internal
+ */
+export function primeLocale(locale: Locale): boolean {
+  if (ambientLocale === locale) return false
   ambientLocale = locale
+  return true
+}
+
+/**
+ * Commit-phase half of `primeLocale`: wakes `useLocale()` subscribers. A
+ * no-op notification is harmless - subscribers re-read an unchanged snapshot
+ * and React bails out.
+ *
+ * @internal
+ */
+export function notifyLocaleListeners(): void {
   for (const listener of listeners) listener()
 }
 

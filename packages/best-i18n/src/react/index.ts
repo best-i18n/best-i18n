@@ -4,6 +4,7 @@ import {
   createContext,
   createElement,
   useContext,
+  useEffect,
   useSyncExternalStore,
 } from 'react'
 
@@ -11,7 +12,8 @@ import {
   configure,
   getLocale,
   isServer,
-  setLocale,
+  notifyLocaleListeners,
+  primeLocale,
   subscribeLocale,
 } from '../runtime/index.ts'
 
@@ -67,10 +69,19 @@ export function LocaleProvider(props: {
   // During render rather than in an effect, and deliberately: an effect runs
   // after the first paint, which would leave that paint in the wrong language.
   // The provider renders above its children, so by the time anything reads the
-  // locale it is set. Nothing is subscribed yet on the render that matters -
-  // hydration - and `setLocale` is a no-op when the value has not changed, so
-  // this cannot notify anyone mid-render.
-  if (!isServer) setLocale(props.locale)
+  // locale it is set. Assignment only - waking subscribers here would setState
+  // into components React is still rendering (a locale switch renders this
+  // provider while the outgoing tree, subscribed, is still mounted).
+  if (!isServer) primeLocale(props.locale)
+
+  // The commit-phase half: ambient-store subscribers outside this provider's
+  // context - the outgoing tree, hook users with no provider - hear about the
+  // change once React is done rendering. Unconditional on purpose; when
+  // nothing changed the snapshot is equal and React bails out. (Effects never
+  // run on the server, so no isServer guard.)
+  useEffect(() => {
+    notifyLocaleListeners()
+  }, [props.locale])
 
   return createElement(
     LocaleContext.Provider,
