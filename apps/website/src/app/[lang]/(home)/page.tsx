@@ -1,7 +1,15 @@
 'use client'
 import { Link } from 'best-i18n/next/navigation'
 import { useI18n } from 'best-i18n/react/macro'
+import {
+  ScrollArea,
+  ScrollBar,
+  ScrollViewport,
+} from 'fumadocs-ui/components/ui/scroll-area'
+import { highlightAll } from 'microlighter'
+import { useEffect, useRef } from 'react'
 import { gitConfig } from '~/lib/shared'
+import 'microlighter/themes/github.css'
 
 const source = `import { useI18n } from 'best-i18n/react/macro'
 
@@ -10,11 +18,24 @@ function About() {
   return <h1>{t\`A small starter with room to grow.\`}</h1>
 }`
 
-const compiled = `// staticLocale: 'zh' — per-locale build
-return <h1>{\`一个小而可长的起始模板。\`}</h1>`
+const compiled = `// compiled — a ternary, no runtime
+
+function About() {
+  const t = useLocale()
+  return <h1>{t === 'zh'
+    ? \`一个小而可长的起始模板。\`
+    : \`A small starter with room to grow.\`}</h1>
+}`
 
 export default function HomePage() {
   const t = useI18n()
+  const codeRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // CSS Custom Highlight API: colors the text ranges without span soup, so
+    // the static markup below stays exactly what the build emitted.
+    if (codeRef.current) void highlightAll({ root: codeRef.current })
+  }, [])
 
   const features = [
     {
@@ -56,13 +77,27 @@ export default function HomePage() {
           GitHub
         </a>
       </div>
-      <div className='grid w-full max-w-3xl gap-4 text-left md:grid-cols-2 mb-12'>
-        <pre className='overflow-x-auto rounded-lg border bg-fd-card p-4 text-xs leading-relaxed'>
-          <code>{source}</code>
-        </pre>
-        <pre className='overflow-x-auto rounded-lg border bg-fd-card p-4 text-xs leading-relaxed'>
-          <code>{compiled}</code>
-        </pre>
+      <div
+        ref={codeRef}
+        data-syntax-theme='github'
+        className='grid w-full max-w-3xl gap-4 text-left md:grid-cols-2 mb-12'
+      >
+        <ScrollArea className='overflow-hidden rounded-lg border bg-(--syntax-background)'>
+          <ScrollViewport>
+            <pre className='w-max min-w-full p-4 text-xs leading-relaxed'>
+              <code className='language-tsx'>{source}</code>
+            </pre>
+          </ScrollViewport>
+          <ScrollBar orientation='horizontal' />
+        </ScrollArea>
+        <ScrollArea className='overflow-hidden rounded-lg border bg-(--syntax-background)'>
+          <ScrollViewport>
+            <pre className='w-max min-w-full p-4 text-xs leading-relaxed'>
+              <code className='language-tsx'>{compiled}</code>
+            </pre>
+          </ScrollViewport>
+          <ScrollBar orientation='horizontal' />
+        </ScrollArea>
       </div>
       <div className='grid w-full max-w-3xl gap-4 text-left sm:grid-cols-2'>
         {features.map((f) => (
