@@ -7,7 +7,9 @@
     "dev": "next dev",
     "extract": "i18n-extract --locales en,zh --src src --messages messages",
     "start": "serve out",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "deploy": "pnpm build && wrangler deploy",
+    "preview": "pnpm build && wrangler dev"
   },
   "dependencies": {
     "best-i18n": "workspace:*",
@@ -30,6 +32,7 @@
     "postcss": "^8.5.26",
     "serve": "^14.2.6",
     "tailwindcss": "^4.3.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.129.0"
   }
 }
