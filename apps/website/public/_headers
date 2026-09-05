@@ -1,0 +1,7 @@
+# Cloudflare static-asset headers (copied into out/ by the export).
+# Without an explicit charset browsers decode these as a legacy encoding,
+# turning the Chinese markdown pages into mojibake.
+/*.md
+  Content-Type: text/markdown; charset=utf-8
+/*.txt
+  Content-Type: text/plain; charset=utf-8

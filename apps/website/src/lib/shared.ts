@@ -1,4 +1,5 @@
 export const appName = 'best-i18n'
+export const siteUrl = 'https://best-i18n.aiwan.run'
 export const docsRoute = '/docs'
 export const docsImageRoute = '/og/docs'
 export const docsContentRoute = '/llms.mdx/docs'
