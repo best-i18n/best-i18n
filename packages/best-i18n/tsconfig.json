@@ -13,5 +13,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  // Compiler fixtures: standalone snippets, not part of the program.
+  "exclude": ["test/fixtures"]
 }

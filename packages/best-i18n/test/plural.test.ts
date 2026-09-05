@@ -6,6 +6,7 @@ import {
   pluralRuleFor,
 } from '../src/compiler/plural.ts'
 import { extract, transform } from '../src/compiler/transform.ts'
+import { fixture, json } from './helpers/fixture.ts'
 
 const MACRO = 'best-i18n/macro'
 const REACT = 'best-i18n/react/macro'
@@ -23,7 +24,8 @@ const OPTIONS = {
   locales: ['en', 'zh'],
   baseLocale: 'en',
   catalog: {
-    'One item{n} items': { zh: ['{n} 件'] },
+    // Plural entries key on singular + `\u0005` + plural, like the PO merge.
+    'One item\u0005{n} items': { zh: ['{n} 件'] },
   },
   plurals: {
     en: { nplurals: 2, formula: 'n != 1' },
@@ -58,75 +60,65 @@ describe('plural rules', () => {
 })
 
 describe('plural macro', () => {
-  it('extracts the pair with the count as a named placeholder', () => {
+  it('extracts the pair with the count as a named placeholder', async () => {
+    const messages = extract(fixture('plural/extract-pair/input.ts'), 'a.ts')
+
+    await expect(json(messages)).toMatchFileSnapshot(
+      'fixtures/plural/extract-pair/messages.json',
+    )
+  })
+
+  it('registers an uninterpolated count so translations can use it', async () => {
     const messages = extract(
-      src('const a = plural(n, `One item`, `${n} items`)'),
+      fixture('plural/extract-uninterpolated-count/input.ts'),
       'a.ts',
     )
 
-    expect(messages).toHaveLength(1)
-    expect(messages[0]).toMatchObject({
-      text: 'One item',
-      plural: { count: 'n', other: '{n} items' },
-      placeholders: ['n'],
-    })
-  })
-
-  it('registers an uninterpolated count so translations can use it', () => {
-    const messages = extract(
-      src('const a = plural(count, `an item`, `items`)'),
-      'a.ts',
+    await expect(json(messages[0])).toMatchFileSnapshot(
+      'fixtures/plural/extract-uninterpolated-count/messages.json',
     )
-
-    expect(messages[0]!.placeholders).toEqual(['count'])
   })
 
-  it('inlines each locale formula and dispatches on the count', () => {
+  it('inlines each locale formula and dispatches on the count', async () => {
     const result = transform(
-      src('export const a = plural(n, `One item`, `${n} items`)'),
+      fixture('plural/single-build-dispatch/input.ts'),
       'a.ts',
       OPTIONS,
     )!
 
-    // zh has one form: no dispatch at all, just the string.
-    expect(result.code).toContain('`${n} 件`')
-    // en (base) dispatches on the Germanic formula.
-    expect(result.code).toContain('__i18nN != 1')
-    expect(result.code).toContain('`One item`')
-    expect(result.code).toContain('`${n} items`')
+    // zh has one form: no dispatch at all, just the string. en (base)
+    // dispatches on the Germanic formula.
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/plural/single-build-dispatch/output.ts',
+    )
   })
 
-  it('collapses to one locale in a per-locale build', () => {
-    const zh = transform(
-      src('export const a = plural(n, `One item`, `${n} items`)'),
-      'a.ts',
-      { ...OPTIONS, staticLocale: 'zh' },
-    )!
+  it('collapses to one locale in a per-locale build', async () => {
+    const zh = transform(fixture('plural/static-locale-zh/input.ts'), 'a.ts', {
+      ...OPTIONS,
+      staticLocale: 'zh',
+    })!
 
-    expect(zh.code).toContain('`${n} 件`')
-    expect(zh.code).not.toContain('One item')
-    expect(zh.code).not.toContain('__i18nN')
+    await expect(zh.code).toMatchFileSnapshot(
+      'fixtures/plural/static-locale-zh/output.ts',
+    )
   })
 
-  it('emits a three-form chain for a three-form locale', () => {
-    const result = transform(
-      src('export const a = plural(n, `One item`, `${n} items`)'),
-      'a.ts',
-      {
-        locales: ['en', 'ru'],
-        baseLocale: 'en',
-        catalog: {
-          'One item{n} items': {
-            ru: ['{n} предмет', '{n} предмета', '{n} предметов'],
-          },
+  it('emits a three-form chain for a three-form locale', async () => {
+    const result = transform(fixture('plural/three-form-ru/input.ts'), 'a.ts', {
+      locales: ['en', 'ru'],
+      baseLocale: 'en',
+      catalog: {
+        'One item\u0005{n} items': {
+          ru: ['{n} предмет', '{n} предмета', '{n} предметов'],
         },
-        plurals: { en: { nplurals: 2, formula: 'n != 1' }, ru: RU },
       },
-    )!
+      plurals: { en: { nplurals: 2, formula: 'n != 1' }, ru: RU },
+    })!
 
-    expect(result.code).toContain('__i18nI === 1 ? `${n} предмета`')
-    expect(result.code).toContain('__i18nI === 2 ? `${n} предметов`')
-    expect(result.code).toContain('`${n} предмет`')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/plural/three-form-ru/output.ts',
+    )
   })
 
   it('the emitted dispatch actually selects the right form', () => {
@@ -165,7 +157,7 @@ describe('plural macro', () => {
       {
         ...OPTIONS,
         // zh declares one form; two supplied means the entry is not usable.
-        catalog: { 'One item{n} items': { zh: ['一件', '{n} 件'] } },
+        catalog: { 'One item\u0005{n} items': { zh: ['一件', '{n} 件'] } },
       },
     )!
 
@@ -176,7 +168,10 @@ describe('plural macro', () => {
     const ok = transform(
       src('export const a = plural(n, `One item`, `${n} items`)'),
       'a.ts',
-      { ...OPTIONS, catalog: { 'One item{n} items': { zh: ['一件'] } } },
+      {
+        ...OPTIONS,
+        catalog: { 'One item\u0005{n} items': { zh: ['一件'] } },
+      },
     )!
     expect(ok.code).toContain('`一件`')
 
@@ -186,31 +181,27 @@ describe('plural macro', () => {
         'a.ts',
         {
           ...OPTIONS,
-          catalog: { 'One item{n} items': { zh: ['{wrong} 件'] } },
+          catalog: { 'One item\u0005{n} items': { zh: ['{wrong} 件'] } },
         },
       ),
     ).toThrow(/uses \{wrong\}/)
   })
 
-  it('dispatches on the hook variable inside a component', () => {
-    const code = [
-      `import { plural } from '${MACRO}'`,
-      `import { useI18n } from '${REACT}'`,
-      'function A({ n }) {',
-      '  const t = useI18n()',
-      '  return <p>{t`Hi`}{plural(n, `One item`, `${n} items`)}</p>',
-      '}',
-    ].join('\n')
-
-    const result = transform(code, 'a.tsx', {
-      ...OPTIONS,
-      catalog: { ...OPTIONS.catalog, Hi: { zh: '嗨' } },
-    })!
+  it('dispatches on the hook variable inside a component', async () => {
+    const result = transform(
+      fixture('plural/hook-variable/input.tsx'),
+      'a.tsx',
+      {
+        ...OPTIONS,
+        catalog: { ...OPTIONS.catalog, Hi: { zh: '嗨' } },
+      },
+    )!
 
     // The plural reads the hook variable, like <Trans> does - reactive, and
     // client-safe on Next.
-    expect(result.code).toContain('t === "zh" ? `${n} 件`')
-    expect(result.code).not.toContain('getLocale')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/plural/hook-variable/output.tsx',
+    )
   })
 
   it('rejects a dynamic form', () => {

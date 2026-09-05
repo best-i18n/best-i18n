@@ -5,7 +5,10 @@ export interface StaticImportEntry {
 }
 
 export interface StaticImport {
-  moduleRequest: { value: string }
+  /** Span of the whole import declaration, for removing it after compiling. */
+  start: number
+  end: number
+  moduleRequest: { value: string; start: number; end: number }
   entries: StaticImportEntry[]
 }
 

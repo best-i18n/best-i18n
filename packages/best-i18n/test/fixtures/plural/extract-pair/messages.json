@@ -1,0 +1,19 @@
+[
+  {
+    "text": "One item",
+    "plural": {
+      "count": "n",
+      "other": "{n} items"
+    },
+    "expressions": [
+      "n"
+    ],
+    "placeholders": [
+      "n"
+    ],
+    "context": "",
+    "start": 51,
+    "end": 86,
+    "line": 2
+  }
+]

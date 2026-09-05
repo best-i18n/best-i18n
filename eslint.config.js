@@ -14,6 +14,9 @@ export default defineConfig(
       '**/project.inlang/**',
       // Next.js rewrites this on every build, so formatting it is undone.
       '**/next-env.d.ts',
+      // Compiler test fixtures: inputs are standalone snippets and outputs
+      // are emitted code, written by `vitest run -u` - not ours to format.
+      '**/test/fixtures/**',
     ],
   },
   {

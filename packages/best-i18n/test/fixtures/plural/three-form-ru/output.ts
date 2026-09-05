@@ -1,0 +1,2 @@
+import { getLocale as __i18nGetLocale } from "best-i18n/runtime";
+export const a = (__i18nGetLocale() === "ru" ? ((__i18nN, __i18nI = +(__i18nN%10==1 && __i18nN%100!=11 ? 0 : __i18nN%10>=2 && __i18nN%10<=4 && (__i18nN%100<10 || __i18nN%100>=20) ? 1 : 2)) => __i18nI === 1 ? `${n} предмета` : __i18nI === 2 ? `${n} предметов` : `${n} предмет`)(n) : ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${n} items` : `One item`)(n))

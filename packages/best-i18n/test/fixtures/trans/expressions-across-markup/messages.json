@@ -1,0 +1,24 @@
+{
+  "text": "Hi {name}, you have <b>{count} items</b>.",
+  "expressions": [
+    "name",
+    "count"
+  ],
+  "placeholders": [
+    "name",
+    "count"
+  ],
+  "elements": [
+    {
+      "token": "b",
+      "open": "<b>",
+      "close": "</b>",
+      "selfClosing": false
+    }
+  ],
+  "context": "",
+  "start": 78,
+  "end": 134,
+  "line": 2,
+  "braced": true
+}

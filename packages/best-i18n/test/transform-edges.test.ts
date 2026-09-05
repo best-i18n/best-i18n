@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { transform } from '../src/compiler/transform.ts'
+import { fixture, json } from './helpers/fixture.ts'
 
-const MACRO = 'best-i18n/macro'
 const REACT = 'best-i18n/react/macro'
 
 const options = (catalog: Record<string, Record<string, string>> = {}) => ({
@@ -29,67 +29,75 @@ describe('parsing JSX in plain JavaScript files', () => {
 })
 
 describe('t template whitespace', () => {
-  it('collapses a source line break to one space', () => {
+  it('collapses a source line break to one space', async () => {
     // Re-indenting a component must not change the msgid.
     const result = transform(
-      `import { t } from '${MACRO}'\nconst a = t\`line one\n      line two\``,
+      fixture('transform-edges/whitespace-linebreak/input.ts'),
       'a.ts',
       options(),
     )!
 
-    expect(result.messages[0]!.text).toBe('line one line two')
+    await expect(json(result.messages[0])).toMatchFileSnapshot(
+      'fixtures/transform-edges/whitespace-linebreak/messages.json',
+    )
   })
 
-  it('keeps a written \\n escape', () => {
+  it('keeps a written \\n escape', async () => {
     const result = transform(
-      `import { t } from '${MACRO}'\nconst a = t\`line one\\nline two\``,
+      fixture('transform-edges/whitespace-written-escape/input.ts'),
       'a.ts',
       options(),
     )!
 
-    expect(result.messages[0]!.text).toBe('line one\nline two')
+    await expect(json(result.messages[0])).toMatchFileSnapshot(
+      'fixtures/transform-edges/whitespace-written-escape/messages.json',
+    )
   })
 })
 
 describe('<Trans> entities', () => {
-  it('decodes entities the way JSX renders them', () => {
-    const code = [
-      `import { Trans } from '${REACT}'`,
-      'export const a = <p><Trans>Tom &amp; Jerry&hellip; &#169; &#x2122;</Trans></p>',
-    ].join('\n')
-
-    const result = transform(code, 'a.tsx', options())!
+  it('decodes entities the way JSX renders them', async () => {
+    const result = transform(
+      fixture('transform-edges/entities-decoded/input.tsx'),
+      'a.tsx',
+      options(),
+    )!
 
     // The translator sees the real text, and the emitted literal renders it.
-    expect(result.messages[0]!.text).toBe('Tom & Jerry… © ™')
-    expect(result.code).toContain('Tom & Jerry… © ™')
+    await expect(json(result.messages[0])).toMatchFileSnapshot(
+      'fixtures/transform-edges/entities-decoded/messages.json',
+    )
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform-edges/entities-decoded/output.tsx',
+    )
   })
 
-  it('leaves an unknown entity untouched', () => {
-    const code = [
-      `import { Trans } from '${REACT}'`,
-      'export const a = <p><Trans>a &notreal; b</Trans></p>',
-    ].join('\n')
+  it('leaves an unknown entity untouched', async () => {
+    const result = transform(
+      fixture('transform-edges/entities-unknown/input.tsx'),
+      'a.tsx',
+      options(),
+    )!
 
-    const result = transform(code, 'a.tsx', options())!
-
-    expect(result.messages[0]!.text).toBe('a &notreal; b')
+    await expect(json(result.messages[0])).toMatchFileSnapshot(
+      'fixtures/transform-edges/entities-unknown/messages.json',
+    )
   })
 })
 
 describe('<Trans> expression children', () => {
-  it('keeps a lone expression an expression, not a string', () => {
-    const code = [
-      `import { Trans } from '${REACT}'`,
-      'export const a = <p><Trans>Hi <b>{name}</b>!</Trans></p>',
-    ].join('\n')
-
-    const result = transform(code, 'a.tsx', options())!
+  it('keeps a lone expression an expression, not a string', async () => {
+    const result = transform(
+      fixture('transform-edges/lone-expression/input.tsx'),
+      'a.tsx',
+      options(),
+    )!
 
     // `` {`${name}`} `` would render a ReactNode as [object Object] and null
     // as the word "null".
-    expect(result.code).toContain('<b>{(name)}</b>')
-    expect(result.code).not.toContain('${name}')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform-edges/lone-expression/output.tsx',
+    )
   })
 
   it('still concatenates a mixed text-and-expression run', () => {

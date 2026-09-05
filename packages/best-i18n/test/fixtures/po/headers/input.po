@@ -1,0 +1,9 @@
+msgid ""
+msgstr ""
+"Language: zh\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Last-Translator: Ana <ana@example.com>\n"
+"X-Generator: Weblate 5.0\n"
+
+msgid "Hello"
+msgstr "你好"

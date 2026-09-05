@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { extract, transform } from '../src/compiler/transform.ts'
+import { fixture, json } from './helpers/fixture.ts'
 
 const MACRO = 'best-i18n/macro'
 
@@ -23,38 +24,40 @@ const OPTIONS = {
 }
 
 describe('extract', () => {
-  it('reads the text and the interpolated expressions', () => {
+  it('reads the text and the interpolated expressions', async () => {
     const messages = extract(
-      src('const x = t`Hi ${name}, you have ${count} items`'),
+      fixture('transform/extract-interpolated/input.ts'),
       'a.ts',
     )
 
-    expect(messages).toHaveLength(1)
-    expect(messages[0]!.text).toBe('Hi {name}, you have {count} items')
-    expect(messages[0]!.expressions).toEqual(['name', 'count'])
+    await expect(json(messages)).toMatchFileSnapshot(
+      'fixtures/transform/extract-interpolated/messages.json',
+    )
   })
 
   it('ignores other tagged templates', () => {
     expect(extract('const x = css`color: red`', 'a.ts')).toHaveLength(0)
   })
 
-  it('parses JSX when the module id carries a query string', () => {
+  it('parses JSX when the module id carries a query string', async () => {
     // TanStack Router's code splitter appends `?tsr-split=component`.
     const messages = extract(
-      src('export const C = () => <p className="x">{t`Hi`}</p>'),
+      fixture('transform/extract-jsx-query-string/input.tsx'),
       '/app/about.tsx?tsr-split=component',
     )
 
-    expect(messages.map((message) => message.text)).toEqual(['Hi'])
+    await expect(json(messages)).toMatchFileSnapshot(
+      'fixtures/transform/extract-jsx-query-string/messages.json',
+    )
   })
 
-  it('numbers complex expressions and names identifiers', () => {
-    const source = src('const a = t`Hi ${user.name}, you have ${count} items`')
+  it('numbers complex expressions and names identifiers', async () => {
+    const source = fixture('transform/extract-positional/input.ts')
 
     // `user.name` is not an identifier, so it stays positional; `count` names
     // its own placeholder.
-    expect(extract(source, 'a.ts')[0]!.text).toBe(
-      'Hi {0}, you have {count} items',
+    await expect(json(extract(source, 'a.ts'))).toMatchFileSnapshot(
+      'fixtures/transform/extract-positional/messages.json',
     )
 
     const result = transform(source, 'a.ts', {
@@ -67,61 +70,60 @@ describe('extract', () => {
       },
     })!
 
-    expect(result.code).toContain('`你好 ${user.name}，你有 ${count} 项`')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/extract-positional/output.ts',
+    )
   })
 })
 
 describe('transform: single build', () => {
-  it('emits a ternary chain with no allocation and imports getLocale once', () => {
+  it('emits a ternary chain with no allocation and imports getLocale once', async () => {
     const result = transform(
-      src('export const a = t`A small starter with room to grow.`'),
+      fixture('transform/single-build-ternary/input.ts'),
       'a.ts',
       OPTIONS,
     )!
 
-    expect(result.code).toContain(
-      '(__i18nGetLocale() === "zh" ? `一个小而可长的起始模板。` : `A small starter with room to grow.`)',
+    // No arrow, no {en: ...} allocation, one getLocale import.
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/single-build-ternary/output.ts',
     )
-    expect(result.code).not.toContain('=>')
-    expect(result.code).not.toContain('{en:')
-    expect(result.code.match(/getLocale as __i18nGetLocale/g)).toHaveLength(1)
   })
 
-  it('does not collide with an existing getLocale import', () => {
-    const code = src(
-      [
-        "import { getLocale } from 'best-i18n/runtime'",
-        'export const a = () => getLocale() + t`About`',
-      ].join('\n'),
-    )
-
-    const result = transform(code, 'a.ts', {
-      ...OPTIONS,
-      catalog: { ...OPTIONS.catalog, About: { en: 'About', zh: '关于' } },
-    })!
-
-    expect(result.code).toContain('getLocale as __i18nGetLocale')
-    expect(result.code).toContain('__i18nGetLocale() === "zh"')
-    // The file's own import must survive untouched.
-    expect(
-      result.code.match(/import \{ getLocale \} from 'best-i18n\/runtime'/g),
-    ).toHaveLength(1)
-  })
-
-  it('picks a further suffix if the alias is taken too', () => {
-    const code = src('const __i18nGetLocale = 1; const a = t`About`')
-    const result = transform(code, 'a.ts', {
-      ...OPTIONS,
-      catalog: { ...OPTIONS.catalog, About: { en: 'About', zh: '关于' } },
-    })!
-
-    expect(result.code).toContain('getLocale as __i18nGetLocale2')
-    expect(result.code).toContain('__i18nGetLocale2() === "zh"')
-  })
-
-  it('emits a bare literal when there is only one locale', () => {
+  it('does not collide with an existing getLocale import', async () => {
     const result = transform(
-      src('const a = t`A small starter with room to grow.`'),
+      fixture('transform/existing-getlocale-import/input.ts'),
+      'a.ts',
+      {
+        ...OPTIONS,
+        catalog: { ...OPTIONS.catalog, About: { en: 'About', zh: '关于' } },
+      },
+    )!
+
+    // The file's own import must survive untouched, next to the alias.
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/existing-getlocale-import/output.ts',
+    )
+  })
+
+  it('picks a further suffix if the alias is taken too', async () => {
+    const result = transform(
+      fixture('transform/alias-suffix-taken/input.ts'),
+      'a.ts',
+      {
+        ...OPTIONS,
+        catalog: { ...OPTIONS.catalog, About: { en: 'About', zh: '关于' } },
+      },
+    )!
+
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/alias-suffix-taken/output.ts',
+    )
+  })
+
+  it('emits a bare literal when there is only one locale', async () => {
+    const result = transform(
+      fixture('transform/single-locale-literal/input.ts'),
       'a.ts',
       {
         ...OPTIONS,
@@ -129,42 +131,30 @@ describe('transform: single build', () => {
       },
     )!
 
-    expect(result.code).not.toContain('getLocale')
-    expect(result.code).toContain('`A small starter with room to grow.`')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/single-locale-literal/output.ts',
+    )
   })
 })
 
 describe('transform: repeated messages hoist', () => {
-  it('emits one function for a message repeated in a module', () => {
+  it('emits one function for a message repeated in a module', async () => {
     const result = transform(
-      src(
-        [
-          'export const a = t`A small starter with room to grow.`',
-          'export const b = t`A small starter with room to grow.`',
-        ].join('\n'),
-      ),
+      fixture('transform/hoist-repeated/input.ts'),
       'a.ts',
       OPTIONS,
     )!
 
-    // The text pair exists once, in a module-level function taking the locale.
-    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(1)
-    expect(result.code).toContain(
-      'const __i18nM1 = (l) => (l === "zh" ? `一个小而可长的起始模板。` : `A small starter with room to grow.`)',
-    )
-    // Both call sites call it, reading the locale at call time.
-    expect(result.code.match(/__i18nM1\(__i18nGetLocale\(\)\)/g)).toHaveLength(
-      2,
+    // The text pair exists once, in a module-level function taking the
+    // locale; both call sites call it, reading the locale at call time.
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/hoist-repeated/output.ts',
     )
   })
 
-  it('parameterizes interpolations so call sites keep their own expressions', () => {
+  it('parameterizes interpolations so call sites keep their own expressions', async () => {
     const result = transform(
-      src(
-        ['const a = t`Hi ${user.name}`', 'const b = t`Hi ${admin.name}`'].join(
-          '\n',
-        ),
-      ),
+      fixture('transform/hoist-parameterized/input.ts'),
       'a.ts',
       {
         ...OPTIONS,
@@ -172,112 +162,87 @@ describe('transform: repeated messages hoist', () => {
       },
     )!
 
-    expect(result.code).toContain(
-      'const __i18nM1 = (l, e0) => (l === "zh" ? `你好 ${e0}` : `Hi ${e0}`)',
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/hoist-parameterized/output.ts',
     )
-    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), user.name)')
-    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), admin.name)')
   })
 
-  it('shares one function between hook and non-hook call sites', () => {
-    const code = [
-      `import { t } from '${MACRO}'`,
-      "import { useI18n } from 'best-i18n/react/macro'",
-      'export const a = t`A small starter with room to grow.`',
-      'export function C() {',
-      '  const t2 = useI18n()',
-      '  return <p>{t2`A small starter with room to grow.`}</p>',
-      '}',
-    ].join('\n')
+  it('shares one function between hook and non-hook call sites', async () => {
+    const result = transform(
+      fixture('transform/hoist-hook-and-plain/input.tsx'),
+      'a.tsx',
+      OPTIONS,
+    )!
 
-    const result = transform(code, 'a.tsx', OPTIONS)!
-
-    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(1)
     // The plain site reads the locale, the hook site passes its variable.
-    expect(result.code).toContain('__i18nM1(__i18nGetLocale())')
-    expect(result.code).toContain('{__i18nM1(t2)}')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/hoist-hook-and-plain/output.tsx',
+    )
   })
 
-  it('hoists a repeated plural with the count as a parameter', () => {
-    const code = [
-      `import { t, plural } from '${MACRO}'`,
-      'const a = plural(x.count, `One item`, `${x.count} items`)',
-      'const b = plural(y.count, `One item`, `${y.count} items`)',
-    ].join('\n')
-
-    const result = transform(code, 'a.ts', {
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
-      catalog: { 'One item{0} items': { zh: ['{0} 件'] } },
-      plurals: {
-        en: { nplurals: 2, formula: 'n != 1' },
-        zh: { nplurals: 1, formula: '0' },
+  it('hoists a repeated plural with the count as a parameter', async () => {
+    const result = transform(
+      fixture('transform/hoist-repeated-plural/input.ts'),
+      'a.ts',
+      {
+        locales: ['en', 'zh'],
+        baseLocale: 'en',
+        catalog: { 'One item\u0005{0} items': { zh: ['{0} 件'] } },
+        plurals: {
+          en: { nplurals: 2, formula: 'n != 1' },
+          zh: { nplurals: 1, formula: '0' },
+        },
       },
-    })!
+    )!
 
-    // One declaration, dispatching on its own parameter.
-    expect(result.code.match(/ 件/g)).toHaveLength(1)
-    expect(result.code).toContain('const __i18nM1 = (l, e0) =>')
-    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), x.count)')
-    expect(result.code).toContain('__i18nM1(__i18nGetLocale(), y.count)')
-    // The one-form zh branch is the bare string; en dispatches on e0.
-    expect(result.code).toContain('`${e0} 件`')
-    expect(result.code).toContain('(e0)')
+    // One declaration, dispatching on its own parameter; the one-form zh
+    // branch is the bare string while en dispatches on e0.
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/hoist-repeated-plural/output.ts',
+    )
   })
 
-  it('does not hoist <Trans>, even repeated', () => {
-    const code = [
-      "import { Trans } from 'best-i18n/react/macro'",
-      'export const A = () => <p><Trans>Read the <a href={u1}>docs</a>.</Trans></p>',
-      'export const B = () => <p><Trans>Read the <a href={u2}>docs</a>.</Trans></p>',
-    ].join('\n')
-
-    const result = transform(code, 'a.tsx', {
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
-      catalog: {
-        'Read the <a>docs</a>.': { zh: '请阅读<a>docs</a>。' },
+  it('does not hoist <Trans>, even repeated', async () => {
+    const result = transform(
+      fixture('transform/no-hoist-trans/input.tsx'),
+      'a.tsx',
+      {
+        locales: ['en', 'zh'],
+        baseLocale: 'en',
+        catalog: {
+          'Read the <a>docs</a>.': { zh: '请阅读<a>docs</a>。' },
+        },
       },
-    })!
+    )!
 
     // Each call site keeps its own JSX branch - the href differs.
-    expect(result.code).not.toContain('__i18nM')
-    expect(result.code.match(/请阅读/g)).toHaveLength(2)
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/no-hoist-trans/output.tsx',
+    )
   })
 
-  it('picks a further prefix when __i18nM is taken', () => {
+  it('picks a further prefix when __i18nM is taken', async () => {
     const result = transform(
-      src(
-        [
-          'const __i18nM1 = 1',
-          'export const a = t`A small starter with room to grow.`',
-          'export const b = t`A small starter with room to grow.`',
-        ].join('\n'),
-      ),
+      fixture('transform/hoist-prefix-taken/input.ts'),
       'a.ts',
       OPTIONS,
     )!
 
-    expect(result.code).toContain('const __i18nM21 = (l) =>')
-    expect(result.code.match(/__i18nM21\(__i18nGetLocale\(\)\)/g)).toHaveLength(
-      2,
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/hoist-prefix-taken/output.ts',
     )
   })
 
-  it('does not hoist under staticLocale, where messages are bare literals', () => {
+  it('does not hoist under staticLocale, where messages are bare literals', async () => {
     const result = transform(
-      src(
-        [
-          'export const a = t`A small starter with room to grow.`',
-          'export const b = t`A small starter with room to grow.`',
-        ].join('\n'),
-      ),
+      fixture('transform/no-hoist-static-locale/input.ts'),
       'a.ts',
       { ...OPTIONS, staticLocale: 'zh' },
     )!
 
-    expect(result.code).not.toContain('__i18nM')
-    expect(result.code.match(/一个小而可长的起始模板。/g)).toHaveLength(2)
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/no-hoist-static-locale/output.ts',
+    )
   })
 })
 
@@ -301,15 +266,16 @@ describe('transform: edge cases', () => {
     expect(result.code).toContain('`Untranslated thing`')
   })
 
-  it('escapes backticks and ${ in message text', () => {
-    const result = transform(src('const a = t`weird`'), 'a.ts', {
+  it('escapes backticks and ${ in message text', async () => {
+    const result = transform(fixture('transform/escapes/input.ts'), 'a.ts', {
       ...OPTIONS,
       staticLocale: 'en',
       catalog: { weird: { en: 'a `tick` and ${notAnExpr}' } },
     })!
 
-    expect(result.code).toContain('\\`tick\\`')
-    expect(result.code).toContain('\\${notAnExpr}')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/escapes/output.ts',
+    )
   })
 
   it('rejects nested t``', () => {

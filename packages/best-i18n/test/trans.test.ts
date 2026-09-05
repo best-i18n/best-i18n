@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { extract, transform } from '../src/compiler/transform.ts'
+import { fixture, json } from './helpers/fixture.ts'
 
 const MACRO = 'best-i18n/react/macro'
 
@@ -33,112 +34,132 @@ function file(body: string) {
 }
 
 describe('<Trans>', () => {
-  it('stores markup as named placeholders', () => {
+  it('stores markup as named placeholders', async () => {
     const [message] = extract(
-      file(
-        '<p><Trans>Read the <a href={url}>docs</a> to learn more.</Trans></p>',
-      ),
+      fixture('trans/extract-markup-placeholders/input.tsx'),
       'a.tsx',
     )
 
-    expect(message?.text).toBe('Read the <a>docs</a> to learn more.')
+    await expect(json(message)).toMatchFileSnapshot(
+      'fixtures/trans/extract-markup-placeholders/messages.json',
+    )
   })
 
-  it('collapses JSX whitespace the way JSX itself does', () => {
+  it('collapses JSX whitespace the way JSX itself does', async () => {
     const [message] = extract(
-      file(`(
-        <Trans>
-          Read the <a href={url}>docs</a> to learn more.
-        </Trans>
-      )`),
+      fixture('trans/extract-whitespace-collapse/input.tsx'),
       'a.tsx',
     )
 
     // Indentation and the surrounding newlines are not part of the message,
     // or re-indenting a component would orphan every translation of it.
-    expect(message?.text).toBe('Read the <a>docs</a> to learn more.')
+    await expect(json(message)).toMatchFileSnapshot(
+      'fixtures/trans/extract-whitespace-collapse/messages.json',
+    )
   })
 
-  it('drops the space a newline swallows, as JSX does', () => {
+  it('drops the space a newline swallows, as JSX does', async () => {
     const [message] = extract(
-      file(`(
-        <Trans>
-          Read the <a href={url}>docs</a>
-          to learn more.
-        </Trans>
-      )`),
+      fixture('trans/extract-newline-swallows-space/input.tsx'),
       'a.tsx',
     )
 
     // JSX renders this without a space, which is the reason `{' '}` exists.
     // The message has to say so, otherwise the translation would read better
     // than the page does.
-    expect(message?.text).toBe('Read the <a>docs</a>to learn more.')
+    await expect(json(message)).toMatchFileSnapshot(
+      'fixtures/trans/extract-newline-swallows-space/messages.json',
+    )
   })
 
-  it('rebuilds the markup around a reordered translation', () => {
+  it('rebuilds the markup around a reordered translation', async () => {
     const result = transform(
-      file(
-        '<p><Trans>Read the <a href={url}>docs</a> to learn more.</Trans></p>',
-      ),
+      fixture('trans/reordered-translation/input.tsx'),
       'a.tsx',
       OPTIONS,
     )!
 
-    expect(result.code).toContain(
-      '<>{`阅读`}<a href={url}>{`文档`}</a>{`了解更多。`}</>',
-    )
-    expect(result.code).toContain(
-      '<>{`Read the `}<a href={url}>{`docs`}</a>{` to learn more.`}</>',
-    )
     // A JSX child has to stay an expression, or it becomes text.
-    expect(result.code).toContain('<p>{(__i18nGetLocale() === "zh" ?')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/reordered-translation/output.tsx',
+    )
   })
 
-  it('names expressions across markup', () => {
-    const source = file(
-      '<p><Trans>Hi {name}, you have <b>{count} items</b>.</Trans></p>',
-    )
+  it('names expressions across markup', async () => {
+    const source = fixture('trans/expressions-across-markup/input.tsx')
 
-    expect(extract(source, 'a.tsx')[0]?.text).toBe(
-      'Hi {name}, you have <b>{count} items</b>.',
+    await expect(json(extract(source, 'a.tsx')[0])).toMatchFileSnapshot(
+      'fixtures/trans/expressions-across-markup/messages.json',
     )
 
     const result = transform(source, 'a.tsx', OPTIONS)!
-    expect(result.code).toContain(
-      '<>{`你好 ${name}，你有 `}<b>{`${count} 项`}</b>{`。`}</>',
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/expressions-across-markup/output.tsx',
     )
   })
 
-  it('emits a plain template literal when the message has no markup', () => {
+  it('emits a plain template literal when the message has no markup', async () => {
     const result = transform(
-      file('<p><Trans>Just words.</Trans></p>'),
+      fixture('trans/no-markup-literal/input.tsx'),
       'a.tsx',
       OPTIONS,
     )!
 
-    expect(result.code).toContain(
-      '<p>{(__i18nGetLocale() === "zh" ? `只有文字。` : `Just words.`)}</p>',
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/no-markup-literal/output.tsx',
     )
-    expect(result.code).not.toContain('<>')
   })
 
-  it('handles nested markup and self-closing elements', () => {
+  it('handles nested markup and self-closing elements', async () => {
     const nested = transform(
-      file('<p><Trans>A <i>b <b>c</b></i> d</Trans></p>'),
+      fixture('trans/nested-markup/input.tsx'),
       'a.tsx',
       OPTIONS,
     )!
-    expect(nested.code).toContain('<>{`A `}<i>{`b `}<b>{`c`}</b></i>{` d`}</>')
     // The translation moved the inner element ahead of its sibling text.
-    expect(nested.code).toContain('<>{`D `}<i><b>{`C`}</b>{` B`}</i>{` A`}</>')
+    await expect(nested.code).toMatchFileSnapshot(
+      'fixtures/trans/nested-markup/output.tsx',
+    )
 
     const void_ = transform(
-      file('<p><Trans>Line one<br />line two</Trans></p>'),
+      fixture('trans/self-closing/input.tsx'),
       'a.tsx',
       OPTIONS,
     )!
-    expect(void_.code).toContain('<>{`第一行`}<br />{`第二行`}</>')
+    await expect(void_.code).toMatchFileSnapshot(
+      'fixtures/trans/self-closing/output.tsx',
+    )
+  })
+
+  it('compiles t`` and <Trans> in one file and drops both macro imports', async () => {
+    const result = transform(
+      fixture('trans/mixed-t-and-trans/input.tsx'),
+      'a.tsx',
+      OPTIONS,
+    )!
+
+    // Both bindings compiled away, so neither import may survive - the macro
+    // modules' runtime halves are throwing stubs.
+    expect(result.code).not.toContain('macro')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/mixed-t-and-trans/output.tsx',
+    )
+  })
+
+  it('compiles the useI18n() t and <Trans> together off one hook variable', async () => {
+    const result = transform(
+      fixture('trans/hook-t-and-trans/input.tsx'),
+      'a.tsx',
+      OPTIONS,
+    )!
+
+    // One import declaration carried both macros - it goes as a whole, and
+    // both sites dispatch on the hook variable, not getLocale().
+    expect(result.code).not.toContain('macro')
+    expect(result.code).not.toContain('getLocale')
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/hook-t-and-trans/output.tsx',
+    )
   })
 
   it('reads the enclosing useI18n() variable when there is one', () => {
@@ -186,20 +207,16 @@ describe('<Trans>', () => {
     expect(result.code).not.toContain('getLocale')
   })
 
-  it('collapses to one locale in a per-locale build', () => {
+  it('collapses to one locale in a per-locale build', async () => {
     const result = transform(
-      file(
-        '<p><Trans>Read the <a href={url}>docs</a> to learn more.</Trans></p>',
-      ),
+      fixture('trans/static-locale-zh/input.tsx'),
       'a.tsx',
       { ...OPTIONS, staticLocale: 'zh' },
     )!
 
-    expect(result.code).toContain(
-      '<p>{<>{`阅读`}<a href={url}>{`文档`}</a>{`了解更多。`}</>}</p>',
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/static-locale-zh/output.tsx',
     )
-    expect(result.code).not.toContain('getLocale')
-    expect(result.code).not.toContain('Read the')
   })
 
   it('rejects props, an empty element, and use as a value', () => {

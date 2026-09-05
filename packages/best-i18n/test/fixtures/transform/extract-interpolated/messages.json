@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Hi {name}, you have {count} items",
+    "expressions": [
+      "name",
+      "count"
+    ],
+    "placeholders": [
+      "name",
+      "count"
+    ],
+    "context": "",
+    "start": 46,
+    "end": 84,
+    "line": 2
+  }
+]

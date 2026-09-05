@@ -12,7 +12,7 @@ import {
   validateTemplateTranslation,
 } from './trans.ts'
 
-import type { StaticImport } from './bindings.ts'
+import type { StaticImport, StaticImportEntry } from './bindings.ts'
 import type { PluralRule } from './plural.ts'
 import type { TransElement } from './trans.ts'
 
@@ -63,6 +63,26 @@ interface HookCall {
   end: number
   /** Variable it was assigned to, which becomes the locale in that scope. */
   name: string
+}
+
+/**
+ * An import declaration naming a macro module, so the transform can drop the
+ * compiled-away bindings. The runtime halves of the macros are throwing stubs;
+ * leaving the import in would keep them in every bundle.
+ */
+interface MacroImport {
+  start: number
+  end: number
+  /** Source text of the module specifier, quotes included. */
+  request: string
+  entries: Array<{
+    /** A macro binding, gone after the transform. */
+    macro: boolean
+    type: boolean
+    kind: string
+    imported: string | undefined
+    local: string
+  }>
 }
 
 /** A function body, so a `<Trans>` can be matched to the scope it sits in. */
@@ -341,6 +361,7 @@ function analyze(
 ): {
   messages: Message[]
   hookCalls: HookCall[]
+  macroImports: MacroImport[]
   directiveEnd: number
   directives: string[]
 } {
@@ -406,13 +427,53 @@ function analyze(
 
   const { end: directiveEnd, directives } = directivePrologue(parsed.program)
 
+  // Which export of which module family is a macro. Matching mirrors
+  // resolveMacroBindings: literal specifier, named (non-type) imports only.
+  const isMacroEntry = (module: string, entry: StaticImportEntry): boolean => {
+    if (entry.isType || entry.importName.kind !== 'Name') return false
+    const name = entry.importName.name
+    return (
+      (from.includes(module) && (name === tag || name === pluralName)) ||
+      (hookFrom.includes(module) && name === hook) ||
+      (componentFrom.includes(module) && name === component)
+    )
+  }
+
+  const macroImports: MacroImport[] = staticImports
+    .filter((declaration) =>
+      declaration.entries.some((entry) =>
+        isMacroEntry(declaration.moduleRequest.value, entry),
+      ),
+    )
+    .map((declaration) => ({
+      start: declaration.start,
+      end: declaration.end,
+      request: code.slice(
+        declaration.moduleRequest.start,
+        declaration.moduleRequest.end,
+      ),
+      entries: declaration.entries.map((entry) => ({
+        macro: isMacroEntry(declaration.moduleRequest.value, entry),
+        type: entry.isType,
+        kind: entry.importName.kind,
+        imported: entry.importName.name,
+        local: entry.localName.value,
+      })),
+    }))
+
   if (
     locals.size === 0 &&
     pluralLocals.size === 0 &&
     hookLocals.size === 0 &&
     componentLocals.size === 0
   ) {
-    return { messages: [], hookCalls: [], directiveEnd, directives }
+    return {
+      messages: [],
+      hookCalls: [],
+      macroImports,
+      directiveEnd,
+      directives,
+    }
   }
 
   // `// i18n: why this wording` above a message becomes a `#.` comment in the
@@ -834,7 +895,7 @@ function analyze(
     }
   }
 
-  return { messages, hookCalls, directiveEnd, directives }
+  return { messages, hookCalls, macroImports, directiveEnd, directives }
 }
 
 const TOKEN_PATTERN = /(?<!\$)\{([A-Za-z0-9_$]+)\}/g
@@ -870,10 +931,8 @@ export function transform(
   const imports = macroSpecifiers(options)
   if (!imports.some((specifier) => code.includes(specifier))) return null
 
-  const { messages, hookCalls, directiveEnd, directives } = analyze(
-    code,
-    filename,
-    {
+  const { messages, hookCalls, macroImports, directiveEnd, directives } =
+    analyze(code, filename, {
       tag,
       from: options.from,
       plural: options.plural,
@@ -881,8 +940,7 @@ export function transform(
       hookFrom: options.hookFrom,
       component: options.component,
       componentFrom: options.componentFrom,
-    },
-  )
+    })
   if (messages.length === 0 && hookCalls.length === 0) return null
 
   const runtimeModule = options.runtimeModule ?? 'best-i18n/runtime'
@@ -891,6 +949,45 @@ export function transform(
   const source = new MagicString(code)
   let needsRuntime = false
   let needsReact = false
+
+  // The macro bindings compile away with their call sites, so their imports
+  // go too. Left in place they would keep the throwing runtime stubs in every
+  // bundle: without a `sideEffects` hint a bundler must assume the import
+  // matters. Misuse that would leave a live reference - `const p = plural` -
+  // is already a build error, so a surviving reference is impossible here.
+  for (const declaration of macroImports) {
+    const kept = declaration.entries.filter((entry) => !entry.macro)
+
+    if (kept.length === 0) {
+      const end =
+        code[declaration.end] === '\n' ? declaration.end + 1 : declaration.end
+      source.remove(declaration.start, end)
+      continue
+    }
+
+    // A macro module can be a user re-export that also carries real values:
+    // keep those, drop only the macro names.
+    const named = kept
+      .filter((entry) => entry.kind === 'Name')
+      .map((entry) => {
+        const spec =
+          entry.imported === entry.local
+            ? entry.local
+            : `${entry.imported} as ${entry.local}`
+        return entry.type ? `type ${spec}` : spec
+      })
+    const clauses = [
+      ...kept
+        .filter((entry) => entry.kind === 'Default')
+        .map((entry) => entry.local),
+      ...(named.length > 0 ? [`{ ${named.join(', ')} }`] : []),
+    ]
+    source.overwrite(
+      declaration.start,
+      declaration.end,
+      `import ${clauses.join(', ')} from ${declaration.request}`,
+    )
+  }
 
   // Never inject a bare name: the file may already import or define one
   // (a locale switcher does), which is a duplicate-declaration parse error.

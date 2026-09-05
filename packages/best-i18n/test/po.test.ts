@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { formatPo, parsePo, samePo } from '../src/compiler/po.ts'
+import { fixture } from './helpers/fixture.ts'
 
 import type { PoEntry } from '../src/compiler/po.ts'
 
@@ -106,24 +107,13 @@ describe('pO round-trip', () => {
     })
   })
 
-  it('preserves headers a translator or TMS set', () => {
-    const text = [
-      'msgid ""',
-      'msgstr ""',
-      '"Language: zh\\n"',
-      '"Plural-Forms: nplurals=1; plural=0;\\n"',
-      '"Last-Translator: Ana <ana@example.com>\\n"',
-      '"X-Generator: Weblate 5.0\\n"',
-      '',
-      'msgid "Hello"',
-      'msgstr "你好"',
-    ].join('\n')
+  it('preserves headers a translator or TMS set', async () => {
+    const text = fixture('po/headers/input.po')
 
-    const output = formatPo(parsePo(text, 'zh'))
-
-    expect(output).toContain('Plural-Forms: nplurals=1; plural=0;')
-    expect(output).toContain('Last-Translator: Ana <ana@example.com>')
-    expect(output).toContain('X-Generator: Weblate 5.0')
+    // The whole formatted file, headers included, as a translator would see it.
+    await expect(formatPo(parsePo(text, 'zh'))).toMatchFileSnapshot(
+      'fixtures/po/headers/output.po',
+    )
   })
 
   it('keeps fuzzy state and references on obsolete entries', () => {
