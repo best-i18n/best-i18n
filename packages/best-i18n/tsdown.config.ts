@@ -29,7 +29,9 @@ export default defineConfig({
   // Next.js has no `exports` map, so the bundler happily resolves `next/link`
   // to `next/link.js` on disk - and Next's own compiler keys its client/server
   // boundaries off the specifier as written. Keep them verbatim.
-  external: [/^next(\/|$)/],
+  deps: {
+    neverBundle: [/^next(\/|$)/],
+  },
   sourcemap: true,
   dts: { sourcemap: true },
 })
