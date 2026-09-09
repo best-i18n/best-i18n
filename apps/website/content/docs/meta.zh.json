@@ -8,6 +8,6 @@
     "extraction",
     "server",
     "limitations",
-    "[llms.txt](/llms.txt)"
+    "external:[llms.txt](/llms.txt)"
   ]
 }
