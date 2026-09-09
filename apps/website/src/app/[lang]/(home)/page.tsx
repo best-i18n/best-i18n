@@ -19,6 +19,7 @@ function About() {
 }`
 
 const compiled = `// compiled — a ternary, no runtime
+import { useLocale } from 'best-i18n/react'
 
 function About() {
   const t = useLocale()

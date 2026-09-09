@@ -16,20 +16,27 @@ function About() {
 compiles (default build) to
 
 ```js
-const t = useLocale() // re-renders on locale change
-return (
-  <h1>
-    {t === 'zh'
-      ? `一个小而可长的起始模板。`
-      : `A small starter with room to grow.`}
-  </h1>
-)
+// injected by the compiler
+import { useLocale } from 'best-i18n/react'
+
+function About() {
+  const t = useLocale() // re-renders on locale change
+  return (
+    <h1>
+      {t === 'zh'
+        ? `一个小而可长的起始模板。`
+        : `A small starter with room to grow.`}
+    </h1>
+  )
+}
 ```
 
 and with `staticLocale: 'zh'` (per-locale build) to
 
 ```js
-return <h1>{`一个小而可长的起始模板。`}</h1>
+function About() {
+  return <h1>{`一个小而可长的起始模板。`}</h1>
+}
 ```
 
 ## Why
@@ -375,6 +382,7 @@ message tree per render: each locale's version is reassembled into ordinary JSX
 at build time, so the above compiles to
 
 ```jsx
+// getLocale is injected by the compiler, from 'best-i18n/runtime'
 getLocale() === 'zh' ? (
   <>
     请阅读<a href={docsUrl}>文档</a>了解更多。

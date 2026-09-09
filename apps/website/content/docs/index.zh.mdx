@@ -18,20 +18,27 @@ function About() {
 （默认构建）编译为
 
 ```js
-const t = useLocale() // locale 变化时重新渲染
-return (
-  <h1>
-    {t === 'zh'
-      ? `一个小而可长的起始模板。`
-      : `A small starter with room to grow.`}
-  </h1>
-)
+// 由编译器注入
+import { useLocale } from 'best-i18n/react'
+
+function About() {
+  const t = useLocale() // locale 变化时重新渲染
+  return (
+    <h1>
+      {t === 'zh'
+        ? `一个小而可长的起始模板。`
+        : `A small starter with room to grow.`}
+    </h1>
+  )
+}
 ```
 
 设置 `staticLocale: 'zh'`（按语言构建）时编译为
 
 ```js
-return <h1>{`一个小而可长的起始模板。`}</h1>
+function About() {
+  return <h1>{`一个小而可长的起始模板。`}</h1>
+}
 ```
 
 ## 为什么

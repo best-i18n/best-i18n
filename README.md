@@ -132,6 +132,31 @@ repetition (measured at **+0.5 kB gzip** for one message used 100 times,
 inlined or hoisted alike), so over the wire it is a wash and what remains is
 parse time.
 
+**Why there is no cross-module dedup.** It is possible — a virtual module
+holding one function per message, imported by every call site, roughly the
+shape of Paraglide's generated `messages/` directory. Three things argue
+against it here.
+
+The transform is handed one file at a time. Vite's and Rolldown's `transform`
+hooks and the Next.js loader all pass a single module with no view of the
+graph, so a shared module means either a codegen pass that writes files before
+the build, or a virtual module every message-using file has to import. Both
+give up what keeps the current design simple: a compiled module is
+self-contained, and nothing has to run before the bundler does.
+
+It also would not dedup across the boundary that matters. On the App Router
+the server and client module graphs are separate, so a message rendered on
+both sides gets its own copy in each of them either way.
+
+And the win is not really there. Repeats within a module already collapse into
+one hoisted function; across modules gzip flattens the rest. What is left is
+parse time on duplicated string literals — not obviously worth a build-graph
+edge into every module in the app.
+
+The hoisted function is already the shape such a module would export, so if an
+app turns up where this costs something measurable, it is a contained change
+rather than a redesign.
+
 Scaling on the message side was measured too, at 300 extra messages: rendered
 from a Server Component they cost best-i18n no client JS at all, and from a
 Client Component about 6 bytes each gzipped for both languages.

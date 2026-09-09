@@ -102,6 +102,7 @@ msgstr "请阅读<a>文档</a>了解更多。"
 版本在构建期就重新组装回普通 JSX，所以上面的代码编译为
 
 ```jsx
+// getLocale 由编译器从 'best-i18n/runtime' 注入
 getLocale() === 'zh' ? (
   <>
     请阅读<a href={docsUrl}>文档</a>了解更多。

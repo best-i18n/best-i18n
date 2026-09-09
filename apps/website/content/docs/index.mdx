@@ -19,20 +19,27 @@ function About() {
 compiles (default build) to
 
 ```js
-const t = useLocale() // re-renders on locale change
-return (
-  <h1>
-    {t === 'zh'
-      ? `一个小而可长的起始模板。`
-      : `A small starter with room to grow.`}
-  </h1>
-)
+// injected by the compiler
+import { useLocale } from 'best-i18n/react'
+
+function About() {
+  const t = useLocale() // re-renders on locale change
+  return (
+    <h1>
+      {t === 'zh'
+        ? `一个小而可长的起始模板。`
+        : `A small starter with room to grow.`}
+    </h1>
+  )
+}
 ```
 
 and with `staticLocale: 'zh'` (per-locale build) to
 
 ```js
-return <h1>{`一个小而可长的起始模板。`}</h1>
+function About() {
+  return <h1>{`一个小而可长的起始模板。`}</h1>
+}
 ```
 
 ## Why
