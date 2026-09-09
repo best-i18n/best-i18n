@@ -15,6 +15,13 @@
  * runtime component putting the pieces back together per render: the parts are
  * reassembled here, once, into ordinary JSX per locale, so what ships is the
  * markup itself.
+ *
+ * A client module is the one place a message needs a component around it, so
+ * that the locale can be read through a hook - and even there the component is
+ * generated, holding the same finished branches. Lingui's `components` prop
+ * exists for the same reason this file's `refs` do (an element cannot leave
+ * the scope its attributes came from), but it is handed a string to parse at
+ * runtime; these are calls the compiler already wrote.
  */
 
 /** An element placeholder, kept as source so its attributes survive intact. */
@@ -628,6 +635,9 @@ function renderFlat(
  * one per part, and nothing is emitted between children: whitespace between
  * JSX children is itself a text node, so pretty-printing here would change
  * what renders.
+ *
+ * `refs` swaps the spliced element source for a call to a render prop, which
+ * is what lets the message leave its call site - see `renderTrans`.
  */
 function renderChildren(
   parts: MessagePart[],
@@ -635,6 +645,7 @@ function renderChildren(
   placeholders: string[],
   elements: TransElement[],
   describe: string,
+  refs?: Map<string, string>,
 ): string {
   let out = ''
   let run: MessagePart[] = []
@@ -661,6 +672,8 @@ function renderChildren(
       )
     }
 
+    const ref = refs?.get(part.token)
+
     if (element.selfClosing) {
       if (part.children.length > 0) {
         throw new Error(
@@ -668,7 +681,18 @@ function renderChildren(
             'source, so it cannot be given content.',
         )
       }
-      out += element.open
+      out += ref === undefined ? element.open : `{${ref}()}`
+      continue
+    }
+
+    if (ref !== undefined) {
+      // The render prop takes the translated children as its argument, so they
+      // have to be one expression: a flat run already is, a run with markup of
+      // its own becomes a fragment.
+      const children = hasElement(part.children)
+        ? `<>${renderChildren(part.children, expressions, placeholders, elements, describe, refs)}</>`
+        : renderFlat(part.children, expressions, placeholders)
+      out += `{${ref}(${part.children.length === 0 ? '' : children})}`
       continue
     }
 
@@ -694,6 +718,12 @@ function renderChildren(
  *
  * A message with no markup left in it comes back as a plain template literal,
  * so the common case costs exactly what `t` would.
+ *
+ * `refs` names a render prop per element - `elements[i]` is called through
+ * `refs[i]` instead of having its source spliced in. That is what a message
+ * needs to be compiled somewhere other than its call site: `<a href={url}>`
+ * cannot leave the scope that `url` lives in, but a `(child) => <a
+ * href={url}>{child}</a>` passed as an argument never does.
  */
 export function renderTrans(
   text: string,
@@ -701,11 +731,17 @@ export function renderTrans(
   placeholders: string[],
   elements: TransElement[],
   describe: string,
+  refs?: string[],
 ): string {
   const parts = parseMessage(text, describe)
   validateTransParts(parts, placeholders, elements, describe)
 
   if (!hasElement(parts)) return renderFlat(parts, expressions, placeholders)
 
-  return `<>${renderChildren(parts, expressions, placeholders, elements, describe)}</>`
+  const byToken =
+    refs === undefined
+      ? undefined
+      : new Map(elements.map((element, index) => [element.token, refs[index]!]))
+
+  return `<>${renderChildren(parts, expressions, placeholders, elements, describe, byToken)}</>`
 }

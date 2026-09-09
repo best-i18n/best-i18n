@@ -202,9 +202,9 @@ describe('transform: repeated messages hoist', () => {
     )
   })
 
-  it('does not hoist <Trans>, even repeated', async () => {
+  it('hoists a repeated <Trans>, elements and all', async () => {
     const result = transform(
-      fixture('transform/no-hoist-trans/input.tsx'),
+      fixture('transform/hoist-repeated-trans/input.tsx'),
       'a.tsx',
       {
         locales: ['en', 'zh'],
@@ -215,9 +215,11 @@ describe('transform: repeated messages hoist', () => {
       },
     )!
 
-    // Each call site keeps its own JSX branch - the href differs.
+    // The hrefs differ, so the markup cannot be shared as source - but it can
+    // be shared as a parameter: each call site passes its own element in as a
+    // render prop, and the translations are emitted once.
     await expect(result.code).toMatchFileSnapshot(
-      'fixtures/transform/no-hoist-trans/output.tsx',
+      'fixtures/transform/hoist-repeated-trans/output.tsx',
     )
   })
 

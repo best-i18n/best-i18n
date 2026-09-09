@@ -4,11 +4,14 @@ description: 设计的边界，直白地说
 ---
 
 - 消息必须静态可见——不能动态拼装消息。
-- 在 Next.js 上，Client Component 必须从 `useI18n()` 取 locale。裸 `t` 和上方
-  没有 `useI18n()` 的 `<Trans>` 读的是 `getLocale()`，而客户端组件渲染在一个
-  没有任何东西绑定过请求 locale 的模块图里——它们会回退到基础语言，且只在服务端
-  如此，React 在水合时一声不吭地抹平差异。loader 拒绝编译这种写法，并指出文件、
-  行号和消息。Server Component 正相反：它们不能调 hook，也不需要。
+- 在 Next.js 上，Client Component 里的消息必须通过 React 取 locale。上方没有
+  `useI18n()` 的裸 `t` 读的是 `getLocale()`，而客户端组件渲染在一个没有任何
+  东西绑定过请求 locale 的模块图里——它会回退到基础语言，且只在服务端如此，
+  React 在水合时一声不吭地抹平差异。loader 拒绝编译这种写法，并指出文件、行号
+  和消息。位置本身接受 element 的 `<Trans>`（JSX children，或者原样 return）
+  由编译器替你绑好：它给这条消息一个自己的组件，那是调 hook 的合法位置。被当作
+  字符串用的（`alt={...}`、模板字面量）不行，和 `t` 一样需要 `useI18n()`。
+  Server Component 正相反：它们不能调 hook，也不需要。
 - 复数是 gettext 复数（`plural(count, one, other)`），不是 ICU：还没有
   `select`/性别结构，也没有数字/日期格式化——那些用 `Intl` 配合 `getLocale()`。
 - `from`/`hookFrom` 按源码里写下的 import 说明符匹配，重导出宏时要把你的模块
@@ -17,9 +20,11 @@ description: 设计的边界，直白地说
   因为 `t` 必须同步解析而 `params` 和 `headers()` 是异步的。那是私有 API，
   Next.js 的大版本可能弄坏它。它读取的字段 `rootParams` 出现在 15.2，也就是
   peer 依赖的下限。
-- Client Component 里优先用 `useI18n`。那里的裸 `t` 读的是环境级客户端 locale，
-  `LocaleProvider` 会在客户端镜像它——但只来自最近的 provider，而且不像
-  `useI18n` 那样在 locale 变化时重新渲染。
+- 不在 Next.js 上、纯客户端构建里，Client Component 里也还是优先用 `useI18n`。
+  那里的裸 `t` 读的是环境级客户端 locale，`LocaleProvider` 会在客户端镜像
+  它——但只来自最近的 provider，而且不像 `useI18n` 那样在 locale 变化时重新
+  渲染。（被编译器包成独立组件的 `<Trans>` 会重新渲染，理由和 `useI18n` 让
+  `t` 重新渲染一样：它读的是 `useLocale()`。）
 - `best-i18n/server` 需要 `AsyncLocalStorage`。Node 和 Bun 自带；Cloudflare
   Workers 上它只存在于 `nodejs_compat`（或 `nodejs_als`）兼容性 flag 之后，
   没开 flag 时 import 直接抛错并把话说明白，而不是在请求之间静默共享一个

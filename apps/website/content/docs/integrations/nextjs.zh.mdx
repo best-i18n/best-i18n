@@ -73,7 +73,8 @@ export default function LocaleLayout({ children }) {
 
 设置到此为止。之后 `t` 在任何 Server Component 里都能用——不需要每个文件调一次
 什么，不需要 `await`，静态渲染完好无损——`useI18n` 则在任何 Client Component
-里可用。
+里可用。Client Component 里的 `<Trans>` 连 hook 都不需要：编译器会给这条消息
+一个自己的组件去读 locale。
 
 ## URL 与导航
 

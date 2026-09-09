@@ -1,0 +1,9 @@
+best-i18n: a Client Component has to take its locale from the hook, or the server renders it in the base language and the browser silently disagrees.
+
+  const t = useI18n()
+
+    a.tsx:5  "Just words."
+
+  A <Trans> among JSX children (or returned as it is) needs nothing: the compiler gives it a component of its own to call the hook from. One used as a string - a prop like `alt`, a template literal - cannot have that, because a component renders to an element.
+
+  If this file is never server-rendered, move the message inside a component and use the hook there anyway - a message read at module scope is resolved once, for every request.

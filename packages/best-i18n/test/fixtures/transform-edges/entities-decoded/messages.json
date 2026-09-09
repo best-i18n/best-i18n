@@ -7,5 +7,6 @@
   "start": 66,
   "end": 120,
   "line": 2,
-  "braced": true
+  "braced": true,
+  "elementOk": true
 }

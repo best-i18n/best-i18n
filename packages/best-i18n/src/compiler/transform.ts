@@ -55,6 +55,15 @@ export interface Message {
    * to be wrapped in braces to stay an expression rather than become text.
    */
   braced?: boolean
+  /**
+   * Set for a `<Trans>` in a position that takes a React element: JSX children,
+   * or returned straight from a function. Such a message can be compiled into a
+   * generated component, which is the only place a client module may read the
+   * locale through React. Anywhere else the message may be wanted as a string
+   * (`alt={...}`, a template literal), and an element would render as
+   * `[object Object]`.
+   */
+  elementOk?: boolean
 }
 
 interface HookCall {
@@ -188,6 +197,18 @@ export interface TransformResult {
    * request, and only the directive says which this is.
    */
   directives: string[]
+  /**
+   * Messages in a `'use client'` module that still read the ambient locale,
+   * because neither a hook variable nor a generated component could bind them.
+   * Empty everywhere else, including per-locale builds.
+   *
+   * On Next.js this is a build error rather than a warning - a client module is
+   * rendered from two module graphs, and only the browser's has a locale, so
+   * the page ships in the base language and flips after hydration. The
+   * compiler reports the fact; the integration decides what it means, because
+   * a client-only bundler has no second graph and no such hazard.
+   */
+  clientUnbound: Array<{ text: string; line: number }>
 }
 
 const DEFAULT_FROM = ['best-i18n/macro']
@@ -762,7 +783,55 @@ function analyze(
     })
   })
 
+  // Parents of every node seen so far. `walk` visits a node before its
+  // children, so by the time a <Trans> is reached its whole ancestor chain is
+  // in here - which is what deciding the position below needs.
+  const parentOf = new Map<unknown, Record<string, unknown> | undefined>()
+
+  /**
+   * Whether a React element is unambiguously valid where this `<Trans>` sits,
+   * which is what decides whether it may become a component of its own.
+   *
+   * The immediate parent is not enough: `{cond && <Trans>...</Trans>}` among
+   * children and `alt={cond ? <Trans>...</Trans> : ''}` have the same one. So
+   * the chain is climbed through the nodes that merely pass a value along,
+   * until something says where the value ends up.
+   */
+  const takesElement = (node: unknown): boolean => {
+    let current = parentOf.get(node)
+
+    while (current !== undefined) {
+      switch (current.type) {
+        // A children position (directly or behind braces), or the value of a
+        // function, which renders it.
+        case 'JSXElement':
+        case 'JSXFragment':
+        case 'ReturnStatement':
+        case 'ArrowFunctionExpression':
+          return true
+        // Nodes that pass their operand along without deciding anything, so
+        // the answer is whatever holds them.
+        case 'JSXExpressionContainer':
+        case 'ConditionalExpression':
+        case 'LogicalExpression':
+        case 'ParenthesizedExpression':
+        case 'TSAsExpression':
+        case 'TSNonNullExpression':
+          current = parentOf.get(current)
+          continue
+        // An attribute may want a string (`alt`), a template literal always
+        // does, and everything else is unknown - which counts as no.
+        default:
+          return false
+      }
+    }
+
+    return false
+  }
+
   walk(parsed.program, (node, parent) => {
+    parentOf.set(node, parent)
+
     if (node.type !== 'JSXElement') return
 
     const opening = node.openingElement as
@@ -845,6 +914,7 @@ function analyze(
       // Among JSX children the replacement has to stay an expression; anywhere
       // else - a variable, a prop, a return - it already is one.
       braced: parent?.type === 'JSXElement' || parent?.type === 'JSXFragment',
+      elementOk: takesElement(node),
     })
   })
 
@@ -1009,27 +1079,51 @@ export function transform(
     (locale) => locale !== options.baseLocale,
   )
 
-  // How many call sites share a catalog entry. A message repeated within one
-  // module hoists into a single module-level function - the translations are
-  // emitted once, each call site pays one call. Only the multi-locale ternary
-  // form is worth it: under `staticLocale` (and a single-locale config) the
-  // message is already a bare literal, and a <Trans> branch captures
-  // call-site JSX that a shared function could not.
+  const isClientModule = directives.includes('use client')
+
+  /**
+   * What a shared function has to agree on, which is more than a catalog key:
+   * the parameter list. A shared msgid implies a shared placeholder and element
+   * set, so this is the same string for every call site in practice - it is
+   * here so that a disagreement produces a second function rather than a call
+   * with the wrong arity.
+   */
+  const signatureOf = (message: Message): string =>
+    [
+      catalogKey(message.context, message.text, message.plural?.other),
+      message.placeholders.join(','),
+      // `t` and `<Trans>` do not compile the same message the same way - a
+      // lone expression stays an expression under `<Trans>` and stringifies
+      // under `t` - so they never share a function, markup or no markup.
+      message.elements === undefined
+        ? 't'
+        : `jsx:${message.elements.map((element) => element.token).join(',')}`,
+    ].join('|')
+
+  // How many call sites share a message. A message repeated within one module
+  // hoists into a single module-level function - the translations are emitted
+  // once, each call site pays one call. Only the multi-locale ternary form is
+  // worth it: under `staticLocale` (and a single-locale config) the message is
+  // already a bare literal.
   const repeats = new Map<string, number>()
   if (options.staticLocale === undefined && others.length > 0) {
     for (const message of messages) {
-      if (message.elements !== undefined) continue
-      const key = catalogKey(
-        message.context,
-        message.text,
-        message.plural?.other,
-      )
+      const key = signatureOf(message)
       repeats.set(key, (repeats.get(key) ?? 0) + 1)
     }
   }
   const hoistPrefix = hygienic('__i18nM')
   const hoistedNames = new Map<string, string>()
   const hoistedDecls: string[] = []
+  const componentPrefix = hygienic('__i18nT')
+  const componentNames = new Map<string, string>()
+  const componentDecls: string[] = []
+  const elementPrefix = hygienic('__i18nC')
+  const elementNames = new Map<string, string>()
+  const elementDecls: string[] = []
+  const localChild = hygienic('__i18nChild')
+  const localProps = hygienic('__i18nProps')
+  const clientUnbound: TransformResult['clientUnbound'] = []
 
   // `const t = useI18n()` becomes `const t = useLocale()`: the variable holds the
   // locale, subscribed through React. In a per-locale build there is nothing
@@ -1049,8 +1143,14 @@ export function transform(
 
   // Compiles one message to its replacement expression. `localeExpr` is what
   // the ternary compares: the hook variable, a `getLocale()` call, or a
-  // hoisted function's own locale parameter.
-  const compileMessage = (message: Message, localeExpr: string): string => {
+  // hoisted function's own locale parameter. `refs`, where given, names the
+  // render prop standing in for each of a `<Trans>`'s elements, so the message
+  // can be compiled away from the call site the elements came from.
+  const compileMessage = (
+    message: Message,
+    localeExpr: string,
+    refs?: string[],
+  ): string => {
     const describe = (locale: string) =>
       `${filename}:${message.line} (${locale}) "${message.text}"`
 
@@ -1137,6 +1237,7 @@ export function transform(
         message.placeholders,
         message.elements,
         describe(locale),
+        refs,
       )
     }
 
@@ -1162,63 +1263,169 @@ export function transform(
     return `(${branches}${base})`
   }
 
+  /** What a report says about a message: enough to find it again. */
+  const pointAt = (message: Message) => ({
+    text: message.text,
+    line: message.line,
+  })
+
+  /** One parameter per expression, then one per element. */
+  const paramsFor = (message: Message) => ({
+    expressions: message.expressions.map((_, index) => `e${index}`),
+    elements: (message.elements ?? []).map((_, index) => `c${index}`),
+  })
+
+  /**
+   * The `(l, e0, ..., c0, ...) => <ternary>` every call site of a message can
+   * share: the translations are emitted once and validated once, and each call
+   * site pays a call.
+   *
+   * The inline form splices call-site source into the template - expressions
+   * into the text, a `<a href={url}>`'s attributes into the markup - and that
+   * cannot leave the scope it came from. Parameters are how it leaves:
+   * expressions arrive as values, elements as render props.
+   */
+  const sharedFunction = (message: Message): string => {
+    const key = signatureOf(message)
+    const existing = hoistedNames.get(key)
+    if (existing !== undefined) return existing
+
+    const name = `${hoistPrefix}${hoistedNames.size + 1}`
+    hoistedNames.set(key, name)
+
+    const params = paramsFor(message)
+    const lifted: Message = {
+      ...message,
+      expressions: params.expressions,
+      plural:
+        message.plural === undefined
+          ? undefined
+          : {
+              ...message.plural,
+              count:
+                params.expressions[
+                  message.expressions.indexOf(message.plural.count)
+                ]!,
+            },
+    }
+    hoistedDecls.push(
+      `const ${name} = (${['l', ...params.expressions, ...params.elements].join(
+        ', ',
+      )}) => ${compileMessage(lifted, 'l', params.elements)}`,
+    )
+
+    return name
+  }
+
+  /**
+   * A generated component for one message, so a client module can read the
+   * locale through React without the file having called `useI18n()`.
+   *
+   * The hook has to sit at the top of a component's own render, and a message
+   * among someone else's JSX is not that - so the message becomes the
+   * component. Nothing about the markup is deferred to runtime: the body is
+   * the same locale ternary as everywhere else, one level down.
+   */
+  const generatedComponent = (message: Message): string => {
+    const key = signatureOf(message)
+    const existing = componentNames.get(key)
+    if (existing !== undefined) return existing
+
+    const name = `${componentPrefix}${componentNames.size + 1}`
+    componentNames.set(key, name)
+
+    const params = paramsFor(message)
+    const all = [...params.expressions, ...params.elements]
+    const args = [
+      `${localUseLocale}()`,
+      ...all.map((p) => `${localProps}.${p}`),
+    ]
+    componentDecls.push(
+      `const ${name} = (${all.length === 0 ? '' : localProps}) => ` +
+        `${sharedFunction(message)}(${args.join(', ')})`,
+    )
+    needsReact = true
+
+    return name
+  }
+
+  /**
+   * The render prop for one element: `(child) => <a href={url}>{child}</a>`.
+   *
+   * An element whose source names nothing from the call site - a plain `<b>`,
+   * an `<a href="/docs">` - is the same function for every render, so it is
+   * hoisted to module scope and allocated once. The tag has to be intrinsic
+   * for that: an uppercase one could be a component declared inside the
+   * function we are hoisting out of.
+   */
+  const elementProp = (element: TransElement): string => {
+    const source = element.selfClosing
+      ? `() => ${element.open}`
+      : `(${localChild}) => ${element.open}{${localChild}}${element.close}`
+
+    if (element.open.includes('{') || !/^<[a-z]/.test(element.open)) {
+      return source
+    }
+
+    const existing = elementNames.get(source)
+    if (existing !== undefined) return existing
+
+    const name = `${elementPrefix}${elementNames.size + 1}`
+    elementNames.set(source, name)
+    elementDecls.push(`const ${name} = ${source}`)
+
+    return name
+  }
+
   for (const message of messages) {
-    const key = catalogKey(message.context, message.text, message.plural?.other)
+    const key = signatureOf(message)
     let replacement: string
+    // A JSX element needs no braces among children - it is already an element
+    // rather than a value to be interpolated.
+    let isElement = false
 
-    if ((repeats.get(key) ?? 0) >= 2 && message.elements === undefined) {
-      let name = hoistedNames.get(key)
+    // Nothing to bind when the locale cannot vary: a per-locale build and a
+    // single-locale config both compile to a bare literal.
+    const unbound =
+      message.localeVar === undefined &&
+      options.staticLocale === undefined &&
+      others.length > 0
 
-      if (name === undefined) {
-        name = `${hoistPrefix}${hoistedNames.size + 1}`
-        hoistedNames.set(key, name)
-
-        // The inline form splices call-site expression source into the
-        // template, which cannot leave its scope - so the hoisted function
-        // takes the locale and one parameter per expression instead. A shared
-        // msgid guarantees a shared placeholder set, so every call site
-        // agrees on the arity. Validation (and `missing`) runs once per
-        // hoisted message, not once per call site.
-        const params = message.expressions.map((_, index) => `e${index}`)
-        const lifted: Message = {
-          ...message,
-          expressions: params,
-          plural:
-            message.plural === undefined
-              ? undefined
-              : {
-                  ...message.plural,
-                  count:
-                    params[message.expressions.indexOf(message.plural.count)]!,
-                },
-        }
-        hoistedDecls.push(
-          `const ${name} = (${['l', ...params].join(', ')}) => ${compileMessage(
-            lifted,
-            'l',
-          )}`,
-        )
-      }
-
+    if (unbound && isClientModule && message.elementOk === true) {
+      const params = paramsFor(message)
+      const attributes = [
+        ...params.expressions.map(
+          (param, index) => `${param}={${message.expressions[index]}}`,
+        ),
+        ...params.elements.map(
+          (param, index) =>
+            `${param}={${elementProp(message.elements![index]!)}}`,
+        ),
+      ]
+      const name = generatedComponent(message)
+      replacement = `<${name}${attributes.map((a) => ` ${a}`).join('')} />`
+      isElement = true
+    } else if ((repeats.get(key) ?? 0) >= 2) {
       // Hook-bound call sites pass the variable that already holds the
       // locale; others read it at call time, so one function serves both.
       const args = [
         message.localeVar ?? `${localGetLocale}()`,
         ...message.expressions,
+        ...(message.elements ?? []).map(elementProp),
       ]
-      if (message.localeVar === undefined) needsRuntime = true
-      replacement = `${name}(${args.join(', ')})`
+      if (unbound) {
+        needsRuntime = true
+        if (isClientModule) clientUnbound.push(pointAt(message))
+      }
+      replacement = `${sharedFunction(message)}(${args.join(', ')})`
     } else {
       replacement = compileMessage(
         message,
         message.localeVar ?? `${localGetLocale}()`,
       )
-      if (
-        message.localeVar === undefined &&
-        options.staticLocale === undefined &&
-        others.length > 0
-      ) {
+      if (unbound) {
         needsRuntime = true
+        if (isClientModule) clientUnbound.push(pointAt(message))
       }
     }
 
@@ -1226,7 +1433,7 @@ export function transform(
       message.start,
       message.end,
       // Among JSX children the result has to be braced to stay an expression.
-      message.braced === true ? `{${replacement}}` : replacement,
+      message.braced === true && !isElement ? `{${replacement}}` : replacement,
     )
   }
 
@@ -1254,7 +1461,15 @@ export function transform(
     )
   }
 
+  for (const declaration of elementDecls) {
+    inject(declaration)
+  }
+
   for (const declaration of hoistedDecls) {
+    inject(declaration)
+  }
+
+  for (const declaration of componentDecls) {
     inject(declaration)
   }
 
@@ -1264,5 +1479,6 @@ export function transform(
     messages,
     missing,
     directives,
+    clientUnbound,
   }
 }

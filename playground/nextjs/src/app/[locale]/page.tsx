@@ -1,6 +1,7 @@
 import { t } from 'best-i18n/macro'
 
 import { Counter } from '@/components/counter'
+import { Notice } from '@/components/notice'
 import { localeAlternates } from '@/seo'
 
 import type { Metadata } from 'next'
@@ -28,6 +29,7 @@ export default function HomePage() {
       <h1>{t`A small starter with room to grow.`}</h1>
       <p>{t`This paragraph was rendered on the server.`}</p>
       <Counter />
+      <Notice href='https://github.com/best-i18n/best-i18n' />
     </>
   )
 }

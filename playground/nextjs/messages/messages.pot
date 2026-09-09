@@ -219,6 +219,10 @@ msgstr ""
 msgid "Counting is <strong>not</strong> translation."
 msgstr ""
 
+#: src/components/notice.tsx:20
+msgid "A Client Component needs no hook for <a>this sentence</a>."
+msgstr ""
+
 #: src/components/site-header.tsx:15
 msgid "Home"
 msgstr ""

@@ -127,3 +127,53 @@ Whitespace follows JSX's own rules, so the stored message matches what renders
 — including the space a line break swallows, which is why `{' '}` exists.
 `<Trans>` takes no props, `key` included: wrap it in the element that needs
 one.
+
+### `<Trans>` in a Client Component
+
+A Client Component is rendered from two module graphs, and only the browser's
+has an ambient locale — so a message there has to read the locale through
+React, the one channel both halves share. `useI18n()` is that channel, and a
+`<Trans>` sitting in JSX gets it without asking:
+
+```tsx
+'use client'
+import { Trans } from 'best-i18n/react/macro'
+
+// No hook in this file, and none needed.
+export function Notice({ href }: { href: string }) {
+  return (
+    <p>
+      <Trans>
+        A Client Component needs no hook for <a href={href}>this sentence</a>.
+      </Trans>
+    </p>
+  )
+}
+```
+
+The message becomes a component of its own, which is a legal place to call a
+hook from, and the markup stays where it was — `href` is a local, so the
+element is passed in rather than moved:
+
+```jsx
+const __i18nM1 = (l, c0) =>
+  l === 'zh' ? <>{c0(`这句话`)}{`不需要 hook。`}</> : <>{`… for `}{c0(`this sentence`)}{`.`}</>
+const __i18nT1 = (p) => __i18nM1(useLocale(), p.c0)
+
+// at the call site
+<__i18nT1 c0={(child) => <a href={href}>{child}</a>} />
+```
+
+Nothing about the markup is deferred to runtime: the body is the same locale
+ternary as everywhere else, one level down. Repeated messages share one
+component, and a render prop that names nothing local (`<b>`, `<br/>`) is
+hoisted to module scope and allocated once.
+
+Two cases still need the hook. A `t` template has no component boundary to put
+one behind, so plain `t` in a Client Component is a build error naming the file
+and line. And a `<Trans>` used where a _string_ is wanted — `alt={...}`, a
+template literal — cannot become a component, because a component renders to
+an element; the compiler only wraps a `<Trans>` in a position that takes one
+(JSX children, or returned as it is). Calling `useI18n()` in the component
+solves both, and is worth preferring anyway when the file already has other
+messages in it.

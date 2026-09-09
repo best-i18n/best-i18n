@@ -4,7 +4,7 @@ import { loadCatalog } from '../../compiler/catalog.ts'
 import { transform } from '../../compiler/transform.ts'
 
 import type { LoadedCatalog } from '../../compiler/catalog.ts'
-import type { Message, TransformOptions } from '../../compiler/transform.ts'
+import type { TransformOptions } from '../../compiler/transform.ts'
 
 /**
  * Everything the loader needs, and nothing that cannot survive a round trip
@@ -32,7 +32,7 @@ export interface I18nLoaderOptions extends Omit<
 }
 
 /**
- * Rejects a message in a Client Component that has no `useI18n()` above it.
+ * Rejects a message in a Client Component that reads the ambient locale.
  *
  * Such a message compiles to `getLocale()`, and a client module is rendered
  * twice from two different module graphs: on the server, where nothing has
@@ -42,24 +42,20 @@ export interface I18nLoaderOptions extends Omit<
  * it. React does not even warn: it patches the text and moves on.
  *
  * There is no version of this that works, which is why it is an error and not
- * a warning. `useI18n()` reads the locale through React, the one channel both
- * graphs share.
+ * a warning. React is the one channel both graphs share, so the locale has to
+ * come through it: `useI18n()` in the component, or - for a `<Trans>` sitting
+ * in JSX - the component the compiler generates for it, which calls the hook
+ * itself.
  *
- * A per-locale build has no locale to read at all, so the question does not
- * arise there.
+ * The compiler reports what it could not bind (`clientUnbound`); this decides
+ * what that means, which is a Next.js question rather than a compiler one.
  */
 export function clientModuleError(options: {
   filename: string
-  directives: string[]
-  messages: Message[]
-  staticLocale?: string | undefined
+  unbound: Array<{ text: string; line: number }>
 }): string | undefined {
-  const { filename, directives, messages, staticLocale } = options
+  const { filename, unbound } = options
 
-  if (staticLocale !== undefined) return undefined
-  if (!directives.includes('use client')) return undefined
-
-  const unbound = messages.filter((message) => message.localeVar === undefined)
   if (unbound.length === 0) return undefined
 
   const where = unbound
@@ -72,6 +68,10 @@ export function clientModuleError(options: {
     `disagrees.\n\n` +
     `  const t = useI18n()\n\n` +
     `${where}\n\n` +
+    `  A <Trans> among JSX children (or returned as it is) needs nothing: the ` +
+    `compiler gives it a component of its own to call the hook from. One ` +
+    `used as a string - a prop like \`alt\`, a template literal - cannot ` +
+    `have that, because a component renders to an element.\n\n` +
     `  If this file is never server-rendered, move the message inside a ` +
     `component and use the hook there anyway - a message read at module ` +
     `scope is resolved once, for every request.`
@@ -175,9 +175,7 @@ export default function bestI18nLoader(
 
   const violation = clientModuleError({
     filename: this.resourcePath,
-    directives: result.directives,
-    messages: result.messages,
-    staticLocale: options.staticLocale,
+    unbound: result.clientUnbound,
   })
 
   if (violation !== undefined) {

@@ -119,3 +119,48 @@ getLocale() === 'zh' ? (
 空白遵循 JSX 自己的规则，所以存储的消息与渲染结果一致——包括换行吞掉的那个
 空格，这正是 `{' '}` 存在的原因。`<Trans>` 不接受任何 prop，`key` 也不行：
 把它包在需要 key 的元素里。
+
+### Client Component 里的 `<Trans>`
+
+Client Component 由两张模块图渲染，而只有浏览器那张有环境级 locale——所以那里
+的消息必须通过 React 取 locale，那是两半唯一共享的通道。`useI18n()` 就是这个
+通道，而待在 JSX 里的 `<Trans>` 不用开口就能拿到：
+
+```tsx
+'use client'
+import { Trans } from 'best-i18n/react/macro'
+
+// 这个文件里没有 hook，也不需要。
+export function Notice({ href }: { href: string }) {
+  return (
+    <p>
+      <Trans>
+        A Client Component needs no hook for <a href={href}>this sentence</a>.
+      </Trans>
+    </p>
+  )
+}
+```
+
+这条消息变成了它自己的组件，那是调 hook 的合法位置，而标记留在原处——`href`
+是个局部变量，所以元素是被传进去的，不是被搬走的：
+
+```jsx
+const __i18nM1 = (l, c0) =>
+  l === 'zh' ? <>{c0(`这句话`)}{`不需要 hook。`}</> : <>{`… for `}{c0(`this sentence`)}{`.`}</>
+const __i18nT1 = (p) => __i18nM1(useLocale(), p.c0)
+
+// 调用点
+<__i18nT1 c0={(child) => <a href={href}>{child}</a>} />
+```
+
+标记没有任何部分被推迟到运行时：函数体还是别处那个 locale 三元，只是下沉了一
+层。重复的消息共享同一个组件，而不引用任何局部变量的 render prop（`<b>`、
+`<br/>`）会被提到模块作用域，只分配一次。
+
+还有两种情况仍然需要 hook。`t` 模板没有组件边界可以藏 hook，所以 Client
+Component 里的裸 `t` 是构建错误，并指出文件和行号。以及被当作**字符串**用的
+`<Trans>`——`alt={...}`、模板字面量——无法变成组件，因为组件渲染出来的是
+element；编译器只包裹那些位置本身就接受 element 的 `<Trans>`（JSX children，
+或者原样 return）。在组件里调 `useI18n()` 两种情况都能解决，而且当文件里本来
+就有别的消息时，这样写本来就更值当。

@@ -73,7 +73,8 @@ export default function LocaleLayout({ children }) {
 
 That is the whole setup. `t` then works in any Server Component — no per-file
 call, no `await`, static rendering intact — and `useI18n` in any Client
-Component.
+Component. A `<Trans>` in a Client Component needs no hook at all: the
+compiler gives the message a component of its own to read the locale from.
 
 ## URLs and navigation
 

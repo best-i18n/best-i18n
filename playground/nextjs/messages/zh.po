@@ -218,6 +218,10 @@ msgstr "你有 {count} 项"
 msgid "Counting is <strong>not</strong> translation."
 msgstr "计数<strong>不是</strong>翻译。"
 
+#: src/components/notice.tsx:20
+msgid "A Client Component needs no hook for <a>this sentence</a>."
+msgstr "<a>这句话</a>不需要 Client Component 里有 hook。"
+
 #: src/components/site-header.tsx:15
 msgid "Home"
 msgstr "首页"
