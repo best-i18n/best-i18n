@@ -3,10 +3,11 @@ import { localizePathname } from 'best-i18n/locale-url'
 import { i18nProvider } from 'fumadocs-ui/i18n'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import { usePathname, useRouter } from 'next/navigation'
+import type { ReactNode } from 'react'
+
 import SearchDialog from '~/components/search'
 import { i18nConfig } from '~/lib/best-i18n'
 import { translations } from '~/lib/layout.shared'
-import type { ReactNode } from 'react'
 
 export function Provider({
   lang,

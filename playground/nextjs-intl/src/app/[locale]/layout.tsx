@@ -1,10 +1,12 @@
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
-import { SiteHeader } from '@/components/site-header'
-import { routing } from '@/i18n/routing'
-import '../globals.css'
 import type { ReactNode } from 'react'
+
+import { SiteHeader } from '@/components/site-header'
+
+import '../globals.css'
+import { routing } from '@/i18n/routing'
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))

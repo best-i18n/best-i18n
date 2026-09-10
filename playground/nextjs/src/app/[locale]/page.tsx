@@ -1,8 +1,9 @@
 import { t } from 'best-i18n/macro'
+import type { Metadata } from 'next'
+
 import { Counter } from '@/components/counter'
 import { Notice } from '@/components/notice'
 import { localeAlternates } from '@/seo'
-import type { Metadata } from 'next'
 
 /**
  * `t` needs no setup here either. `generateMetadata` runs inside the same

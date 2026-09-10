@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { resolveClientLocale } from '../src/client.ts'
 import { matchLocale, rankAcceptLanguage } from '../src/locale-tag.ts'
 import { resolveLocale } from '../src/request.ts'

@@ -1,9 +1,11 @@
 import { getLocale } from 'best-i18n/next/server'
 import { LocaleProvider } from 'best-i18n/react'
-import { SiteHeader } from '@/components/site-header'
-import { i18n } from '@/i18n'
-import '../globals.css'
 import type { ReactNode } from 'react'
+
+import { SiteHeader } from '@/components/site-header'
+
+import '../globals.css'
+import { i18n } from '@/i18n'
 
 /** Relative `alternates` need a base to resolve against. */
 export const metadata = {

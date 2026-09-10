@@ -1,5 +1,6 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
 import { withRequestLocale } from 'best-i18n/server'
+
 import { i18n } from './i18n'
 
 /**

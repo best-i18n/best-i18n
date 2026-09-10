@@ -1,10 +1,12 @@
+import type { Metadata } from 'next'
+
 import { i18n } from '~/lib/i18n'
+
 import {
   withGenerateMetadata,
   withGenerateStaticParams,
   WithPage,
 } from '../../../[lang]/docs/[[...slug]]/page.with'
-import type { Metadata } from 'next'
 
 export function generateStaticParams() {
   return withGenerateStaticParams(i18n.defaultLanguage)

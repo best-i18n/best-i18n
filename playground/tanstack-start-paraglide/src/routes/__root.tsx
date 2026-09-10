@@ -4,8 +4,10 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router'
+
 import { SiteHeader } from '@/components/site-header'
 import { getLocale } from '@/paraglide/runtime'
+
 import appCss from '@/styles.css?url'
 
 export const Route = createRootRoute({

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { resolveClientLocale } from '../src/client.ts'
 import { resolveLocale } from '../src/request.ts'
 

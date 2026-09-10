@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl'
+
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { Link } from '@/i18n/navigation'
 

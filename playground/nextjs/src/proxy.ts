@@ -1,4 +1,5 @@
 import { createProxy } from 'best-i18n/next/proxy'
+
 import { i18n } from '@/i18n'
 
 /**

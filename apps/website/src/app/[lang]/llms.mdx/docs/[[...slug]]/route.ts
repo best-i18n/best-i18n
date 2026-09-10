@@ -1,4 +1,5 @@
 import { i18n } from '~/lib/i18n'
+
 import { withGenerateStaticParams, withGET } from './route.with'
 
 export const revalidate = false

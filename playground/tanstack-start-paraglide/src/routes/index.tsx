@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+
 import { Counter } from '@/components/counter'
 import { m } from '@/paraglide/messages'
 

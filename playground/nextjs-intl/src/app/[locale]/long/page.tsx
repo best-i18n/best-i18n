@@ -1,7 +1,7 @@
+import type { Metadata } from 'next'
 import { useTranslations } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { use } from 'react'
-import type { Metadata } from 'next'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('LongPage')

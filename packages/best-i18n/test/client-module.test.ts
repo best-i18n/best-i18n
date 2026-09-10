@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { transform } from '../src/compiler/transform.ts'
 import { clientModuleError } from '../src/integrations/next/loader.ts'
 import { fixture } from './helpers/fixture.ts'

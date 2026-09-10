@@ -1,7 +1,8 @@
-import { loadCatalog } from '../compiler/catalog.ts'
-import { macroSpecifiers, transform } from '../compiler/transform.ts'
 import type { Plugin } from 'rolldown'
+
+import { loadCatalog } from '../compiler/catalog.ts'
 import type { LoadedCatalog } from '../compiler/catalog.ts'
+import { macroSpecifiers, transform } from '../compiler/transform.ts'
 import type { TransformOptions } from '../compiler/transform.ts'
 
 export interface I18nPluginOptions extends Omit<

@@ -1,12 +1,13 @@
 import { t } from 'best-i18n/macro'
 import { setRequestLocale } from 'best-i18n/next/server'
 import { LocaleProvider } from 'best-i18n/react'
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import type { ReactNode } from 'react'
+
 import { Provider } from '~/components/provider'
 import { i18nConfig } from '~/lib/best-i18n'
 import { appName, siteUrl } from '~/lib/shared'
-import type { Metadata } from 'next'
-import type { ReactNode } from 'react'
 
 const inter = Inter({
   subsets: ['latin'],

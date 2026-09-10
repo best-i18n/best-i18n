@@ -1,11 +1,13 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+
 import { rolldown } from 'rolldown'
 import { describe, expect, it } from 'vitest'
+
 import { formatPo } from '../src/compiler/po.ts'
-import { i18n } from '../src/integrations/rolldown.ts'
 import type { PoEntry } from '../src/compiler/po.ts'
+import { i18n } from '../src/integrations/rolldown.ts'
 
 const entry = (partial: Partial<PoEntry>): PoEntry => ({
   context: '',

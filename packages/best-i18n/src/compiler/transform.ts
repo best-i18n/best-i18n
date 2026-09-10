@@ -1,7 +1,10 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
+
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
+import type { StaticImport, StaticImportEntry } from './bindings.ts'
 import { GERMANIC } from './plural.ts'
+import type { PluralRule } from './plural.ts'
 import {
   renderTemplate,
   renderTrans,
@@ -10,8 +13,6 @@ import {
   validatePluralForm,
   validateTemplateTranslation,
 } from './trans.ts'
-import type { StaticImport, StaticImportEntry } from './bindings.ts'
-import type { PluralRule } from './plural.ts'
 import type { TransElement } from './trans.ts'
 
 export interface Message {

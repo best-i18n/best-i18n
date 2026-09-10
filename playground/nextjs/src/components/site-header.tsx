@@ -1,5 +1,6 @@
 import { t } from 'best-i18n/macro'
 import { Link } from 'best-i18n/next/navigation'
+
 import { LocaleSwitcher } from '@/components/locale-switcher'
 
 /**

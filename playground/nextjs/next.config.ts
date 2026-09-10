@@ -1,8 +1,10 @@
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+
 import { createI18nPlugin } from 'best-i18n/next'
-import { i18n } from './src/i18n'
 import type { NextConfig } from 'next'
+
+import { i18n } from './src/i18n'
 
 const withI18n = createI18nPlugin({
   // The loader compiles per-locale ternaries, so it needs the values at build

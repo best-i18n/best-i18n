@@ -2,6 +2,7 @@ import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { resolveClientLocale } from 'best-i18n/client'
 import { deLocalizeUrl, localizeUrl } from 'best-i18n/locale-url'
 import { getLocale, isServer, setLocale } from 'best-i18n/runtime'
+
 import { i18n } from './i18n'
 import { routeTree } from './routeTree.gen'
 

@@ -5,7 +5,9 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 import { getLocale } from 'best-i18n/runtime'
+
 import { SiteHeader } from '@/components/site-header'
+
 import appCss from '@/styles.css?url'
 
 export const Route = createRootRoute({

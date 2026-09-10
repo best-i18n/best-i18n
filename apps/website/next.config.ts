@@ -1,8 +1,10 @@
 import { fileURLToPath } from 'node:url'
+
 import { createI18nPlugin } from 'best-i18n/next'
 import { createMDX } from 'fumadocs-mdx/next'
-import { i18nConfig } from './src/lib/best-i18n'
 import type { NextConfig } from 'next'
+
+import { i18nConfig } from './src/lib/best-i18n'
 
 const withMDX = createMDX()
 

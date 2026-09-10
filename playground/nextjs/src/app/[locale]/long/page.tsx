@@ -1,7 +1,8 @@
 import { plural, t } from 'best-i18n/macro'
 import { Trans } from 'best-i18n/react/macro'
-import { localeAlternates } from '@/seo'
 import type { Metadata } from 'next'
+
+import { localeAlternates } from '@/seo'
 
 export function generateMetadata(): Metadata {
   return {
