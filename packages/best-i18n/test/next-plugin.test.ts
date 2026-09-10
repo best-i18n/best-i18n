@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-
 import { createI18nPlugin } from '../src/integrations/next/index.ts'
 
 const BASE = {

@@ -1,6 +1,5 @@
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { i18n } from 'best-i18n/vite'

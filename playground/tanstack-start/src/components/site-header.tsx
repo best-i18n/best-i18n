@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { t } from 'best-i18n/macro'
-
 import { LocaleSwitcher } from '@/components/locale-switcher'
 
 /**

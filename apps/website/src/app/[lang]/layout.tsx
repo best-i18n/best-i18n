@@ -1,8 +1,6 @@
-import type { Metadata } from 'next'
-
 import { i18n } from '~/lib/i18n'
-
 import { withGenerateMetadata, WithLayout } from './layout.with'
+import type { Metadata } from 'next'
 
 export async function generateMetadata({
   params,

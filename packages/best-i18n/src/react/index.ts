@@ -7,9 +7,6 @@ import {
   useEffect,
   useSyncExternalStore,
 } from 'react'
-import type { ReactNode } from 'react'
-
-import type { UrlConfig } from '../locale-url.ts'
 import {
   configure,
   getLocale,
@@ -18,6 +15,9 @@ import {
   primeLocale,
   subscribeLocale,
 } from '../runtime/index.ts'
+import type { ReactNode } from 'react'
+
+import type { UrlConfig } from '../locale-url.ts'
 import type { Locale } from '../runtime/index.ts'
 
 /**

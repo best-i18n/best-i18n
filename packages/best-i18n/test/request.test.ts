@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-
 import { resolveLocale } from '../src/request.ts'
 import { configure, getLocale } from '../src/runtime/index.ts'
 import { withLocale } from '../src/runtime/server.ts'

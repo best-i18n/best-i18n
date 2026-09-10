@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { createElement } from 'react'
-import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-
 import { Link, usePathname } from '../src/integrations/next/navigation.ts'
-import type { UrlConfig } from '../src/locale-url.ts'
 import { LocaleProvider } from '../src/react/index.ts'
+import type { ReactNode } from 'react'
+
+import type { UrlConfig } from '../src/locale-url.ts'
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => createElement('a', props),

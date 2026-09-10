@@ -1,7 +1,6 @@
 import { useTranslations } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { use } from 'react'
-
 import { Counter } from '@/components/counter'
 
 export default function HomePage({

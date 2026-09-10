@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-
 import { resolveLocale } from '../request.ts'
-import type { RequestConfig } from '../request.ts'
 import { configure, setRequestLocaleSource } from './index.ts'
+
+import type { RequestConfig } from '../request.ts'
 import type { Locale } from './index.ts'
 
 interface RequestStore {

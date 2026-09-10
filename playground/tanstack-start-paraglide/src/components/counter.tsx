@@ -1,5 +1,4 @@
 import { useState } from 'react'
-
 import { m } from '@/paraglide/messages'
 
 export function Counter() {

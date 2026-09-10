@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-
 import { i18n } from '~/lib/i18n'
 import { getLLMText, getPageMarkdownUrl, source } from '~/lib/source'
 

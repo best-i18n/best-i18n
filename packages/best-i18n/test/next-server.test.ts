@@ -1,7 +1,6 @@
-import type { AsyncLocalStorage } from 'node:async_hooks'
-
-import './helpers/install-als-global.ts'
 import { describe, expect, it } from 'vitest'
+import './helpers/install-als-global.ts'
+import type { AsyncLocalStorage } from 'node:async_hooks'
 
 /**
  * Outside a React render - which is what this plain Node process is - React's

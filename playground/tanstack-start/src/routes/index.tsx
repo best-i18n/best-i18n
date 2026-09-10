@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { t } from 'best-i18n/macro'
-
 import { Counter } from '@/components/counter'
 
 export const Route = createFileRoute('/')({

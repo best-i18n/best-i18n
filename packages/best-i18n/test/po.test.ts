@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-
 import { formatPo, parsePo, samePo } from '../src/compiler/po.ts'
-import type { PoEntry } from '../src/compiler/po.ts'
 import { fixture } from './helpers/fixture.ts'
+
+import type { PoEntry } from '../src/compiler/po.ts'
 
 const entry = (overrides: Partial<PoEntry>): PoEntry => ({
   context: '',

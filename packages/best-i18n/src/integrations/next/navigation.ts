@@ -6,11 +6,11 @@ import {
   useRouter as useNextRouter,
 } from 'next/navigation'
 import { createElement } from 'react'
+import { deLocalizePathname, localizePathname } from '../../locale-url.ts'
+import { useLocale, useUrlConfig } from '../../react/index.ts'
 import type { ComponentProps, ReactNode } from 'react'
 
-import { deLocalizePathname, localizePathname } from '../../locale-url.ts'
 import type { UrlConfig } from '../../locale-url.ts'
-import { useLocale, useUrlConfig } from '../../react/index.ts'
 
 /**
  * The locale-aware halves of `next/navigation`, exported one by one so an app

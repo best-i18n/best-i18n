@@ -1,5 +1,6 @@
-import type { RequestConfig } from '../../request.ts'
 import { configure } from '../../runtime/index.ts'
+
+import type { RequestConfig } from '../../request.ts'
 
 /**
  * Header the proxy uses to hand the resolved locale to the render.

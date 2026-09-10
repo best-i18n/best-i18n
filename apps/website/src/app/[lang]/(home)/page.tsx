@@ -8,9 +8,7 @@ import {
 } from 'fumadocs-ui/components/ui/scroll-area'
 import { highlightAll } from 'microlighter'
 import { useEffect, useRef } from 'react'
-
 import { gitConfig } from '~/lib/shared'
-
 import 'microlighter/themes/github.css'
 
 const source = `import { useI18n } from 'best-i18n/react/macro'

@@ -1,11 +1,10 @@
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-
 import { describe, expect, it } from 'vitest'
-
 import { loadCatalog } from '../src/compiler/catalog.ts'
 import { formatPo } from '../src/compiler/po.ts'
+
 import type { PoEntry } from '../src/compiler/po.ts'
 
 const entry = (overrides: Partial<PoEntry>): PoEntry => ({

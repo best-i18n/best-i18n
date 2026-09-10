@@ -1,6 +1,5 @@
 import { switchLocale } from 'best-i18n/client'
 import { useLocale } from 'best-i18n/react'
-
 import { i18n } from '@/i18n'
 
 const LABELS: Record<string, string> = {

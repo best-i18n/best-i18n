@@ -7,13 +7,12 @@ import {
   ViewOptionsPopover,
 } from 'fumadocs-ui/layouts/docs/page'
 import { createRelativeLink } from 'fumadocs-ui/mdx'
-import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-
 import { getMDXComponents } from '~/components/mdx'
 import { i18n } from '~/lib/i18n'
 import { gitConfig, repoAppDir } from '~/lib/shared'
 import { getPageImageUrl, getPageMarkdownUrl, source } from '~/lib/source'
+import type { Metadata } from 'next'
 
 /**
  * Params for one locale. The `(main)` tree asks for the default language and

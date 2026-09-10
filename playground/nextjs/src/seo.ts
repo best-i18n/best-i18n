@@ -1,8 +1,7 @@
 import { localizePathname } from 'best-i18n/locale-url'
 import { getLocale } from 'best-i18n/next/server'
-import type { Metadata } from 'next'
-
 import { i18n } from '@/i18n'
+import type { Metadata } from 'next'
 
 /**
  * `canonical` plus an `hreflang` entry per locale, for one route.
