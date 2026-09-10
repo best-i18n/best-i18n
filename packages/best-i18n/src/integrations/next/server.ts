@@ -2,10 +2,8 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { workUnitAsyncStorage } from 'next/dist/server/app-render/work-unit-async-storage.external.js'
 import { headers } from 'next/headers'
 import { cache } from 'react'
-
 import { setRequestLocaleSource } from '../../runtime/index.ts'
 import { getI18nConfig, LOCALE_HEADER } from './config.ts'
-
 import type { Locale } from '../../runtime/index.ts'
 import type { NextI18nConfig } from './config.ts'
 

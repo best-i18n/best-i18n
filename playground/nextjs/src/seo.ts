@@ -1,8 +1,6 @@
 import { localizePathname } from 'best-i18n/locale-url'
 import { getLocale } from 'best-i18n/next/server'
-
 import { i18n } from '@/i18n'
-
 import type { Metadata } from 'next'
 
 /**

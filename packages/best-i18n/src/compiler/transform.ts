@@ -1,6 +1,5 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
-
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
 import { GERMANIC } from './plural.ts'
 import {
@@ -11,7 +10,6 @@ import {
   validatePluralForm,
   validateTemplateTranslation,
 } from './trans.ts'
-
 import type { StaticImport, StaticImportEntry } from './bindings.ts'
 import type { PluralRule } from './plural.ts'
 import type { TransElement } from './trans.ts'
@@ -321,7 +319,8 @@ function directivePrologue(program: unknown): {
   for (const statement of body) {
     if (statement.type !== 'ExpressionStatement') break
     const expression = statement.expression as
-      { type?: string; value?: unknown } | undefined
+      | { type?: string; value?: unknown }
+      | undefined
     if (
       expression?.type !== 'Literal' ||
       typeof expression.value !== 'string'
@@ -857,7 +856,9 @@ function analyze(
         ?.name
       if (attribute.type === 'JSXAttribute' && attributeName === 'ctx') {
         const value = attribute.value as
-          { type?: string; value?: unknown } | null | undefined
+          | { type?: string; value?: unknown }
+          | null
+          | undefined
         if (
           value?.type !== 'Literal' ||
           typeof value.value !== 'string' ||

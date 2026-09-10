@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
-
 import { mergeMessages } from '../src/compiler/merge.ts'
-
 import type { SourceMessage } from '../src/compiler/merge.ts'
 import type { PoEntry } from '../src/compiler/po.ts'
 

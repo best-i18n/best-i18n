@@ -35,6 +35,9 @@ export function baseOptions(locale: string): BaseLayoutProps {
     nav: {
       title: (
         <>
+          {/* oxlint-disable-next-line nextjs/no-img-element -- a 20px static
+              SVG; next/image does not optimise SVG and would only add a
+              wrapper */}
           <img src='/favicon.svg' width={20} height={20} alt='' />
           {appName}
         </>

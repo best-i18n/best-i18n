@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-
 import {
   checkFormula,
   parsePluralForms,
@@ -132,7 +131,7 @@ describe('plural macro', () => {
     )!
 
     const body = result.code.replace(`import { plural } from '${MACRO}'`, '')
-    // eslint-disable-next-line no-eval
+    // oxlint-disable-next-line eslint/no-eval
     const pick = eval(`${body.replace('export const pick =', '(')})`)
     expect(pick(1)).toBe('One item')
     expect(pick(0)).toBe('0 items')

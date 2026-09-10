@@ -2,10 +2,8 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-
 import { Link, usePathname } from '../src/integrations/next/navigation.ts'
 import { LocaleProvider } from '../src/react/index.ts'
-
 import type { ReactNode } from 'react'
 import type { UrlConfig } from '../src/locale-url.ts'
 

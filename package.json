@@ -1,26 +1,27 @@
 {
   "name": "best-i18n-monorepo",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.34.5",
   "description": "Monorepo for best-i18n: the compile-time i18n toolchain and its playgrounds",
-  "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
-  "license": "MIT",
   "homepage": "https://github.com/best-i18n/best-i18n#readme",
+  "bugs": "https://github.com/best-i18n/best-i18n/issues",
+  "license": "MIT",
+  "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/best-i18n/best-i18n.git"
   },
-  "bugs": "https://github.com/best-i18n/best-i18n/issues",
+  "type": "module",
   "scripts": {
     "build": "pnpm --filter best-i18n build",
     "test": "pnpm --filter best-i18n test",
     "spike": "pnpm --filter best-i18n spike",
     "bench": "node ./scripts/bench-size.mjs",
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "release": "pnpm --filter best-i18n release",
     "dev:website": "pnpm --filter @apps/website dev",
     "build:website": "pnpm --filter @apps/website build",
@@ -33,10 +34,11 @@
     "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev"
   },
   "devDependencies": {
-    "@debbl/eslint-config": "^3.17.3",
+    "@debbl/oxc-config": "^0.0.0",
     "@types/node": "^25.5.0",
-    "eslint": "^9.39.4",
-    "eslint-config-prettier": "^10.1.8",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
     "typescript": "^6.0.2"
-  }
+  },
+  "packageManager": "pnpm@10.34.5"
 }

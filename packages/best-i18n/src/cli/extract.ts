@@ -2,11 +2,9 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-
 import { mergeMessages } from '../compiler/merge.ts'
 import { formatPo, parsePo, samePo } from '../compiler/po.ts'
 import { extract } from '../compiler/transform.ts'
-
 import type { SourceMessage } from '../compiler/merge.ts'
 
 const HELP = `

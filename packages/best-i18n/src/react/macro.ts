@@ -56,10 +56,11 @@ export function Trans(props: {
   /** Disambiguation context (gettext `msgctxt`). Must be a string literal. */
   ctx?: string
 }): never {
+  // Part of the public signature even though the body throws.
+  void props
+
   throw new Error(
     'best-i18n: <Trans> reached runtime, which means this file was never ' +
       'transformed. Is the bundler plugin installed?',
   )
-  // Part of the public signature even though the body throws.
-  void props
 }

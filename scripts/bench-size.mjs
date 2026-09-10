@@ -169,7 +169,7 @@ for (const [index, variant] of VARIANTS.entries()) {
   }
 }
 
-for (const family of [...new Set(results.map((r) => r.family))]) {
+for (const family of new Set(results.map((r) => r.family))) {
   const rows = results.filter((result) => result.family === family)
   const withHtml = rows.some((row) => row.pages.length > 0)
 

@@ -1,9 +1,9 @@
 {
   "name": "playground-nextjs-intl",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
   "description": "The same app as playground/nextjs, built with next-intl, for size comparison",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

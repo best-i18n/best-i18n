@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-
 import './helpers/install-als-global.ts'
-
 import type { AsyncLocalStorage } from 'node:async_hooks'
 
 /**

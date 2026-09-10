@@ -7,7 +7,6 @@ import {
   useEffect,
   useSyncExternalStore,
 } from 'react'
-
 import {
   configure,
   getLocale,
@@ -16,7 +15,6 @@ import {
   primeLocale,
   subscribeLocale,
 } from '../runtime/index.ts'
-
 import type { ReactNode } from 'react'
 import type { UrlConfig } from '../locale-url.ts'
 import type { Locale } from '../runtime/index.ts'
@@ -81,6 +79,8 @@ export function LocaleProvider(props: {
   // run on the server, so no isServer guard.)
   useEffect(() => {
     notifyLocaleListeners()
+    // `props.locale` is the trigger, not something the body reads.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [props.locale])
 
   return createElement(

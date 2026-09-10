@@ -5,7 +5,6 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
-
 import { parsePo } from '../src/compiler/po.ts'
 import { i18n } from '../src/integrations/vite.ts'
 

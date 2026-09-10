@@ -1,5 +1,4 @@
 import { isPathExcluded, localizePathname, splitLocale } from './locale-url.ts'
-
 import type { UrlConfig } from './locale-url.ts'
 
 export interface SwitchConfig extends UrlConfig {

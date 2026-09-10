@@ -1,9 +1,9 @@
 {
   "name": "playground-tanstack-start",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
   "description": "TanStack Start playground for best-i18n, on the plain Vite plugin",
+  "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

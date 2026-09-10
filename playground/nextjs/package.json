@@ -1,9 +1,9 @@
 {
   "name": "playground-nextjs",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
   "description": "Next.js App Router playground for best-i18n",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

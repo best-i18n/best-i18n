@@ -1,31 +1,38 @@
 {
   "name": "best-i18n",
-  "type": "module",
   "version": "0.0.6",
-  "packageManager": "pnpm@10.34.5",
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
-  "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
-  "license": "MIT",
+  "keywords": [
+    "compile-time",
+    "gettext",
+    "i18n",
+    "internationalization",
+    "macro",
+    "next",
+    "nextjs",
+    "po",
+    "react",
+    "tree-shaking",
+    "vite-plugin"
+  ],
   "homepage": "https://github.com/best-i18n/best-i18n#readme",
+  "bugs": "https://github.com/best-i18n/best-i18n/issues",
+  "license": "MIT",
+  "author": "Brendan Dash <me@aiwan.run> (https://aiwan.run)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/best-i18n/best-i18n.git",
     "directory": "packages/best-i18n"
   },
-  "bugs": "https://github.com/best-i18n/best-i18n/issues",
-  "keywords": [
-    "i18n",
-    "internationalization",
-    "macro",
-    "compile-time",
-    "vite-plugin",
-    "next",
-    "nextjs",
-    "gettext",
-    "po",
-    "react",
-    "tree-shaking"
+  "bin": {
+    "i18n-compile": "./dist/cli-compile.mjs",
+    "i18n-extract": "./dist/cli-extract.mjs"
+  },
+  "files": [
+    "dist",
+    "src"
   ],
+  "type": "module",
   "sideEffects": false,
   "exports": {
     "./macro": {
@@ -102,14 +109,6 @@
     },
     "./package.json": "./package.json"
   },
-  "bin": {
-    "i18n-extract": "./dist/cli-extract.mjs",
-    "i18n-compile": "./dist/cli-compile.mjs"
-  },
-  "files": [
-    "dist",
-    "src"
-  ],
   "publishConfig": {
     "access": "public"
   },
@@ -119,6 +118,25 @@
     "release": "bumpp",
     "typecheck": "tsc --noEmit",
     "spike": "node ./spike/run.mjs"
+  },
+  "dependencies": {
+    "gettext-parser": "^9.1.1",
+    "magic-string": "^0.30.21",
+    "oxc-parser": "^0.144.0"
+  },
+  "devDependencies": {
+    "@types/gettext-parser": "^9.0.0",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.0",
+    "bumpp": "^12.2.1",
+    "next": "^16.3.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.8",
+    "rolldown": "^1.2.6",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.5"
   },
   "peerDependencies": {
     "next": ">=15.2",
@@ -140,23 +158,5 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "gettext-parser": "^9.1.1",
-    "magic-string": "^0.30.21",
-    "oxc-parser": "^0.144.0"
-  },
-  "devDependencies": {
-    "@types/gettext-parser": "^9.0.0",
-    "@types/node": "^25.5.0",
-    "@types/react": "^19.2.0",
-    "bumpp": "^12.2.1",
-    "next": "^16.3.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.8",
-    "rolldown": "^1.2.6",
-    "tsdown": "^0.22.0",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.0",
-    "vitest": "^4.1.5"
-  }
+  "packageManager": "pnpm@10.34.5"
 }

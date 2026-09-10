@@ -1,9 +1,7 @@
 import { t } from 'best-i18n/macro'
-
 import { Counter } from '@/components/counter'
 import { Notice } from '@/components/notice'
 import { localeAlternates } from '@/seo'
-
 import type { Metadata } from 'next'
 
 /**

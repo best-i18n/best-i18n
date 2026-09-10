@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-
 import { pluralRuleFor } from './plural.ts'
 import { parsePo } from './po.ts'
 import { catalogKey } from './transform.ts'
-
 import type { PluralRule } from './plural.ts'
 import type { TransformOptions } from './transform.ts'
 

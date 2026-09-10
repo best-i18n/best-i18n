@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
-
 import { isPathExcluded, splitLocale } from '../../locale-url.ts'
 import { resolveLocale } from '../../request.ts'
 import { LOCALE_HEADER } from './config.ts'
-
 import type { NextRequest } from 'next/server'
 import type { NextI18nConfig } from './config.ts'
 

@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-
 import { LocaleSwitcher } from '@/components/locale-switcher'
 import { m } from '@/paraglide/messages'
 

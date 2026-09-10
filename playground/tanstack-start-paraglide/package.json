@@ -1,9 +1,9 @@
 {
   "name": "playground-tanstack-start-paraglide",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
   "description": "The same app as playground/tanstack-start, built with Paraglide, for size comparison",
+  "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

@@ -1,8 +1,6 @@
 import { statSync } from 'node:fs'
-
 import { loadCatalog } from '../../compiler/catalog.ts'
 import { transform } from '../../compiler/transform.ts'
-
 import type { LoadedCatalog } from '../../compiler/catalog.ts'
 import type { TransformOptions } from '../../compiler/transform.ts'
 
@@ -136,6 +134,8 @@ function catalogFor(options: I18nLoaderOptions): LoadedCatalog {
  * of the Vite plugin. Configured for you by `createI18nPlugin` in
  * `best-i18n/next`; you should not have to name it yourself.
  */
+// oxlint-disable oxc/no-this-in-exported-function -- the loader context
+// arrives as `this`; that is the contract, spelled out below.
 export default function bestI18nLoader(
   this: LoaderContext,
   code: string,

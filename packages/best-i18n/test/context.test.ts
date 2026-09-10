@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-
 import { extract, transform } from '../src/compiler/transform.ts'
 
 const MACRO = 'best-i18n/macro'
