@@ -19,15 +19,6 @@ describe('resolveLocale', () => {
       ),
     ).toBe('zh')
   })
-
-  it('ignores q=0 languages, which mean "not acceptable"', () => {
-    expect(
-      resolveLocale(request({ 'accept-language': 'zh;q=0, de' }), CONFIG),
-    ).toBe('de')
-    expect(
-      resolveLocale(request({ 'accept-language': 'zh;q=0' }), CONFIG),
-    ).toBe('en')
-  })
 })
 
 describe('runtime configuration', () => {

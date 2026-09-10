@@ -1,3 +1,4 @@
+import { matchLocale } from './locale-tag.ts'
 import { isPathExcluded, localizePathname, splitLocale } from './locale-url.ts'
 import type { UrlConfig } from './locale-url.ts'
 
@@ -45,20 +46,10 @@ export function resolveClientLocale(options: {
     if (config.locales.includes(candidate)) return candidate
   }
 
-  // navigator.languages is the client-side face of Accept-Language.
-  for (const language of languages) {
-    const tag = language.toLowerCase()
-    const exact = config.locales.find((locale) => locale.toLowerCase() === tag)
-    if (exact !== undefined) return exact
-
-    const prefix = tag.split('-')[0]
-    const partial = config.locales.find(
-      (locale) => locale.toLowerCase() === prefix,
-    )
-    if (partial !== undefined) return partial
-  }
-
-  return config.baseLocale
+  // navigator.languages is the client-side face of Accept-Language, already
+  // in preference order - matched by the same function the server uses, so
+  // the two sides cannot drift apart.
+  return matchLocale(languages, config.locales) ?? config.baseLocale
 }
 
 /**

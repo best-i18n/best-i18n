@@ -22,8 +22,13 @@ export const GERMANIC: PluralRule = { nplurals: 2, formula: 'n != 1' }
  * Built-in rules by primary language subtag, used when a catalog has no
  * `Plural-Forms` header. The header always wins - it is the translator's
  * statement of intent, and covers the locales this table does not.
+ *
+ * Every entry is checked against the table GNU gettext and CLDR agree on by
+ * `plural-table.test.ts`, which compares behaviour rather than spelling: the
+ * formulas here are written differently but must select the same form for
+ * every count. The few deliberate departures are listed there with a reason.
  */
-const BUILTIN = new Map<string, PluralRule>([
+export const BUILTIN = new Map<string, PluralRule>([
   // One form.
   ...['ja', 'zh', 'ko', 'vi', 'th', 'id', 'ms', 'my', 'km'].map(
     (tag): [string, PluralRule] => [tag, { nplurals: 1, formula: '0' }],
@@ -50,10 +55,12 @@ const BUILTIN = new Map<string, PluralRule>([
     'hu',
     'sq',
     'eo',
-    'he',
     'ur',
-    'hi',
-    'bn',
+    'tr',
+    'az',
+    'kk',
+    'ky',
+    'uz',
     'ta',
     'te',
     'ml',
@@ -62,9 +69,11 @@ const BUILTIN = new Map<string, PluralRule>([
     'sw',
   ].map((tag): [string, PluralRule] => [tag, GERMANIC]),
   // Singular at zero and one.
-  ...['fr', 'oc', 'tr', 'az', 'kk', 'ky', 'uz', 'hy', 'fa', 'pt'].map(
+  ...['fr', 'oc', 'hy', 'fa', 'pt', 'hi', 'bn'].map(
     (tag): [string, PluralRule] => [tag, { nplurals: 2, formula: 'n > 1' }],
   ),
+  // Hebrew has a dual: one, two, other.
+  ['he', { nplurals: 3, formula: 'n==1 ? 0 : n==2 ? 1 : 2' }],
   // East Slavic / Serbo-Croatian three-way.
   ...['ru', 'uk', 'be', 'sr', 'hr', 'bs'].map((tag): [string, PluralRule] => [
     tag,
@@ -106,7 +115,9 @@ const BUILTIN = new Map<string, PluralRule>([
     'lv',
     {
       nplurals: 3,
-      formula: 'n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 : 2',
+      formula:
+        'n%10==0 || (n%100>=11 && n%100<=19) ? 0 : ' +
+        'n%10==1 && n%100!=11 ? 1 : 2',
     },
   ],
   [

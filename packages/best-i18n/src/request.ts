@@ -1,3 +1,4 @@
+import { matchLocale, rankAcceptLanguage } from './locale-tag.ts'
 import {
   isPathExcluded,
   localeFromPathname,
@@ -46,33 +47,7 @@ function fromHeader(
   const header = request.headers.get('accept-language')
   if (header === null) return undefined
 
-  const ranked = header
-    .split(',')
-    .map((entry) => {
-      const [tag, ...params] = entry.trim().split(';')
-      const q = params
-        .map((param) => param.trim())
-        .find((param) => param.startsWith('q='))
-      return { tag: (tag ?? '').toLowerCase(), q: q ? Number(q.slice(2)) : 1 }
-    })
-    // `q=0` means explicitly not acceptable, so it must not win by existing.
-    .filter(
-      (entry) => entry.tag !== '' && !Number.isNaN(entry.q) && entry.q > 0,
-    )
-    .sort((a, b) => b.q - a.q)
-
-  for (const { tag } of ranked) {
-    const exact = config.locales.find((locale) => locale.toLowerCase() === tag)
-    if (exact !== undefined) return exact
-
-    const base = tag.split('-')[0]
-    const prefix = config.locales.find(
-      (locale) => locale.toLowerCase() === base,
-    )
-    if (prefix !== undefined) return prefix
-  }
-
-  return undefined
+  return matchLocale(rankAcceptLanguage(header), config.locales)
 }
 
 /**

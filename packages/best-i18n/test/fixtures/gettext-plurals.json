@@ -1,0 +1,1770 @@
+{
+  "af": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ak": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "am": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "an": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ar": {
+    "nplurals": 6,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n % 100 >= 3 && n % 100 <= 10) ? 3 : ((n % 100 >= 11 && n % 100 <= 99) ? 4 : 5))))",
+    "cases": [
+      "zero",
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "ars": {
+    "nplurals": 6,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n % 100 >= 3 && n % 100 <= 10) ? 3 : ((n % 100 >= 11 && n % 100 <= 99) ? 4 : 5))))",
+    "cases": [
+      "zero",
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "as": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "asa": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ast": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "az": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bal": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "be": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "bem": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bez": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bg": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bho": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "blo": {
+    "nplurals": 3,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : 2)",
+    "cases": [
+      "zero",
+      "one",
+      "other"
+    ]
+  },
+  "bm": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "bn": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "br": {
+    "nplurals": 5,
+    "formula": "(n % 10 == 1 && n % 100 != 11 && n % 100 != 71 && n % 100 != 91) ? 0 : ((n % 10 == 2 && n % 100 != 12 && n % 100 != 72 && n % 100 != 92) ? 1 : ((((n % 10 == 3 || n % 10 == 4) || n % 10 == 9) && (n % 100 < 10 || n % 100 > 19) && (n % 100 < 70 || n % 100 > 79) && (n % 100 < 90 || n % 100 > 99)) ? 2 : ((n != 0 && n % 1000000 == 0) ? 3 : 4)))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "brx": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "bs": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "ca": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "ce": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ceb": {
+    "nplurals": 2,
+    "formula": "n != 1 && n != 2 && n != 3 && (n % 10 == 4 || n % 10 == 6 || n % 10 == 9)",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "cgg": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "chr": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ckb": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "cs": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n >= 2 && n <= 4) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "csw": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "cy": {
+    "nplurals": 6,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n == 3) ? 3 : ((n == 6) ? 4 : 5))))",
+    "cases": [
+      "zero",
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "da": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "de": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "doi": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "dsb": {
+    "nplurals": 4,
+    "formula": "(n % 100 == 1) ? 0 : ((n % 100 == 2) ? 1 : ((n % 100 == 3 || n % 100 == 4) ? 2 : 3))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "other"
+    ]
+  },
+  "dv": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "dz": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ee": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "el": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "en": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "eo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "es": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "et": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "eu": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fa": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ff": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fi": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fil": {
+    "nplurals": 2,
+    "formula": "n != 1 && n != 2 && n != 3 && (n % 10 == 4 || n % 10 == 6 || n % 10 == 9)",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fr": {
+    "nplurals": 3,
+    "formula": "(n == 0 || n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "fur": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "fy": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ga": {
+    "nplurals": 5,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : ((n >= 3 && n <= 6) ? 2 : ((n >= 7 && n <= 10) ? 3 : 4)))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "gd": {
+    "nplurals": 4,
+    "formula": "(n == 1 || n == 11) ? 0 : ((n == 2 || n == 12) ? 1 : ((n >= 3 && n <= 10 || n >= 13 && n <= 19) ? 2 : 3))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "other"
+    ]
+  },
+  "gl": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "gsw": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "gu": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "guw": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "gv": {
+    "nplurals": 4,
+    "formula": "(n % 10 == 1) ? 0 : ((n % 10 == 2) ? 1 : ((n % 100 == 0 || n % 100 == 20 || n % 100 == 40 || n % 100 == 60 || n % 100 == 80) ? 2 : 3))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "other"
+    ]
+  },
+  "ha": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "haw": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "he": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "hi": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "hnj": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "hr": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "hsb": {
+    "nplurals": 4,
+    "formula": "(n % 100 == 1) ? 0 : ((n % 100 == 2) ? 1 : ((n % 100 == 3 || n % 100 == 4) ? 2 : 3))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "other"
+    ]
+  },
+  "hu": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "hy": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ia": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "id": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ig": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ii": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "io": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "is": {
+    "nplurals": 2,
+    "formula": "n % 10 != 1 || n % 100 == 11",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "it": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "iu": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "ja": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "jbo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "jgo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "jmc": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "jv": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ka": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kab": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kaj": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kcg": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kde": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "kea": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "kk": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kkj": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kl": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "km": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "kn": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ko": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ks": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ksb": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ksh": {
+    "nplurals": 3,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : 2)",
+    "cases": [
+      "zero",
+      "one",
+      "other"
+    ]
+  },
+  "ku": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "kw": {
+    "nplurals": 6,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : (((n % 100 == 2 || n % 100 == 22 || n % 100 == 42 || n % 100 == 62 || n % 100 == 82) || n % 1000 == 0 && (n % 100000 >= 1000 && n % 100000 <= 20000 || n % 100000 == 40000 || n % 100000 == 60000 || n % 100000 == 80000) || n != 0 && n % 1000000 == 100000) ? 2 : ((n % 100 == 3 || n % 100 == 23 || n % 100 == 43 || n % 100 == 63 || n % 100 == 83) ? 3 : ((n != 1 && (n % 100 == 1 || n % 100 == 21 || n % 100 == 41 || n % 100 == 61 || n % 100 == 81)) ? 4 : 5))))",
+    "cases": [
+      "zero",
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "ky": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "lag": {
+    "nplurals": 3,
+    "formula": "(n == 0) ? 0 : ((n == 1) ? 1 : 2)",
+    "cases": [
+      "zero",
+      "one",
+      "other"
+    ]
+  },
+  "lb": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "lg": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "lij": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "lkt": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "lld": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "ln": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "lo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "lt": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && (n % 100 < 11 || n % 100 > 19)) ? 0 : ((n % 10 >= 2 && n % 10 <= 9 && (n % 100 < 11 || n % 100 > 19)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "lv": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 0 || n % 100 >= 11 && n % 100 <= 19) ? 0 : ((n % 10 == 1 && n % 100 != 11) ? 1 : 2)",
+    "cases": [
+      "zero",
+      "one",
+      "other"
+    ]
+  },
+  "mas": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "mg": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "mgo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "mk": {
+    "nplurals": 2,
+    "formula": "n % 10 != 1 || n % 100 == 11",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ml": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "mn": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "mr": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ms": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "mt": {
+    "nplurals": 5,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : ((n == 0 || n % 100 >= 3 && n % 100 <= 10) ? 2 : ((n % 100 >= 11 && n % 100 <= 19) ? 3 : 4)))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "many",
+      "other"
+    ]
+  },
+  "my": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "nah": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "naq": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "nb": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nd": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ne": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nl": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nn": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nnh": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "no": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nqo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "nr": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nso": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ny": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "nyn": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "om": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "or": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "os": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "osa": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "pa": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "pap": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "pcm": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "pl": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "prg": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 0 || n % 100 >= 11 && n % 100 <= 19) ? 0 : ((n % 10 == 1 && n % 100 != 11) ? 1 : 2)",
+    "cases": [
+      "zero",
+      "one",
+      "other"
+    ]
+  },
+  "ps": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "pt": {
+    "nplurals": 3,
+    "formula": "(n == 0 || n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "pt_PT": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "rm": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ro": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 0 || n != 1 && n % 100 >= 1 && n % 100 <= 19) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "rof": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ru": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "rwk": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sah": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "saq": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sat": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "sc": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "scn": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "sd": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sdh": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "se": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "seh": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ses": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "sg": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "sh": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "shi": {
+    "nplurals": 3,
+    "formula": "(n == 0 || n == 1) ? 0 : ((n >= 2 && n <= 10) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "si": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sk": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n >= 2 && n <= 4) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "sl": {
+    "nplurals": 4,
+    "formula": "(n % 100 == 1) ? 0 : ((n % 100 == 2) ? 1 : ((n % 100 == 3 || n % 100 == 4) ? 2 : 3))",
+    "cases": [
+      "one",
+      "two",
+      "few",
+      "other"
+    ]
+  },
+  "sma": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "smi": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "smj": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "smn": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "sms": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n == 2) ? 1 : 2)",
+    "cases": [
+      "one",
+      "two",
+      "other"
+    ]
+  },
+  "sn": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "so": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sq": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sr": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "ss": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ssy": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "st": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "su": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "sv": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "sw": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "syr": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ta": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "te": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "teo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "th": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "ti": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "tig": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "tk": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "tl": {
+    "nplurals": 2,
+    "formula": "n != 1 && n != 2 && n != 3 && (n % 10 == 4 || n % 10 == 6 || n % 10 == 9)",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "tn": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "to": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "tpi": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "tr": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ts": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "tzm": {
+    "nplurals": 2,
+    "formula": "n >= 2 && (n < 11 || n > 99)",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ug": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "uk": {
+    "nplurals": 3,
+    "formula": "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)",
+    "cases": [
+      "one",
+      "few",
+      "other"
+    ]
+  },
+  "ur": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "uz": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "ve": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "vec": {
+    "nplurals": 3,
+    "formula": "(n == 1) ? 0 : ((n != 0 && n % 1000000 == 0) ? 1 : 2)",
+    "cases": [
+      "one",
+      "many",
+      "other"
+    ]
+  },
+  "vi": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "vo": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "vun": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "wa": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "wae": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "wo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "xh": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "xog": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "yi": {
+    "nplurals": 2,
+    "formula": "n != 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  },
+  "yo": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "yue": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "zh": {
+    "nplurals": 1,
+    "formula": "0",
+    "cases": [
+      "other"
+    ]
+  },
+  "zu": {
+    "nplurals": 2,
+    "formula": "n > 1",
+    "cases": [
+      "one",
+      "other"
+    ]
+  }
+}
