@@ -4,7 +4,6 @@ import {
   localeFromPathname,
   splitLocale,
 } from './locale-url.ts'
-
 import type { UrlConfig } from './locale-url.ts'
 
 export interface RequestConfig extends UrlConfig {

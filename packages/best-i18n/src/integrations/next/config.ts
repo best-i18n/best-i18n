@@ -1,5 +1,4 @@
 import { configure } from '../../runtime/index.ts'
-
 import type { RequestConfig } from '../../request.ts'
 
 /**

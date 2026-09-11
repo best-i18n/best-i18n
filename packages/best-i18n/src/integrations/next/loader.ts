@@ -1,7 +1,6 @@
 import { statSync } from 'node:fs'
 import { loadCatalog } from '../../compiler/catalog.ts'
 import { transform } from '../../compiler/transform.ts'
-
 import type { LoadedCatalog } from '../../compiler/catalog.ts'
 import type { TransformOptions } from '../../compiler/transform.ts'
 
