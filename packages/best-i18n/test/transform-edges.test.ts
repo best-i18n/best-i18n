@@ -164,7 +164,7 @@ describe('macro semantics inherited from Lingui', () => {
     )
   })
 
-  describe('JSX comments', () => {
+  describe('jsx comments', () => {
     it('are not part of the message', () => {
       expect(
         only('export const a = <Trans>Hi {/* who? */}{name}!</Trans>'),

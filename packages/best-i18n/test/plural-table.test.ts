@@ -26,6 +26,7 @@ const table = OFFICIAL as Record<
 
 /** Compiles a formula the way the transform inlines it, to compare behaviour. */
 const select = (formula: string) =>
+  // oxlint-disable-next-line no-new-func -- gettext formulas arrive as strings; this is how the transform inlines them
   new Function('n', `return Number(${formula})`) as (n: number) => number
 
 /** Counts up to a million, so the CLDR `many` form has a chance to appear. */
@@ -46,15 +47,16 @@ describe('the reference table is inside the formula grammar', () => {
     expect(checkFormula(formula)).toBe(formula.trim())
   })
 
-  it('parses each one as a Plural-Forms header', () => {
-    for (const [language, rule] of Object.entries(table)) {
+  it.each(Object.entries(table))(
+    'parses %s as a Plural-Forms header',
+    (_language, rule) => {
       const header = `nplurals=${rule.nplurals}; plural=${rule.formula};`
-      expect(parsePluralForms(header), language).toEqual({
+      expect(parsePluralForms(header)).toEqual({
         nplurals: rule.nplurals,
         formula: rule.formula,
       })
-    }
-  })
+    },
+  )
 
   it('never selects a form the header does not declare', () => {
     // The emitted dispatch chain has `nplurals` branches. A formula that can

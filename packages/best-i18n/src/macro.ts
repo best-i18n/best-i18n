@@ -45,6 +45,7 @@ export const t: TranslateMacro = Object.assign(
   (strings: TemplateStringsArray, ...values: Array<string | number>) => {
     void values
     throw new Error(
+      // oxlint-disable-next-line no-template-curly-in-string -- join filler is placeholder syntax, not interpolation
       `best-i18n: the macro t\`${strings.join('${...}')}\` reached runtime, ` +
         'which means this file was never transformed. Is the bundler plugin installed?',
     )

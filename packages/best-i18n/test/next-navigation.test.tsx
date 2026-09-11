@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { Link, usePathname } from '../src/integrations/next/navigation.ts'
 import { LocaleProvider } from '../src/react/index.ts'
 import type { ReactNode } from 'react'
-
 import type { UrlConfig } from '../src/locale-url.ts'
 
 vi.mock('next/link', () => ({
@@ -13,7 +12,11 @@ vi.mock('next/link', () => ({
 }))
 vi.mock('next/navigation', () => ({
   usePathname: () => '/zh/about',
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn<() => void>(),
+    replace: vi.fn<() => void>(),
+    prefetch: vi.fn<() => void>(),
+  }),
 }))
 
 const CONFIG = { locales: ['en', 'zh'], baseLocale: 'en' }

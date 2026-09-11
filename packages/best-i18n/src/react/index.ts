@@ -16,7 +16,6 @@ import {
   subscribeLocale,
 } from '../runtime/index.ts'
 import type { ReactNode } from 'react'
-
 import type { UrlConfig } from '../locale-url.ts'
 import type { Locale } from '../runtime/index.ts'
 

@@ -8,7 +8,7 @@ allowBuilds:
   esbuild: true
   workerd: true
 minimumReleaseAgeExclude:
-  - '@debbl/oxc-config@0.0.4'
+  - '@debbl/oxc-config@0.0.4 || 0.0.5'
   - '@fumadocs/base-ui@16.15.9'
   - '@tanstack/react-router@1.170.35'
   - '@tanstack/react-start-client@1.168.33'
@@ -21,3 +21,7 @@ minimumReleaseAgeExclude:
   - lucide-react@1.45.0
   - miniflare@5.20260910.0-alpha
   - wrangler@4.131.0
+  - icu-minify@4.14.4
+  - next-intl-swc-plugin-extractor@4.14.4
+  - next-intl@4.14.4
+  - use-intl@4.14.4

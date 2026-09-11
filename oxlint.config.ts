@@ -50,6 +50,9 @@ export default defineConfig({
         // Tests read a hook's return value by assigning it to an outer
         // variable from a probe component. That is the point of the probe.
         'react/globals': 'off',
+        // Tests embed source snippets and expected compiled output; `${name}`
+        // in a regular string is the catalog/source text, not a missed template.
+        'no-template-curly-in-string': 'off',
       },
     },
   ],

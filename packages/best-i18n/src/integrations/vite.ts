@@ -2,7 +2,6 @@ import path from 'node:path'
 import { loadCatalog } from '../compiler/catalog.ts'
 import { transform } from '../compiler/transform.ts'
 import type { Plugin } from 'vite'
-
 import type { TransformOptions } from '../compiler/transform.ts'
 
 export interface I18nPluginOptions extends Omit<
