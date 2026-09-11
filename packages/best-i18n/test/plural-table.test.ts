@@ -59,16 +59,27 @@ describe('the reference table is inside the formula grammar', () => {
   it('never selects a form the header does not declare', () => {
     // The emitted dispatch chain has `nplurals` branches. A formula that can
     // return an out-of-range index would fall off the end of it.
+    //
+    // Collected rather than asserted per count: 216 languages over every
+    // count below is a third of a million checks, and `expect` in that loop
+    // costs more than the whole rest of the suite.
+    const violations: string[] = []
+
     for (const [language, rule] of Object.entries(table)) {
       const form = select(rule.formula)
       for (const n of COUNTS) {
         const index = form(n)
-        expect(
-          Number.isInteger(index) && index >= 0 && index < rule.nplurals,
+        if (Number.isInteger(index) && index >= 0 && index < rule.nplurals) {
+          continue
+        }
+        violations.push(
           `${language} selected form ${index} of ${rule.nplurals} for n=${n}`,
-        ).toBe(true)
+        )
+        break
       }
     }
+
+    expect(violations).toEqual([])
   })
 })
 
