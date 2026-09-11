@@ -1,6 +1,6 @@
 {
   "name": "best-i18n",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
   "keywords": [
     "compile-time",
