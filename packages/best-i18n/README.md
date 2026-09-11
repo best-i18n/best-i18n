@@ -455,6 +455,13 @@ pattern for paths that must never be localized (`/api/...`).
   loader refuses to compile that, naming the file, the line and the message.
   Server Components are the other way round: they cannot call a hook, and do
   not need to.
+- The macro cannot be a dependency. ``useMemo(() => t`About`, [t])`` is
+  refused: `t` is compiled away, and what the name holds by the time the array
+  is evaluated is a locale rather than a translator. Depend on the locale
+  instead — `const locale = useLocale()` alongside `useI18n()`, then
+  ``useMemo(() => t`About`, [locale])`` — which costs nothing, because the
+  compiler turns the two reads into one. The build error explains it at the
+  call site, and so does [the error reference](https://best-i18n.aiwan.run/docs/errors/dependency-array).
 - Plurals are gettext plurals (`plural(count, one, other)`), not ICU: there
   is no `select`/gender construct yet, and no number/date formatting - reach
   for `Intl` with `getLocale()` for those.

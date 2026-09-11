@@ -12,6 +12,12 @@ description: 设计的边界，直白地说
   由编译器替你绑好：它给这条消息一个自己的组件，那是调 hook 的合法位置。被当作
   字符串用的（`alt={...}`、模板字面量）不行，和 `t` 一样需要 `useI18n()`。
   Server Component 正相反：它们不能调 hook，也不需要。
+- 宏不能当依赖。``useMemo(() => t`About`, [t])`` 会被拒绝：`t` 会被编译掉，
+  等到依赖数组求值时这个名字持有的是 locale 而不是翻译函数。改为依赖 locale
+  ——在 `useI18n()` 旁边写 `const locale = useLocale()`，然后
+  ``useMemo(() => t`About`, [locale])``——这不花钱，因为编译器会把两次读合成
+  一次。构建报错会在调用点把这件事说清楚，[报错说明](/zh/docs/errors/dependency-array)
+  里也有。
 - 复数是 gettext 复数（`plural(count, one, other)`），不是 ICU：还没有
   `select`/性别结构，也没有数字/日期格式化——那些用 `Intl` 配合 `getLocale()`。
 - `from`/`hookFrom` 按源码里写下的 import 说明符匹配，重导出宏时要把你的模块

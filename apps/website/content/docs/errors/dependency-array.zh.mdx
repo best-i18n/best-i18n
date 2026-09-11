@@ -1,0 +1,94 @@
+---
+title: 依赖数组里的宏
+description: 为什么 `[t]` 会被拒绝，以及该依赖什么
+---
+
+```
+best-i18n: `t` is a compile-time macro and can only be used at its call site.
+A dependency array wants the locale, not the macro.
+```
+
+## 发生了什么
+
+`t` 在运行时并不存在。每条消息都被编译进调用点，而 `useI18n()` 声明的那个变量
+留下来持有的是 **locale**：
+
+```tsx
+const t = useI18n()
+return <p>{t`About`}</p>
+```
+
+```tsx
+const t = useLocale()
+return <p>{t === 'zh' ? `关于` : `About`}</p>
+```
+
+所以等到依赖数组求值的时候，这个名字持有的是一个字符串，而不是翻译函数。把它
+列在那里，等于让 React 去盯一个已经名不副实的东西。
+
+## 该怎么写
+
+依赖 locale 本身：
+
+```tsx
+import { useLocale } from 'best-i18n/react'
+import { useI18n } from 'best-i18n/react/macro'
+import { useMemo } from 'react'
+
+export function About() {
+  const locale = useLocale()
+  const t = useI18n()
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => t`About`, [locale])
+}
+```
+
+这不花钱。编译器会发现这个组件读了两次 locale，把两次读合成一次订阅，并且直接
+复用模块自己那个 import：
+
+```tsx
+import { useLocale } from 'best-i18n/react'
+import { useMemo } from 'react'
+
+export function About() {
+  const locale = useLocale()
+  const t = locale
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => (locale === 'zh' ? `关于` : `About`), [locale])
+}
+```
+
+## 那行抑制为什么是有依据的
+
+`react-hooks/exhaustive-deps` 读的是源码，而源码里 `t` 确实用在回调内部，所以
+它一定会要求把 `t` 列进数组，并且说不通。这条抑制不是糊弄：代码真正运行时
+`t` **就是** `locale`，而 `locale` 已经列在里面了。
+
+## 不要这么写
+
+不要用空数组去应付这条规则：
+
+```tsx
+const t = useI18n()
+// 能编译——然后切换语言后它会留在上一种语言里。
+return useMemo(() => t`About`, [])
+```
+
+它构建时一声不响。编译后的消息比较的是 locale，而 memo 永远不会重算，那段文字
+就停在第一次渲染时的语言上。这正是这条报错想拦住的故障，也是它为什么要顺便告诉
+你该写什么，而不是只说一句不行。
+
+## 其他同样被拒绝的写法
+
+同一条规则覆盖所有不在调用点的引用，而那些没有替代写法可以指：
+
+```tsx
+const f = t                           // 存起来
+greet(t)                              // 传出去
+<Component label={t} />               // 交给别人
+```
+
+helper 不能拿 `t` 当参数，因为编译器必须在消息被写下的位置看见它。把算好的字符串
+交给 helper，或者把消息搬进 helper 里。

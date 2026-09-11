@@ -1,0 +1,100 @@
+---
+title: A macro in a dependency array
+description: Why `[t]` is refused, and what to depend on instead
+---
+
+```
+best-i18n: `t` is a compile-time macro and can only be used at its call site.
+A dependency array wants the locale, not the macro.
+```
+
+## What happened
+
+`t` does not exist at runtime. Every message is compiled into the call site,
+and the variable `useI18n()` declared is left holding the **locale**:
+
+```tsx
+const t = useI18n()
+return <p>{t`About`}</p>
+```
+
+```tsx
+const t = useLocale()
+return <p>{t === 'zh' ? `关于` : `About`}</p>
+```
+
+So by the time a dependency array is evaluated, the name holds a string rather
+than a translator. Listing it there would be asking React to watch something
+that no longer means what it says.
+
+## What to write instead
+
+Depend on the locale itself:
+
+```tsx
+import { useLocale } from 'best-i18n/react'
+import { useI18n } from 'best-i18n/react/macro'
+import { useMemo } from 'react'
+
+export function About() {
+  const locale = useLocale()
+  const t = useI18n()
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => t`About`, [locale])
+}
+```
+
+This costs nothing. The compiler notices that the component reads the locale
+twice and compiles the two reads into one subscription, reusing the module's
+own import:
+
+```tsx
+import { useLocale } from 'best-i18n/react'
+import { useMemo } from 'react'
+
+export function About() {
+  const locale = useLocale()
+  const t = locale
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => (locale === 'zh' ? `关于` : `About`), [locale])
+}
+```
+
+## Why the suppression is sound
+
+`react-hooks/exhaustive-deps` reads the source, where `t` is used inside the
+callback, so it asks for `t` in the array and cannot be talked out of it. The
+suppression is not a shortcut: `t` **is** `locale` by the time the code runs,
+and `locale` is listed.
+
+## What not to write
+
+Do not answer the rule with an empty array:
+
+```tsx
+const t = useI18n()
+// Compiles - and then keeps the previous language after a locale switch.
+return useMemo(() => t`About`, [])
+```
+
+That builds without complaint. The compiled message compares the locale, the
+memo never recomputes, and the text stays in the language it was first
+rendered in. This is the failure the error is trying to prevent, which is why
+it names the alternative rather than just refusing.
+
+## Other shapes that are refused
+
+The same rule covers every reference that is not a call site, and those have no
+alternative to point at:
+
+```tsx
+const f = t                           // stored
+greet(t)                              // passed
+<Component label={t} />               // handed over
+```
+
+A helper cannot take `t` as a parameter, because the compiler has to see the
+message at the place it is written. Give the helper the finished string
+instead, or move the message into it.

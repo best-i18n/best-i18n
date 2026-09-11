@@ -8,6 +8,7 @@
     "extraction",
     "server",
     "limitations",
+    "errors",
     "external:[llms.txt](/llms.txt)"
   ]
 }

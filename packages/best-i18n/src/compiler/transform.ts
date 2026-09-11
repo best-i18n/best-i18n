@@ -70,6 +70,21 @@ interface HookCall {
   end: number
   /** Variable it was assigned to, which becomes the locale in that scope. */
   name: string
+  /**
+   * A locale variable already read earlier in the same function, which this
+   * call aliases instead of subscribing again. See `localeAliases`.
+   */
+  alias?: string
+}
+
+/**
+ * One `const x = useLocale()` the module wrote itself: the range of the call
+ * and the variable it feeds.
+ */
+interface LocaleRead {
+  start: number
+  end: number
+  name: string
 }
 
 /**
@@ -98,6 +113,14 @@ interface Scope {
   end: number
   localeVar?: string
 }
+
+/**
+ * Where a rejected macro reference is explained at length. Kept next to the
+ * error rather than in a docs config: it ships inside the message, so it has
+ * to be here to be reviewable in a diff.
+ */
+const MACRO_MISUSE_DOCS =
+  'https://best-i18n.aiwan.run/docs/errors/dependency-array'
 
 const FUNCTIONS = new Set([
   'FunctionDeclaration',
@@ -288,6 +311,8 @@ export interface ExtractOptions {
   hookFrom?: string[]
   component?: string
   componentFrom?: string[]
+  /** Only to recognize the runtime `useLocale` - see `localeAliases`. */
+  reactModule?: string
 }
 
 /** Collects the messages in `code` without modifying it. */
@@ -381,6 +406,9 @@ function analyze(
 ): {
   messages: Message[]
   hookCalls: HookCall[]
+  localeAliases: Array<{ start: number; end: number; text: string }>
+  /** See `reusableLocaleRead`. */
+  reusableLocaleRead?: string
   macroImports: MacroImport[]
   directiveEnd: number
   directives: string[]
@@ -432,6 +460,14 @@ function analyze(
       from: componentFrom,
       exportName: component,
     })
+
+  // The runtime read that `useI18n()` compiles into. Recognizing the module's
+  // own calls is what lets one component share a single subscription.
+  const { locals: localeReadLocals } = resolveMacroBindings({
+    staticImports,
+    from: [options.reactModule ?? 'best-i18n/react'],
+    exportName: 'useLocale',
+  })
 
   const namespaced = [
     ...new Set([...namespaces, ...hookNamespaces, ...componentNamespaces]),
@@ -490,6 +526,7 @@ function analyze(
     return {
       messages: [],
       hookCalls: [],
+      localeAliases: [],
       macroImports,
       directiveEnd,
       directives,
@@ -528,8 +565,9 @@ function analyze(
   const localeVars = new Set<string>()
   const allowedHookNodes = new Set<unknown>()
   const scopes: Scope[] = []
+  const localeReads: LocaleRead[] = []
 
-  walk(parsed.program, (node) => {
+  walk(parsed.program, (node, parent) => {
     if (FUNCTIONS.has(node.type as string)) {
       scopes.push({ start: node.start as number, end: node.end as number })
       return
@@ -549,6 +587,21 @@ function analyze(
       | undefined
     if (init?.type !== 'CallExpression') return
     if (init.callee?.type !== 'Identifier') return
+
+    if (localeReadLocals.has(init.callee.name ?? '')) {
+      const id = node.id as { type?: string; name?: string }
+      // `const` only: a reassignable binding would stop tracking the locale
+      // the moment someone wrote to it, and an alias cannot follow that.
+      if (id.type === 'Identifier' && parent?.kind === 'const') {
+        localeReads.push({
+          start: init.start as number,
+          end: init.end as number,
+          name: id.name ?? '',
+        })
+      }
+      return
+    }
+
     if (!hookLocals.has(init.callee.name ?? '')) return
 
     const id = node.id as { type?: string; name?: string; start?: number }
@@ -593,6 +646,75 @@ function analyze(
     scope.localeVar = call.name
   }
   if (moduleScope !== undefined) scopes.push(moduleScope)
+
+  /**
+   * Rewrites that turn a repeated locale read into an alias of the first one.
+   *
+   * `useI18n()` compiles into the very `useLocale()` a module may already be
+   * calling itself, and `useLocale` is a `useContext` plus a
+   * `useSyncExternalStore` - so two reads of one value mean two context reads
+   * and two subscriptions. Within a function the first read in source order
+   * keeps its call and every later one becomes `= <that variable>`.
+   *
+   * Source order decides rather than a preference between the two kinds: an
+   * alias can only name a variable that is already declared.
+   *
+   * Only scopes that contain a `useI18n()` are touched. Two `useLocale()`
+   * calls the module wrote itself are its own business; the compiler is here
+   * to avoid adding a read, not to edit hooks nobody asked it about.
+   */
+  const localeAliases: Array<{ start: number; end: number; text: string }> = []
+
+  /**
+   * The module's own name for `useLocale`, when the compiled reads can use it
+   * instead of a second import of the same function.
+   *
+   * Only when nothing in the module could mean anything else by that name:
+   * every mention has to be the import specifier itself or the callee of a
+   * call. A parameter, a variable or a property named `useLocale` all fail
+   * the test, which is what keeps a shadowed name from being compiled
+   * against - the reads are emitted inside the declaring component and at
+   * module scope, and this makes both safe at once.
+   */
+  const reusableLocaleRead = ((): string | undefined => {
+    if (localeReadLocals.size !== 1) return undefined
+    const [name] = [...localeReadLocals]
+    if (name === undefined) return undefined
+
+    let safe = true
+    walk(parsed.program, (node, parent) => {
+      if (!safe) return
+      if (node.type !== 'Identifier' || node.name !== name) return
+      if (parent?.type === 'ImportSpecifier') return
+      if (parent?.type === 'CallExpression' && parent.callee === node) return
+      safe = false
+    })
+
+    return safe ? name : undefined
+  })()
+
+  const scopeOf = (offset: number): Scope | undefined =>
+    innermost(offset, scopes)
+
+  for (const scope of new Set(hookCalls.map((call) => scopeOf(call.start)))) {
+    const reads = [
+      ...hookCalls
+        .filter((call) => scopeOf(call.start) === scope)
+        .map((call) => ({ start: call.start, end: call.end, call })),
+      ...localeReads
+        .filter((read) => scopeOf(read.start) === scope)
+        .map((read) => ({ ...read, call: undefined })),
+    ].sort((a, b) => a.start - b.start)
+
+    const [first, ...rest] = reads
+    if (first === undefined || rest.length === 0) continue
+
+    const name = first.call?.name ?? (first as LocaleRead).name
+    for (const read of rest) {
+      if (read.call !== undefined) read.call.alias = name
+      else localeAliases.push({ start: read.start, end: read.end, text: name })
+    }
+  }
 
   const withLocaleVar = scopes.filter((scope) => scope.localeVar !== undefined)
 
@@ -919,6 +1041,54 @@ function analyze(
     })
   })
 
+  /**
+   * Identifiers sitting in something shaped like a React dependency array,
+   * collected only so the guard below can explain itself.
+   *
+   * They are not allowed through. A macro never leaves its call site - one
+   * rule, no exceptions - and a dependency array is no exception even though
+   * the compiled variable would happen to be a valid string there. What it
+   * gets instead is an error naming the spelling that does work.
+   *
+   * Loose on purpose: any `use...()` call with an array argument counts,
+   * since a wrong guess only ever changes the wording of a message.
+   */
+  const depNodes = new Set<unknown>()
+  walk(parsed.program, (node) => {
+    if (node.type !== 'CallExpression') return
+
+    const callee = node.callee as
+      | {
+          type?: string
+          name?: string
+          computed?: boolean
+          property?: { type?: string; name?: string }
+        }
+      | undefined
+
+    // `useMemo(...)` or `React.useMemo(...)`.
+    const hookName =
+      callee?.type === 'Identifier'
+        ? callee.name
+        : callee?.type === 'MemberExpression' &&
+            callee.computed !== true &&
+            callee.property?.type === 'Identifier'
+          ? callee.property.name
+          : undefined
+
+    if (hookName === undefined || !/^use[A-Z]/.test(hookName)) return
+
+    for (const argument of (node.arguments ?? []) as Array<{
+      type?: string
+      elements?: Array<{ type?: string } | null>
+    }>) {
+      if (argument?.type !== 'ArrayExpression') continue
+      for (const element of argument.elements ?? []) {
+        if (element?.type === 'Identifier') depNodes.add(element)
+      }
+    }
+  })
+
   // Any other reference to the binding cannot be compiled: `const f = t`,
   // `foo(t)`, or a local that shadows it. Fail here instead of leaving a
   // runtime throw for someone to find in production.
@@ -941,10 +1111,22 @@ function analyze(
     if (allowedPluralNodes.has(node)) return
     if (isNonReferencePosition(parent, node)) return
 
+    // A dependency array is the one rejection with a right answer to point
+    // at, so it gets one. The stale-text warning is the important half: an
+    // empty array compiles fine and then keeps the previous language.
+    const hint =
+      depNodes.has(node) &&
+      hookScopeAt(node.start as number, name) !== undefined
+        ? ' A dependency array wants the locale, not the macro: read it ' +
+          'with `useLocale()` and depend on that variable, then silence ' +
+          '`react-hooks/exhaustive-deps` for the line. Depending on nothing ' +
+          'would leave the text in the previous language after a switch.'
+        : ' It cannot be stored, passed, or shadowed.'
+
     throw new Error(
       `best-i18n: \`${name}\` is a compile-time macro and can only be ` +
         `used at its call site (${filename} offset ` +
-        `${node.start as number}). It cannot be stored, passed, or shadowed.`,
+        `${node.start as number}).${hint}\n\n  ${MACRO_MISUSE_DOCS}`,
     )
   })
 
@@ -966,7 +1148,15 @@ function analyze(
     }
   }
 
-  return { messages, hookCalls, macroImports, directiveEnd, directives }
+  return {
+    messages,
+    hookCalls,
+    localeAliases,
+    reusableLocaleRead,
+    macroImports,
+    directiveEnd,
+    directives,
+  }
 }
 
 const TOKEN_PATTERN = /(?<!\$)\{([A-Za-z0-9_$]+)\}/g
@@ -1002,16 +1192,26 @@ export function transform(
   const imports = macroSpecifiers(options)
   if (!imports.some((specifier) => code.includes(specifier))) return null
 
-  const { messages, hookCalls, macroImports, directiveEnd, directives } =
-    analyze(code, filename, {
-      tag,
-      from: options.from,
-      plural: options.plural,
-      hook: options.hook,
-      hookFrom: options.hookFrom,
-      component: options.component,
-      componentFrom: options.componentFrom,
-    })
+  const {
+    messages,
+    hookCalls,
+    localeAliases,
+    reusableLocaleRead,
+    macroImports,
+    directiveEnd,
+    directives,
+  } = analyze(code, filename, {
+    tag,
+    from: options.from,
+    plural: options.plural,
+    hook: options.hook,
+    hookFrom: options.hookFrom,
+    component: options.component,
+    componentFrom: options.componentFrom,
+    // Read by analyze to recognize `useLocale` calls, so a custom spelling
+    // has to travel.
+    reactModule: options.reactModule,
+  })
   if (messages.length === 0 && hookCalls.length === 0) return null
 
   const runtimeModule = options.runtimeModule ?? 'best-i18n/runtime'
@@ -1070,7 +1270,11 @@ export function transform(
     return name
   }
   const localGetLocale = hygienic('__i18nGetLocale')
-  const localUseLocale = hygienic('__i18nUseLocale')
+  // The module may already import the very function the compiled reads need.
+  // Borrowing that name leaves one import where there would have been two -
+  // and the second one would have gone unused in the process, since the call
+  // it was written for gets aliased away.
+  const localUseLocale = reusableLocaleRead ?? hygienic('__i18nUseLocale')
   const localN = hygienic('__i18nN')
   const localI = hygienic('__i18nI')
 
@@ -1136,9 +1340,24 @@ export function transform(
         call.end,
         JSON.stringify(options.staticLocale),
       )
+    } else if (call.alias !== undefined) {
+      // The component already read the locale above; share that one read
+      // rather than subscribing again. No React import is needed for it.
+      source.overwrite(call.start, call.end, call.alias)
     } else {
       source.overwrite(call.start, call.end, `${localUseLocale}()`)
       needsReact = true
+    }
+  }
+
+  // The other half of the same dedupe: a `useLocale()` the module wrote
+  // itself, standing after a read that already happened. Left alone in a
+  // per-locale build, where the hook above is a literal and there is no
+  // subscription to save - and where folding someone's own runtime call to a
+  // constant would be a bigger claim than this optimization is making.
+  if (options.staticLocale === undefined) {
+    for (const alias of localeAliases) {
+      source.overwrite(alias.start, alias.end, alias.text)
     }
   }
 
@@ -1454,7 +1673,7 @@ export function transform(
     )
   }
 
-  if (needsReact) {
+  if (needsReact && reusableLocaleRead === undefined) {
     inject(
       `import { useLocale as ${localUseLocale} } from ${JSON.stringify(
         reactModule,
