@@ -14,10 +14,10 @@
   "dependencies": {
     "best-i18n": "workspace:*",
     "cn": "^0.2.6",
-    "fumadocs-core": "^16.15.8",
+    "fumadocs-core": "^16.15.9",
     "fumadocs-mdx": "^15.4.0",
-    "fumadocs-ui": "npm:@fumadocs/base-ui@^16.15.8",
-    "lucide-react": "^1.44.0",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@^16.15.9",
+    "lucide-react": "^1.45.0",
     "microlighter": "^2.1.0",
     "next": "^16.3.4",
     "react": "^19.3.0",
@@ -33,6 +33,6 @@
     "serve": "^14.2.6",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "wrangler": "^4.130.0"
+    "wrangler": "^4.131.0"
   }
 }

@@ -34,7 +34,7 @@
     "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev"
   },
   "devDependencies": {
-    "@debbl/oxc-config": "^0.0.3",
+    "@debbl/oxc-config": "^0.0.4",
     "@types/node": "^25.9.6",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.82.0",
