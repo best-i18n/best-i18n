@@ -35,6 +35,27 @@ export default defineConfig({
         'playground/nextjs-intl/**',
       ],
       plugins: ['nextjs'],
+      rules: {
+        'react/only-export-components': oxlint({ next: true }).rules![
+          'react/only-export-components'
+        ],
+      },
+    },
+    {
+      files: ['apps/website/src/app/**/*.with.tsx'],
+      rules: {
+        // These modules pair translated server components with their metadata
+        // and static-params helpers.
+        'react/only-export-components': [
+          'warn',
+          {
+            allowExportNames: [
+              'withGenerateMetadata',
+              'withGenerateStaticParams',
+            ],
+          },
+        ],
+      },
     },
     {
       files: ['playground/nextjs-intl/**'],
