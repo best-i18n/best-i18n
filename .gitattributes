@@ -1,0 +1,6 @@
+# The compiler's tests byte-compare emitted code against fixture files on
+# disk, so a CRLF checkout - Git's default on Windows - fails 48 of them.
+# Pin the working tree to LF everywhere rather than per-directory: every file
+# here is authored with LF, and the next fixture folder should not have to
+# remember this.
+* text=auto eol=lf
