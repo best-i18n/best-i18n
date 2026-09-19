@@ -11,6 +11,7 @@ SvelteKit、Astro。rolldown-vite 保留了 Vite 插件 API，所以也直接用
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
@@ -41,8 +42,11 @@ catalog 工作流见[提取与翻译](/zh/docs/extraction)。
 
 ```ts
 // vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
@@ -63,16 +67,24 @@ function——不需要每个组件再调一次：
 
 ```ts
 // src/start.ts
-import { createMiddleware, createStart } from '@tanstack/react-start'
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
 import { withRequestLocale } from 'best-i18n/server'
 import { i18n } from './i18n'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
 
 const localeMiddleware = createMiddleware().server(({ next, request }) =>
   withRequestLocale(request, i18n, () => next()),
 )
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [localeMiddleware],
+  requestMiddleware: [csrfMiddleware, localeMiddleware],
 }))
 ```
 
@@ -106,8 +118,10 @@ hydration 前先解析客户端语言，让首屏和 SSR 一致——详见[服�
 
 ```ts
 // vite.config.ts
+import { fileURLToPath } from 'node:url'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [

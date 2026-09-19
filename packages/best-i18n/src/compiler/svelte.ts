@@ -20,15 +20,24 @@ export function parseSvelte(
   contexts: ParsedSource[]
   insertion: number
 } {
-  let parser: typeof import('svelte/compiler')
+  let compilerPath: string
   try {
-    parser = require('svelte/compiler')
+    compilerPath = require.resolve('svelte/compiler')
   } catch (cause) {
+    if (
+      !(cause instanceof Error) ||
+      (cause as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND' ||
+      !cause.message.startsWith("Cannot find module 'svelte/compiler'")
+    )
+      throw cause
     throw new Error(
       'best-i18n: install svelte@^5 to translate .svelte files.',
       { cause },
     )
   }
+  // Load outside the catch: failures inside an installed compiler must retain
+  // their original diagnostics, including missing transitive dependencies.
+  const parser: typeof import('svelte/compiler') = require(compilerPath)
   const ast = parser.parse(code, { filename, modern: true })
   const insertionScript = ast.module ?? ast.instance
   const parseScript = (script: AST.Script): ParsedSource => {

@@ -510,11 +510,7 @@ best-i18n did not invent its best ideas, it inherited them:
 - [gettext-parser](https://github.com/smhg/gettext-parser) — the PO codec
   underneath `i18n-extract`.
 
-## License
-
-MIT
-
-### Svelte 5
+## Svelte 5
 
 Set `svelte: true` and place `i18n(...)` before `svelte()` / `sveltekit()` in
 Vite's plugins array. The extractor scans `.svelte` files, and the plugin
@@ -541,3 +537,7 @@ compiles translations to literals without the locale runtime. Markup in a
 message uses `<Trans>` from `best-i18n/svelte/macro`. React's `useI18n` is
 not supported. For SSR, use `withLocale` from `best-i18n/server` and
 initialize the client locale before hydration.
+
+## License
+
+MIT

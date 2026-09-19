@@ -12,6 +12,7 @@ API, so it uses this plugin unchanged.
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
@@ -44,8 +45,11 @@ plugin and the plain server binding. A full app is in
 
 ```ts
 // vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
@@ -66,16 +70,24 @@ components, loaders, server functions — with no per-component call:
 
 ```ts
 // src/start.ts
-import { createMiddleware, createStart } from '@tanstack/react-start'
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
 import { withRequestLocale } from 'best-i18n/server'
 import { i18n } from './i18n'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
 
 const localeMiddleware = createMiddleware().server(({ next, request }) =>
   withRequestLocale(request, i18n, () => next()),
 )
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [localeMiddleware],
+  requestMiddleware: [csrfMiddleware, localeMiddleware],
 }))
 ```
 
@@ -112,8 +124,10 @@ component. A full app is in
 
 ```ts
 // vite.config.ts
+import { fileURLToPath } from 'node:url'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [

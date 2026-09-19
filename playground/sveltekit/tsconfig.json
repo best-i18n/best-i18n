@@ -10,12 +10,5 @@
     "sourceMap": true,
     "strict": true,
     "moduleResolution": "bundler"
-  },
-  "include": [
-    ".svelte-kit/ambient.d.ts",
-    ".svelte-kit/non-ambient.d.ts",
-    ".svelte-kit/types/**/$types.d.ts",
-    "src/**/*.ts",
-    "vite.config.ts"
-  ]
+  }
 }

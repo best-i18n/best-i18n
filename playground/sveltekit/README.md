@@ -35,9 +35,9 @@ unprefixed: `/zh/about` still renders `src/routes/about`. Links go the other
 way through `href()` in `$lib/href.svelte.ts`.
 
 **Runes, not `useI18n`.** Svelte has no React. Compiled messages subscribe
-through `best-i18n/svelte`. Markup `{t\`...\`}`updates on a locale change;
-script text that should follow the locale needs`$derived(t\`...\`)`. Markup
-inside a sentence uses `<Trans>`from`best-i18n/svelte/macro` — same
+through `best-i18n/svelte`. Markup ``{t`...`}`` updates on a locale change;
+script text that should follow the locale needs ``$derived(t`...`)``. Markup
+inside a sentence uses `<Trans>` from `best-i18n/svelte/macro` — same
 placeholders as the React macro, rebuilt to Svelte markup rather than JSX.
 
 ## Messages

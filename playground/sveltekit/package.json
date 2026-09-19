@@ -12,7 +12,7 @@
     "start": "node build/index.js",
     "extract": "i18n-extract --locales en,zh --src src --messages messages",
     "prepare": "svelte-kit sync || echo ''",
-    "typecheck": "svelte-kit sync && tsc --noEmit"
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
     "best-i18n": "workspace:*"
@@ -22,7 +22,8 @@
     "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "svelte": "^5.57.1",
-    "typescript": "^7.0.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
     "vite": "^8.3.0"
   }
 }

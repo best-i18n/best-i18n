@@ -1,3 +1,5 @@
+import type { Component, Snippet } from 'svelte'
+
 /**
  * Compile-time macro for a Svelte message that contains markup.
  *
@@ -15,7 +17,10 @@
  * an event, or anything else.
  *
  * @example
- *   import { Trans } from 'best-i18n/svelte/macro'
+ *   <script lang="ts">
+ *     import { Trans } from 'best-i18n/svelte/macro'
+ *     let { docsUrl } = $props<{ docsUrl: string }>()
+ *   </script>
  *
  *   <p>
  *     <Trans>
@@ -23,12 +28,10 @@
  *     </Trans>
  *   </p>
  */
-export function Trans(props: {
-  children?: unknown
-  /** Disambiguation context (gettext `msgctxt`). Must be a string literal. */
+export const Trans: Component<{
+  children?: Snippet
   ctx?: string
-}): never {
-  void props
+}> = () => {
   throw new Error(
     'best-i18n: <Trans> reached runtime, which means this file was never ' +
       'transformed. Is the bundler plugin installed, and is svelte: true set?',
