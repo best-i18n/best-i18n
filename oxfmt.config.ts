@@ -8,5 +8,10 @@ export default oxfmt({
     // Compiler test fixtures: inputs are standalone snippets and outputs are
     // emitted code, written by `vitest run -u` - not ours to format.
     '**/test/fixtures/**',
+    // SvelteKit writes this on every sync, dev and build.
+    '**/.svelte-kit/**',
   ],
+  // Oxfmt delegates `.svelte` to bundled Prettier and leaves it off until
+  // `svelte` is installed (its peer) and this flag is set.
+  overrides: { svelte: true },
 })

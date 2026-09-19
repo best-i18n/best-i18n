@@ -1,6 +1,14 @@
-import { createMiddleware, createStart } from '@tanstack/react-start'
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
 import { withRequestLocale } from 'best-i18n/server'
 import { i18n } from './i18n'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
 
 /**
  * Binds the locale for the whole request, before anything renders.
@@ -15,5 +23,5 @@ const localeMiddleware = createMiddleware().server(({ next, request }) =>
 )
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [localeMiddleware],
+  requestMiddleware: [csrfMiddleware, localeMiddleware],
 }))

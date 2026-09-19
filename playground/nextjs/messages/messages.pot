@@ -138,7 +138,7 @@ msgstr ""
 
 #: src/app/[locale]/long/page.tsx:106
 msgid ""
-"A sentence can hold <strong>bold text</strong> and a{0}<a>link</a> at once, "
+"A sentence can hold <strong>bold text</strong> and a <a>link</a> at once, "
 "and the translator still only ever sees named placeholders - never a JSX "
 "attribute, never an import, never a prop."
 msgstr ""

@@ -1,0 +1,47 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/lib/counter.svelte:5
+msgid "You have {count} items"
+msgstr "你有 {count} 项"
+
+#: src/lib/counter.svelte:10
+msgid "Add one"
+msgstr "加一"
+
+#: src/routes/+layout.svelte:12
+msgid "Home"
+msgstr "首页"
+
+#: src/routes/+layout.svelte:13
+#: src/routes/about/+page.svelte:8
+msgid "About"
+msgstr "关于"
+
+#: src/routes/+page.svelte:6
+msgid "A small starter with room to grow."
+msgstr "一个小而可长的起始模板。"
+
+#: src/routes/+page.svelte:7
+msgid "This paragraph was rendered on the server."
+msgstr "这段文字是在服务端渲染的。"
+
+#: src/routes/about/+page.svelte:9
+msgid "{name} inlines every translation at the call site."
+msgstr "{name} 会把每条翻译内联到调用处。"
+
+#: src/routes/about/+page.svelte:10
+msgid "Nothing is looked up at runtime, so nothing has to be loaded."
+msgstr "运行时不做任何查表，因此也没有任何东西需要加载。"
+
+#: src/routes/about/+page.svelte:12
+msgid "Read the <a>README</a> to learn more."
+msgstr "请阅读 <a>README</a> 了解更多。"
+

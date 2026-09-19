@@ -11,6 +11,8 @@ export default defineConfig({
     '**/project.inlang/**',
     // Next.js rewrites this on every build.
     '**/next-env.d.ts',
+    // SvelteKit writes this on every sync, dev and build.
+    '**/.svelte-kit/**',
     // Compiler test fixtures: inputs are standalone snippets and outputs are
     // emitted code, written by `vitest run -u` - not ours to lint.
     '**/test/fixtures/**',
@@ -63,6 +65,13 @@ export default defineConfig({
         // The arrows passed to `t.rich` are next-intl's markup API - tag
         // handlers, not component definitions.
         'react/no-unstable-nested-components': 'off',
+      },
+    },
+    {
+      files: ['**/src/app.d.ts'],
+      rules: {
+        // SvelteKit's ambient App namespace has to be a module (`export {}`).
+        'unicorn/require-module-specifiers': 'off',
       },
     },
     {

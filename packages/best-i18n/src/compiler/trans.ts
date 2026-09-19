@@ -200,6 +200,17 @@ export function decodeEntities(text: string): string {
   )
 }
 
+interface SvelteTemplateNode {
+  type?: string
+  start?: number
+  end?: number
+  raw?: string
+  data?: string
+  name?: string
+  expression?: { type?: string; start?: number; end?: number }
+  fragment?: { nodes?: SvelteTemplateNode[] }
+}
+
 /** Turns the children of a `<Trans>` into a message plus its raw material. */
 export function serializeTrans(
   children: readonly unknown[],
@@ -244,6 +255,17 @@ function serializeChildren(
         // `{/* a comment */}` is not a value and has nothing to translate.
         if (expression === undefined) break
         if (expression.type === 'JSXEmptyExpression') break
+
+        // Formatters insert {' '} to preserve spaces around wrapped JSX.
+        // This is static message text, not a value a translator must retain.
+        if (
+          expression.type === 'Literal' &&
+          typeof expression.value === 'string' &&
+          /^\s*$/.test(expression.value)
+        ) {
+          out += expression.value
+          break
+        }
 
         const source = code.slice(
           expression.start as number,
@@ -293,6 +315,121 @@ function serializeChildren(
           ? ''
           : serializeChildren(
               child.children ?? [],
+              code,
+              filename,
+              expressions,
+              placeholders,
+              elements,
+            )
+
+        out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`
+        break
+      }
+
+      default:
+        throw new Error(
+          `best-i18n: <Trans> in ${filename} contains a ${child.type} child, ` +
+            'which has no place in a message. Move it outside the <Trans>.',
+        )
+    }
+  }
+
+  return out
+}
+
+/**
+ * Same stored message as `serializeTrans`, from a Svelte template rather than
+ * JSX: `{name}` is an ExpressionTag, `<a>` a RegularElement, `<Button>` a
+ * Component. Blocks, `{@html}` and the rest stay out — they are not a
+ * sentence a translator can reorder.
+ */
+export function serializeSvelteTrans(
+  children: readonly unknown[],
+  code: string,
+  filename: string,
+): TransMessage {
+  const expressions: string[] = []
+  const placeholders: string[] = []
+  const elements: TransElement[] = []
+
+  const text = serializeSvelteChildren(
+    children as SvelteTemplateNode[],
+    code,
+    filename,
+    expressions,
+    placeholders,
+    elements,
+  )
+
+  return { text, expressions, placeholders, elements }
+}
+
+function serializeSvelteChildren(
+  children: SvelteTemplateNode[],
+  code: string,
+  filename: string,
+  expressions: string[],
+  placeholders: string[],
+  elements: TransElement[],
+): string {
+  let out = ''
+
+  for (const child of children) {
+    switch (child.type) {
+      case 'Text': {
+        out += decodeEntities(cleanJsxText(child.raw ?? child.data ?? ''))
+        break
+      }
+
+      case 'Comment':
+        break
+
+      case 'ExpressionTag': {
+        const expression = child.expression
+        if (expression === undefined) break
+        const source = code.slice(
+          expression.start as number,
+          expression.end as number,
+        )
+        out += `{${tokenForExpression(source, expressions, placeholders)}}`
+        break
+      }
+
+      case 'RegularElement':
+      case 'Component':
+      case 'SvelteElement':
+      case 'SvelteFragment': {
+        const nodes = child.fragment?.nodes ?? []
+        const name =
+          child.type === 'RegularElement' || child.type === 'Component'
+            ? child.name
+            : undefined
+        const token = tokenForElement(
+          name,
+          elements.map((element) => element.token),
+        )
+        const index = elements.length
+        elements.push({ token, open: '', close: '', selfClosing: false })
+
+        const selfClosing = nodes.length === 0
+        elements[index] = {
+          token,
+          open: selfClosing
+            ? code.slice(child.start as number, child.end as number)
+            : code.slice(child.start as number, nodes[0]!.start as number),
+          close: selfClosing
+            ? ''
+            : code.slice(
+                nodes[nodes.length - 1]!.end as number,
+                child.end as number,
+              ),
+          selfClosing,
+        }
+
+        const inner = selfClosing
+          ? ''
+          : serializeSvelteChildren(
+              nodes,
               code,
               filename,
               expressions,
@@ -724,6 +861,10 @@ function renderChildren(
  * needs to be compiled somewhere other than its call site: `<a href={url}>`
  * cannot leave the scope that `url` lives in, but a `(child) => <a
  * href={url}>{child}</a>` passed as an argument never does.
+ *
+ * `fragment` wraps the rebuilt children in `<>...</>` so they are one JSX
+ * expression. Svelte has no equivalent: the children go into the template as
+ * they are, and locale switching is a `{#if}` around this return value.
  */
 export function renderTrans(
   text: string,
@@ -732,6 +873,7 @@ export function renderTrans(
   elements: TransElement[],
   describe: string,
   refs?: string[],
+  fragment = true,
 ): string {
   const parts = parseMessage(text, describe)
   validateTransParts(parts, placeholders, elements, describe)
@@ -743,5 +885,13 @@ export function renderTrans(
       ? undefined
       : new Map(elements.map((element, index) => [element.token, refs[index]!]))
 
-  return `<>${renderChildren(parts, expressions, placeholders, elements, describe, byToken)}</>`
+  const children = renderChildren(
+    parts,
+    expressions,
+    placeholders,
+    elements,
+    describe,
+    byToken,
+  )
+  return fragment ? `<>${children}</>` : children
 }

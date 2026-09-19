@@ -1,0 +1,50 @@
+[
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 169,
+    "end": 185,
+    "line": 4
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 224,
+    "end": 240,
+    "line": 7
+  },
+  {
+    "text": "Hi {name}",
+    "expressions": [
+      "name"
+    ],
+    "placeholders": [
+      "name"
+    ],
+    "context": "",
+    "start": 243,
+    "end": 264,
+    "line": 7
+  },
+  {
+    "text": "One item",
+    "plural": {
+      "count": "count",
+      "other": "{count} items"
+    },
+    "expressions": [
+      "count"
+    ],
+    "placeholders": [
+      "count"
+    ],
+    "context": "",
+    "start": 290,
+    "end": 333,
+    "line": 8
+  }
+]

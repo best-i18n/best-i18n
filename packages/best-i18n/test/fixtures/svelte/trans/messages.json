@@ -1,0 +1,129 @@
+[
+  {
+    "text": "Read the <a>docs</a> to learn more.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={url}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 219,
+    "end": 288,
+    "line": 12,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "Hi {name}, you have <b>{count} items</b>.",
+    "expressions": [
+      "name",
+      "count"
+    ],
+    "placeholders": [
+      "name",
+      "count"
+    ],
+    "elements": [
+      {
+        "token": "b",
+        "open": "<b>",
+        "close": "</b>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 300,
+    "end": 356,
+    "line": 17,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "Just words.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 365,
+    "end": 391,
+    "line": 19,
+    "braced": true,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "verb",
+    "start": 399,
+    "end": 429,
+    "line": 20,
+    "braced": true,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "A <i>b <b>c</b></i> d",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "i",
+        "open": "<i>",
+        "close": "</i>",
+        "selfClosing": false
+      },
+      {
+        "token": "b",
+        "open": "<b>",
+        "close": "</b>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 437,
+    "end": 473,
+    "line": 21,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "Line one<br/>line two",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "br",
+        "open": "<br />",
+        "close": "",
+        "selfClosing": true
+      }
+    ],
+    "context": "",
+    "start": 481,
+    "end": 518,
+    "line": 22,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 527,
+    "end": 535,
+    "line": 23
+  }
+]

@@ -107,7 +107,15 @@
       "types": "./dist/po.d.mts",
       "default": "./dist/po.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./svelte": {
+      "types": "./dist/svelte.d.mts",
+      "default": "./dist/svelte.mjs"
+    },
+    "./svelte/macro": {
+      "types": "./dist/svelte-macro.d.mts",
+      "default": "./dist/svelte-macro.mjs"
+    }
   },
   "publishConfig": {
     "access": "public"
@@ -133,6 +141,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rolldown": "^1.2.8",
+    "svelte": "^5.57.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
@@ -142,6 +151,7 @@
     "next": ">=15.2",
     "react": ">=18",
     "rolldown": ">=1",
+    "svelte": "^5.7.0",
     "vite": ">=6"
   },
   "peerDependenciesMeta": {
@@ -155,6 +165,9 @@
       "optional": true
     },
     "vite": {
+      "optional": true
+    },
+    "svelte": {
       "optional": true
     }
   },

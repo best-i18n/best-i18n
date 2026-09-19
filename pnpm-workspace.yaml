@@ -25,3 +25,4 @@ minimumReleaseAgeExclude:
   - next-intl-swc-plugin-extractor@4.14.4
   - next-intl@4.14.4
   - use-intl@4.14.4
+  - svelte@5.57.1

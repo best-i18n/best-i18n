@@ -10,21 +10,21 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 
 ## 一览
 
-|                                      | best-i18n                   | Lingui                        | next-intl              | Paraglide JS          |
-| ------------------------------------ | --------------------------- | ----------------------------- | ---------------------- | --------------------- |
-| 消息是什么                           | 源文本                      | 源文本                        | key                    | key（`m.greeting()`） |
-| 运行时装载什么                       | 无——内联三元/字面量         | catalog + 查找                | catalog + ICU 格式化器 | 每条消息一个函数      |
-| catalog 格式                         | PO                          | PO                            | JSON                   | inlang messages       |
-| 复数                                 | gettext，公式按语言内联     | ICU，运行时                   | ICU，运行时            | matching/variants     |
-| `select`、日期、数字                 | 无——用 `Intl`               | 有（ICU）                     | 有（ICU）              | 无内置格式化          |
-| 消息内嵌标记                         | `<Trans>`，构建期重组为 JSX | `<Trans>`，每次渲染遍历消息树 | `t.rich()` 运行时      | 仅字符串              |
-| 按语言构建                           | `staticLocale`——纯字面量    | 无                            | 无                     | 有，按语言出包        |
-| 本地化路径（`/about` → `/de/ueber`） | 无                          | 无                            | 有                     | 有                    |
+|                                      | best-i18n                                 | Lingui                        | next-intl              | Paraglide JS          |
+| ------------------------------------ | ----------------------------------------- | ----------------------------- | ---------------------- | --------------------- |
+| 消息是什么                           | 源文本                                    | 源文本                        | key                    | key（`m.greeting()`） |
+| 运行时装载什么                       | 无——内联三元/字面量                       | catalog + 查找                | catalog + ICU 格式化器 | 每条消息一个函数      |
+| catalog 格式                         | PO                                        | PO                            | JSON                   | inlang messages       |
+| 复数                                 | gettext，公式按语言内联                   | ICU，运行时                   | ICU，运行时            | matching/variants     |
+| `select`、日期、数字                 | 无——用 `Intl`                             | 有（ICU）                     | 有（ICU）              | 无内置格式化          |
+| 消息内嵌标记                         | `<Trans>`，构建期重组为 JSX / Svelte 标记 | `<Trans>`，每次渲染遍历消息树 | `t.rich()` 运行时      | 仅字符串              |
+| 按语言构建                           | `staticLocale`——纯字面量                  | 无                            | 无                     | 有，按语言出包        |
+| 本地化路径（`/about` → `/de/ueber`） | 无                                        | 无                            | 有                     | 有                    |
 
 其中两个是 best-i18n 的直系祖先：宏的形态和 `<0>...</0>` 标记约定来自 Lingui，
 而 Paraglide 证明了编译期 i18n 加按语言 tree-shaking 根本上可行。与 Lingui 更深
 的分野在于运行的东西：Lingui 在运行时查 catalog，`<Trans>` 每次渲染都遍历消息
-树；这里每个语言的版本在浏览器看到之前就已经是普通 JSX。
+树；这里每个语言的版本在浏览器看到之前就已经是普通 JSX 或 Svelte 标记。
 
 ## 实测体积
 

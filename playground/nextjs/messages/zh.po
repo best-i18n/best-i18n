@@ -137,10 +137,10 @@ msgstr "标记不挡翻译者的路"
 
 #: src/app/[locale]/long/page.tsx:106
 msgid ""
-"A sentence can hold <strong>bold text</strong> and a{0}<a>link</a> at once, "
+"A sentence can hold <strong>bold text</strong> and a <a>link</a> at once, "
 "and the translator still only ever sees named placeholders - never a JSX "
 "attribute, never an import, never a prop."
-msgstr "一句话可以同时含有<strong>加粗文本</strong>和{0}一个<a>链接</a>，而翻译者始终只看到具名占位符——看不到 JSX 属性，看不到 import，也看不到 prop。"
+msgstr "一句话可以同时含有<strong>加粗文本</strong>和 一个<a>链接</a>，而翻译者始终只看到具名占位符——看不到 JSX 属性，看不到 import，也看不到 prop。"
 
 #: src/app/[locale]/long/page.tsx:114
 msgid ""

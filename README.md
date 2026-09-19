@@ -11,12 +11,14 @@ packages/best-i18n     the package
   src/compiler/        parser, transform, PO reading and merging
   src/runtime/         locale at runtime: isomorphic, plus the Node server half
   src/react/           useLocale, LocaleProvider, the useI18n and Trans macros
+  src/svelte.ts        reactive getLocale; src/svelte/macro.ts is <Trans>
   src/integrations/    one folder per framework - vite, next
   src/cli/             i18n-extract, i18n-compile
   spike/               builds a fixture twice and asserts on the real bundles
 playground/nextjs      Next.js App Router, both locales, end to end
 playground/nextjs-intl the same app in next-intl, for size comparison
 playground/tanstack-start the same app on the plain Vite plugin
+playground/sveltekit       the same app on SvelteKit
 playground/tanstack-start-paraglide the same app in Paraglide
 scripts/bench-size.mjs builds each playground and weighs what a browser loads
 ```
@@ -38,7 +40,7 @@ pnpm bench          # client JS a browser downloads, best-i18n vs next-intl
 
 ## Playgrounds
 
-Four apps, the same two pages, the same messages, the same URLs - so a
+Five apps, the same two pages, the same messages, the same URLs - so a
 comparison is between libraries rather than between apps.
 
 |                                                                                       |                                     |
@@ -46,12 +48,14 @@ comparison is between libraries rather than between apps.
 | [`playground/nextjs`](./playground/nextjs#readme)                                     | best-i18n on the Next.js App Router |
 | [`playground/nextjs-intl`](./playground/nextjs-intl#readme)                           | the same app in next-intl           |
 | [`playground/tanstack-start`](./playground/tanstack-start#readme)                     | best-i18n on the plain Vite plugin  |
+| [`playground/sveltekit`](./playground/sveltekit#readme)                               | best-i18n on SvelteKit              |
 | [`playground/tanstack-start-paraglide`](./playground/tanstack-start-paraglide#readme) | the same app in Paraglide           |
 
 ```bash
 pnpm build          # the playgrounds consume the built package
 pnpm dev:next       # http://localhost:3000 and /zh
 pnpm dev:tanstack
+pnpm dev:sveltekit
 pnpm dev:paraglide
 ```
 
