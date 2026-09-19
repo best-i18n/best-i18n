@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+globalThis.window = {};
+const { createRoot, createComputed, createMemo } = await import('solid-js');
+const { configure, getLocale, getLocales, setLocale } = await import('best-i18n/solid');
+configure({ baseLocale: 'zh', locales: ['en', 'zh'] });
+assert.equal(getLocale(), 'zh');
+assert.deepEqual(getLocales(), ['en', 'zh']);
+const values = [[], []];
+const stops = values.map(list => createRoot(dispose => {
+  const locale = createMemo(() => getLocale());
+  createComputed(() => list.push(locale()));
+  return dispose;
+}));
+setLocale('en');
+setLocale('en');
+assert.deepEqual(values, [['zh', 'en'], ['zh', 'en']]);
+stops[0]();
+setLocale('zh');
+assert.deepEqual(values, [['zh', 'en'], ['zh', 'en', 'zh']]);
+stops[1]();
+setLocale('en');
+assert.deepEqual(values, [['zh', 'en'], ['zh', 'en', 'zh']]);
+console.log('ok');

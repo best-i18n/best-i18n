@@ -13,6 +13,7 @@
 //            so there is no href to follow; both apps split into the same three
 //            chunks, so the totals line up anyway. SvelteKit is reported in its
 //            own table and includes all client chunks, entries and route nodes.
+//            SolidStart v2 also gets its own table, covering all _build JS.
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -83,6 +84,22 @@ const VARIANTS = [
     dir: 'playground/sveltekit',
     kind: 'vite',
     clientDir: '.svelte-kit/output/client',
+    env: { I18N_STATIC_LOCALE: 'zh' },
+  },
+  {
+    family: 'SolidStart v2',
+    label: 'best-i18n',
+    dir: 'playground/solid-start',
+    kind: 'vite',
+    clientDir: '.output/public/_build',
+    env: {},
+  },
+  {
+    family: 'SolidStart v2',
+    label: 'best-i18n (staticLocale=zh)',
+    dir: 'playground/solid-start',
+    kind: 'vite',
+    clientDir: '.output/public/_build',
     env: { I18N_STATIC_LOCALE: 'zh' },
   },
 ]

@@ -1,0 +1,121 @@
+---
+title: SolidStart
+description: Reactive translations and request isolation in SolidStart v2
+---
+
+Supports [SolidStart v2](https://docs.solidjs.com/solid-start/v2), Solid 1 and Vite 8. See the complete [`playground/solid-start`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start).
+
+## Shared configuration
+
+Reuse one locale configuration in Vite, the server and the client:
+
+```ts
+// src/i18n.ts
+import type { UrlConfig } from 'best-i18n/locale-url'
+
+export const i18n: UrlConfig = {
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+}
+```
+
+Put `i18n` before `solidStart()` and enable `solid: true`. This example uses Nitro for Node server deployment.
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { solidStart } from '@solidjs/start/config'
+import { i18n } from 'best-i18n/vite'
+import { nitro } from 'nitro/vite'
+import { defineConfig } from 'vite'
+import { i18n as localeConfig } from './src/i18n.ts'
+
+export default defineConfig({
+  define: {
+    'import.meta.env.I18N_STATIC_LOCALE': JSON.stringify(
+      process.env.I18N_STATIC_LOCALE ?? '',
+    ),
+  },
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: localeConfig.locales,
+      baseLocale: localeConfig.baseLocale,
+      staticLocale: process.env.I18N_STATIC_LOCALE || undefined,
+      solid: true,
+    }),
+    solidStart({ middleware: './src/middleware.ts' }),
+    nitro(),
+  ],
+})
+```
+
+## Server and hydration
+
+Wrap `next()` in v2 H3 middleware to isolate each request’s locale. Static builds use their build locale:
+
+```ts
+// src/middleware.ts
+import { createMiddleware } from '@solidjs/start/middleware'
+import { withLocale, withRequestLocale } from 'best-i18n/server'
+import { i18n } from './i18n.ts'
+
+export default createMiddleware([
+  (event, next) =>
+    import.meta.env.I18N_STATIC_LOCALE
+      ? withLocale(import.meta.env.I18N_STATIC_LOCALE, next)
+      : withRequestLocale(event.req, i18n, next),
+])
+```
+
+In the document component in `entry-server.tsx`, use `getLocale()` from `best-i18n/solid` for `<html lang={getLocale()}>`. Read that value before hydration:
+
+```tsx
+// src/entry-client.tsx
+import { mount, StartClient } from '@solidjs/start/client'
+import { configure, setLocale } from 'best-i18n/solid'
+import { i18n } from './i18n.ts'
+
+configure(i18n)
+// Use the server-rendered language so hydration also matches static builds.
+setLocale(document.documentElement.lang || i18n.baseLocale)
+mount(() => <StartClient />, document.getElementById('app')!)
+```
+
+## Writing messages
+
+```tsx
+import { createSignal } from 'solid-js'
+import { t, plural } from 'best-i18n/macro'
+import { Trans } from 'best-i18n/solid/macro'
+
+export default function Counter() {
+  const [count, setCount] = createSignal(0)
+  const title = () => t`Hello from SolidStart!`
+
+  return (
+    <>
+      <h1>{title()}</h1>
+      <button onClick={() => setCount(count() + 1)}>
+        {plural(count(), `One click`, `${count()} clicks`)}
+      </button>
+      <p>
+        <Trans>
+          Read the <a href='/docs'>documentation</a> to learn more.
+        </Trans>
+      </p>
+    </>
+  )
+}
+```
+
+Solid component functions run once. Put text that must follow locale changes in JSX, an accessor (like `title` above), or `createMemo`; assigning a translated string at component initialization captures its initial value. Reusable translation logic can return accessors, without React’s `useI18n()`.
+
+`best-i18n/solid` exports reactive `getLocale()`, plus `configure`, `getLocales` and `setLocale`. Calling `setLocale()` updates tracked JSX and computations. For locale-prefixed URLs, use `switchLocale(locale, i18n)` from `best-i18n/client`; it saves a cookie and performs a full navigation, which also works with separate deployments per locale.
+
+The extractor recognizes `<Trans>` from `best-i18n/solid/macro` by default. Run:
+
+```sh
+i18n-extract --src src --messages messages --locales en,zh
+```

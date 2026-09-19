@@ -33,7 +33,10 @@
     "build:tanstack": "pnpm --filter playground-tanstack-start build",
     "dev:sveltekit": "pnpm --filter playground-sveltekit dev",
     "build:sveltekit": "pnpm --filter playground-sveltekit build",
-    "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev"
+    "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev",
+    "dev:solid-start": "pnpm --filter playground-solid-start dev",
+    "build:solid-start": "pnpm --filter playground-solid-start build",
+    "test:solid-start": "pnpm build && pnpm --filter playground-solid-start test"
   },
   "devDependencies": {
     "@debbl/oxc-config": "^0.0.5",

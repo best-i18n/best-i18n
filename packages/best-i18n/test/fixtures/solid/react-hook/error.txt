@@ -1,0 +1,1 @@
+best-i18n: Solid uses t and reactive accessors; React useI18n is not supported.

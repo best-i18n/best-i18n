@@ -19,6 +19,7 @@ playground/nextjs      Next.js App Router, both locales, end to end
 playground/nextjs-intl the same app in next-intl, for size comparison
 playground/tanstack-start the same app on the plain Vite plugin
 playground/sveltekit       the same app on SvelteKit
+playground/solid-start     SolidStart v2 with reactive translations and SSR
 playground/tanstack-start-paraglide the same app in Paraglide
 scripts/bench-size.mjs builds each playground and weighs what a browser loads
 ```
@@ -40,8 +41,8 @@ pnpm bench          # client JS a browser downloads, best-i18n vs next-intl
 
 ## Playgrounds
 
-Five apps, the same two pages, the same messages, the same URLs - so a
-comparison is between libraries rather than between apps.
+Six playgrounds cover Next.js, TanStack Start, SvelteKit and SolidStart.
+The size comparison playgrounds use matching pages and messages.
 
 |                                                                                       |                                     |
 | ------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -56,8 +57,11 @@ pnpm build          # the playgrounds consume the built package
 pnpm dev:next       # http://localhost:3000 and /zh
 pnpm dev:tanstack
 pnpm dev:sveltekit
+pnpm dev:solid-start
 pnpm dev:paraglide
 ```
+
+SolidStart v2: [`playground/solid-start`](./playground/solid-start#readme).
 
 ## Size
 
@@ -65,11 +69,16 @@ pnpm dev:paraglide
 pnpm build && pnpm bench
 ```
 
-Two families, measured two ways - both apps in a family go through the same
+Four framework families, measured two ways - variants in a family use the same
 method, which is what makes a table mean something. On Next.js the numbers are
 every `/_next/static/*.js` the HTML of `/zh`, `/zh/about` and `/zh/long`
 references; on TanStack Start they are the emitted client assets, because
 Start hands the client entry over through a manifest rather than a script tag.
+SvelteKit includes all JavaScript under `.svelte-kit/output/client`; SolidStart
+v2 includes all JavaScript under `.output/public/_build`. Each has its own
+table with dynamic and `staticLocale=zh` builds. Framework totals include
+framework code and different example content, so compare variants within a
+family.
 
 `/zh/long` is the text-heavy case: a deliberately long article of ~30
 server-rendered messages, most of them full paragraphs, mirrored across both
@@ -104,6 +113,15 @@ render - the ~30 long-page messages exist as HTML on `/zh/long` and nowhere
 else, client JS included. The long page itself is close on both (5.0 kB
 against 5.5 kB): a page that actually renders the text pays for the text,
 whoever compiled it.
+
+### SolidStart v2
+
+| variant | client JS (gzip) | raw |
+| --- | --- | --- |
+| best-i18n | 16.7 kB | 41.9 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 16.4 kB | 41.3 kB |
+
+These totals include all emitted client JavaScript for the SolidStart example.
 
 ### What the two gaps are made of
 

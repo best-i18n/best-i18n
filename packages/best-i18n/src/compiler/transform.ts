@@ -177,6 +177,8 @@ export interface TransformOptions {
   staticLocale?: string | undefined
   /** Module that exports `getLocale`. Only imported when needed. */
   runtimeModule?: string
+  /** Compile Solid JSX and use best-i18n/solid for reactive locale reads. */
+  solid?: boolean
   /** Name of the tagged template to treat as a message. */
   tag?: string
   /**
@@ -210,7 +212,7 @@ export interface TransformOptions {
    * Modules whose `component` export is the `<Trans>` macro. Same
    * literal-specifier matching as `from`.
    *
-   * @default ['best-i18n/react/macro', 'best-i18n/svelte/macro']
+   * @default ['best-i18n/react/macro', 'best-i18n/svelte/macro', 'best-i18n/solid/macro']
    */
   componentFrom?: string[]
 }
@@ -246,6 +248,7 @@ const DEFAULT_HOOK_FROM = ['best-i18n/react/macro']
 const DEFAULT_COMPONENT_FROM = [
   'best-i18n/react/macro',
   'best-i18n/svelte/macro',
+  'best-i18n/solid/macro',
 ]
 const REACT_MACRO = 'best-i18n/react/macro'
 
@@ -1347,8 +1350,15 @@ export function transform(
   })
   if (messages.length === 0 && hookCalls.length === 0) return null
 
+  if (options.solid && hookCalls.length > 0) {
+    throw new Error(
+      'best-i18n: Solid uses t and reactive accessors; React useI18n is not supported.',
+    )
+  }
+
   const runtimeModule =
     options.runtimeModule ??
+    (options.solid ? 'best-i18n/solid' : undefined) ??
     (/\.svelte(?:\.[jt]s)?$/.test(filename.split('?')[0] ?? filename)
       ? 'best-i18n/svelte'
       : 'best-i18n/runtime')
@@ -1421,7 +1431,7 @@ export function transform(
     (locale) => locale !== options.baseLocale,
   )
 
-  const isClientModule = directives.includes('use client')
+  const isClientModule = !options.solid && directives.includes('use client')
 
   /**
    * What a shared function has to agree on, which is more than a catalog key:
@@ -1802,6 +1812,12 @@ export function transform(
         needsRuntime = true
         if (isClientModule) clientUnbound.push(pointAt(message))
       }
+    }
+
+    // Solid components run once. A directly returned <Trans> needs a JSX
+    // child expression so the locale branch is evaluated in a reactive scope.
+    if (options.solid && message.elements !== undefined && !message.braced) {
+      replacement = `<>{${replacement}}</>`
     }
 
     source.overwrite(
