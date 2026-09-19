@@ -8,6 +8,8 @@ export default defineConfig({
     'macro': 'src/macro.ts',
     'react': 'src/react/index.ts',
     'react-macro': 'src/react/macro.ts',
+    'svelte': 'src/svelte.ts',
+    'svelte-macro': 'src/svelte/macro.ts',
     'runtime': 'src/runtime/index.ts',
     'server': 'src/runtime/server.ts',
     'client': 'src/client.ts',

@@ -1,0 +1,1 @@
+best-i18n: <Trans> in Page.svelte contains a IfBlock child, which has no place in a message. Move it outside the <Trans>.

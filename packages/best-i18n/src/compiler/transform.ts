@@ -2,9 +2,11 @@ import { MagicString } from 'magic-string'
 import { parseSync } from 'oxc-parser'
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
 import { GERMANIC } from './plural.ts'
+import { parseSvelte } from './svelte.ts'
 import {
   renderTemplate,
   renderTrans,
+  serializeSvelteTrans,
   serializeTrans,
   tokenForExpression,
   validatePluralForm,
@@ -12,6 +14,7 @@ import {
 } from './trans.ts'
 import type { StaticImport, StaticImportEntry } from './bindings.ts'
 import type { PluralRule } from './plural.ts'
+import type { ParsedSource } from './svelte.ts'
 import type { TransElement } from './trans.ts'
 
 export interface Message {
@@ -62,6 +65,12 @@ export interface Message {
    * `[object Object]`.
    */
   elementOk?: boolean
+  /**
+   * Set for a Svelte `<Trans>`: the replacement is template markup (`{#if}`
+   * around locale branches, or the children on their own) rather than a JSX
+   * expression. Svelte cannot put elements inside `{...}`.
+   */
+  svelte?: boolean
 }
 
 interface HookCall {
@@ -201,7 +210,7 @@ export interface TransformOptions {
    * Modules whose `component` export is the `<Trans>` macro. Same
    * literal-specifier matching as `from`.
    *
-   * @default ['best-i18n/react/macro']
+   * @default ['best-i18n/react/macro', 'best-i18n/svelte/macro']
    */
   componentFrom?: string[]
 }
@@ -234,7 +243,11 @@ export interface TransformResult {
 
 const DEFAULT_FROM = ['best-i18n/macro']
 const DEFAULT_HOOK_FROM = ['best-i18n/react/macro']
-const DEFAULT_COMPONENT_FROM = ['best-i18n/react/macro']
+const DEFAULT_COMPONENT_FROM = [
+  'best-i18n/react/macro',
+  'best-i18n/svelte/macro',
+]
+const REACT_MACRO = 'best-i18n/react/macro'
 
 /**
  * Every module specifier whose presence in a file means it may contain a
@@ -403,6 +416,7 @@ function analyze(
   code: string,
   filename: string,
   options: ExtractOptions = {},
+  input?: ParsedSource,
 ): {
   messages: Message[]
   hookCalls: HookCall[]
@@ -413,6 +427,48 @@ function analyze(
   directiveEnd: number
   directives: string[]
 } {
+  if (input === undefined && filename.split('?')[0]?.endsWith('.svelte')) {
+    const { contexts, insertion } = parseSvelte(code, filename)
+    const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
+    const hook = options.hook ?? 'useI18n'
+    const component = options.component ?? 'Trans'
+    for (const context of contexts) {
+      for (const declaration of context.module.staticImports) {
+        const request = declaration.moduleRequest.value
+        if (
+          (hookFrom.includes(request) || request === REACT_MACRO) &&
+          declaration.entries.some(
+            (entry) =>
+              !entry.isType &&
+              (entry.importName.name === hook ||
+                entry.importName.name === component),
+          )
+        ) {
+          throw new Error(
+            'best-i18n: Svelte supports t, plural, and <Trans> from ' +
+              'best-i18n/svelte/macro; React macros are not supported.',
+          )
+        }
+      }
+    }
+    const parts = contexts.map((context) =>
+      analyze(code, filename, options, context),
+    )
+    const imports = parts.flatMap((part) => part.macroImports)
+    return {
+      messages: parts
+        .flatMap((part) => part.messages)
+        .sort((a, b) => a.start - b.start),
+      hookCalls: [],
+      localeAliases: [],
+      macroImports: imports.filter(
+        (item, index) =>
+          imports.findIndex((other) => other.start === item.start) === index,
+      ),
+      directiveEnd: insertion,
+      directives: [],
+    }
+  }
   const tag = options.tag ?? 't'
   const from = options.from ?? DEFAULT_FROM
   const pluralName = options.plural ?? 'plural'
@@ -429,7 +485,8 @@ function analyze(
   const extension = cleanName.split('.').pop() ?? 'ts'
   const lang = LANGS.get(extension) ?? 'ts'
 
-  const parsed = parseSync(filename, code, { sourceType: 'module', lang })
+  const parsed =
+    input ?? parseSync(filename, code, { sourceType: 'module', lang })
   if (parsed.errors.length > 0) {
     throw new Error(
       `best-i18n: failed to parse ${filename}: ${parsed.errors[0]?.message}`,
@@ -557,6 +614,7 @@ function analyze(
   const hookCalls: HookCall[] = []
   const tagNodes = new Set<unknown>()
   const allowedPluralNodes = new Set<unknown>()
+  const allowedComponentStarts = new Set<number>()
 
   // `const t = useI18n()` declares a locale-holding variable. Matching later
   // tag uses is by scope, not by name across the file: an imported macro that
@@ -953,6 +1011,78 @@ function analyze(
   walk(parsed.program, (node, parent) => {
     parentOf.set(node, parent)
 
+    if (node.type === 'Component' && componentLocals.has(node.name as string)) {
+      const start = node.start as number
+      let context = ''
+      for (const attribute of (node.attributes ?? []) as Array<
+        Record<string, unknown>
+      >) {
+        if (attribute.type === 'Attribute' && attribute.name === 'ctx') {
+          const value = attribute.value as
+            | Array<{ type?: string; data?: string }>
+            | undefined
+          const text = value?.length === 1 ? value[0] : undefined
+          if (
+            text?.type !== 'Text' ||
+            typeof text.data !== 'string' ||
+            text.data === ''
+          ) {
+            throw new Error(
+              `best-i18n: <${component} ctx> must be a non-empty string ` +
+                `literal (${filename} offset ${start}).`,
+            )
+          }
+          context = text.data
+          continue
+        }
+        throw new Error(
+          `best-i18n: <${component}> takes no props other than ctx ` +
+            `(${filename} offset ${start}). Wrap it in an element if you ` +
+            'need one.',
+        )
+      }
+
+      const nodes =
+        (node.fragment as { nodes?: unknown[] } | undefined)?.nodes ?? []
+      if (nodes.length === 0) {
+        throw new Error(
+          `best-i18n: <${component} /> is empty (${filename} offset ${start}). ` +
+            'A message needs content.',
+        )
+      }
+
+      const { text, expressions, placeholders, elements } = serializeSvelteTrans(
+        nodes,
+        code,
+        filename,
+      )
+
+      const localeVar = innermost(start, withLocaleVar)?.localeVar
+      const line = lineAt(code, start)
+      const description = descriptionFor(line)
+
+      allowedComponentStarts.add(start)
+      messages.push({
+        text,
+        expressions,
+        placeholders,
+        elements,
+        context,
+        ...(description === undefined ? {} : { description }),
+        start,
+        end: node.end as number,
+        line,
+        ...(localeVar === undefined ? {} : { localeVar }),
+        // A text-only message is a JS expression and needs braces in the
+        // template. Markup becomes `{#if}` / children, which is already
+        // template syntax.
+        braced: elements.length === 0,
+        elementOk: false,
+        svelte: true,
+      })
+      return
+    }
+
     if (node.type !== 'JSXElement') return
 
     const opening = node.openingElement as
@@ -1109,6 +1239,12 @@ function analyze(
     if (tagNodes.has(node)) return
     if (allowedHookNodes.has(node)) return
     if (allowedPluralNodes.has(node)) return
+    if (
+      componentLocals.has(name) &&
+      allowedComponentStarts.has(node.start as number)
+    ) {
+      return
+    }
     if (isNonReferencePosition(parent, node)) return
 
     // A dependency array is the one rejection with a right answer to point
@@ -1214,7 +1350,11 @@ export function transform(
   })
   if (messages.length === 0 && hookCalls.length === 0) return null
 
-  const runtimeModule = options.runtimeModule ?? 'best-i18n/runtime'
+  const runtimeModule =
+    options.runtimeModule ??
+    (/\.svelte(?:\.[jt]s)?$/.test(filename.split('?')[0] ?? filename)
+      ? 'best-i18n/svelte'
+      : 'best-i18n/runtime')
   const reactModule = options.reactModule ?? 'best-i18n/react'
   const missing: TransformResult['missing'] = []
   const source = new MagicString(code)
@@ -1458,6 +1598,7 @@ export function transform(
         message.elements,
         describe(locale),
         refs,
+        message.svelte !== true,
       )
     }
 
@@ -1467,6 +1608,20 @@ export function transform(
 
     const base = render(valueFor(options.baseLocale), options.baseLocale)
     if (others.length === 0) return base
+
+    // Svelte cannot put elements inside `{...}`, so markup becomes a template
+    // `{#if}` rather than a JS ternary of fragments.
+    if (message.svelte === true && (message.elements?.length ?? 0) > 0) {
+      const branches = others.map(
+        (locale, index) =>
+          `${
+            index === 0
+              ? `{#if ${localeExpr} === ${JSON.stringify(locale)}}`
+              : `{:else if ${localeExpr} === ${JSON.stringify(locale)}}`
+          }${render(valueFor(locale), locale)}`,
+      )
+      return `${branches.join('')}{:else}${base}{/if}`
+    }
 
     // A ternary chain, not an object literal and not an IIFE: nothing is
     // allocated per render.
@@ -1625,7 +1780,10 @@ export function transform(
       const name = generatedComponent(message)
       replacement = `<${name}${attributes.map((a) => ` ${a}`).join('')} />`
       isElement = true
-    } else if ((repeats.get(key) ?? 0) >= 2) {
+    } else if (
+      (repeats.get(key) ?? 0) >= 2 &&
+      !(message.svelte === true && (message.elements?.length ?? 0) > 0)
+    ) {
       // Hook-bound call sites pass the variable that already holds the
       // locale; others read it at call time, so one function serves both.
       const args = [

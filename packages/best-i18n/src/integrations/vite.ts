@@ -15,7 +15,20 @@ export interface I18nPluginOptions extends Omit<
    * Typically driven by an env var so one config can build every locale.
    */
   staticLocale?: string | undefined
+  /**
+   * Files to compile. Defaults to JS/TS, plus `.svelte` when `svelte` is
+   * set. Query-string virtual modules (`*.svelte?type=style`) are skipped
+   * even when they match.
+   */
   include?: RegExp
+  /**
+   * Compile macros in `.svelte` files. Requires the `svelte` package.
+   * Off by default so a project that never uses Svelte does not match those
+   * files. `.svelte.ts` / `.svelte.js` rune modules are ordinary JS/TS and
+   * do not need this. Has no effect when `include` is set: that pattern is
+   * the whole filter.
+   */
+  svelte?: boolean
 }
 
 /**
@@ -24,9 +37,11 @@ export interface I18nPluginOptions extends Omit<
  * `best-i18n/next`, because it does not run on Vite.
  */
 export function i18n(options: I18nPluginOptions): Plugin {
-  // The same set the transform's language map supports - `.mts`/`.mjs` and
-  // the commonjs spellings included, or a macro there reaches runtime.
-  const include = options.include ?? /\.[cm]?[jt]sx?$/
+  const include =
+    options.include ??
+    (options.svelte === true
+      ? /\.(?:[cm]?[jt]sx?|svelte)$/
+      : /\.(?:[cm]?[jt]sx?)$/)
   const load = () =>
     loadCatalog({
       messagesDir: options.messagesDir,
@@ -73,7 +88,10 @@ export function i18n(options: I18nPluginOptions): Plugin {
     },
 
     transform(code, id) {
-      if (!include.test(id.split('?')[0] ?? id)) return null
+      const [filename, query] = id.split('?')
+      // Virtual style/raw/url modules are not Svelte component source.
+      if (filename?.endsWith('.svelte') && query !== undefined) return null
+      if (!include.test(filename ?? id)) return null
 
       const result = transform(code, id, {
         ...options,

@@ -9,3 +9,6 @@ out
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 .output
+.svelte-kit
+.svelte-build-*
+.svelte-test-*

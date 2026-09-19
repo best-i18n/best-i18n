@@ -1,0 +1,1 @@
+best-i18n: <Trans> takes no props other than ctx (Page.svelte offset 65). Wrap it in an element if you need one.

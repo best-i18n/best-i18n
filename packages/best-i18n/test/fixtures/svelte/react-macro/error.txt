@@ -1,0 +1,1 @@
+best-i18n: Svelte supports t, plural, and <Trans> from best-i18n/svelte/macro; React macros are not supported.

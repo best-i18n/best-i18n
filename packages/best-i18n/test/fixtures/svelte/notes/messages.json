@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "description": "greeting",
+    "start": 82,
+    "end": 90,
+    "line": 3
+  }
+]

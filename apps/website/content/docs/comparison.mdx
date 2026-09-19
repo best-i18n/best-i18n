@@ -18,7 +18,7 @@ reproducible rather than remembered.
 | Catalog format                               | PO                                   | PO                              | JSON                    | inlang messages          |
 | Plurals                                      | gettext, formula inlined per locale  | ICU, at runtime                 | ICU, at runtime         | matching/variants        |
 | `select`, dates, numbers                     | no — reach for `Intl`                | yes (ICU)                       | yes (ICU)               | no built-in formatting   |
-| Markup in messages                           | `<Trans>`, rebuilt to JSX at build   | `<Trans>`, tree walk per render | `t.rich()` at runtime   | strings only             |
+| Markup in messages                           | `<Trans>`, rebuilt to JSX or Svelte markup at build | `<Trans>`, tree walk per render | `t.rich()` at runtime   | strings only             |
 | Per-locale build                             | `staticLocale` — pure literals       | no                              | no                      | yes, per-locale bundles  |
 | Localized pathnames (`/about` → `/de/ueber`) | no                                   | no                              | yes                     | yes                      |
 
@@ -27,7 +27,7 @@ Two of these are best-i18n's direct ancestors: the macro shape and the
 compile-time i18n with per-locale tree-shaking is viable at all. The deeper
 difference from Lingui is what runs: Lingui looks a message up in a catalog and
 `<Trans>` walks a message tree on every render; here each locale's version is
-ordinary JSX by the time the browser sees it.
+ordinary JSX or Svelte markup by the time the browser sees it.
 
 ## Measured size
 

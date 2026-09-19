@@ -95,6 +95,11 @@ function About() {
 }
 ```
 
+Svelte uses the same component and the same catalog placeholders, from
+`best-i18n/svelte/macro`. The compiler emits `{#if}` around the locale
+branches instead of a JSX fragment — Svelte cannot put elements inside
+`{...}`.
+
 The catalog stores the markup as named placeholders — the tag's own name
 where it has one, a number where it does not — for the reason Lingui
 established: a translator moves the pieces, and never sees a JSX attribute:

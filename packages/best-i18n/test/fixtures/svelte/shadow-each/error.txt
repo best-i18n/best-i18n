@@ -1,0 +1,3 @@
+best-i18n: `t` is a compile-time macro and can only be used at its call site (Page.svelte offset 66). It cannot be stored, passed, or shadowed.
+
+  https://best-i18n.aiwan.run/docs/errors/dependency-array

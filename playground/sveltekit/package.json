@@ -1,0 +1,28 @@
+{
+  "name": "playground-sveltekit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SvelteKit playground for best-i18n, on the plain Vite plugin",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "build:zh": "I18N_STATIC_LOCALE=zh vite build",
+    "preview": "vite preview",
+    "start": "node build/index.js",
+    "extract": "i18n-extract --locales en,zh --src src --messages messages",
+    "prepare": "svelte-kit sync || echo ''",
+    "typecheck": "svelte-kit sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "best-i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "svelte": "^5.57.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

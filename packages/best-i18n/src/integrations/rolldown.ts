@@ -15,7 +15,19 @@ export interface I18nPluginOptions extends Omit<
    * Typically driven by an env var so one config can build every locale.
    */
   staticLocale?: string | undefined
+  /**
+   * Files to compile. Defaults to JS/TS, plus `.svelte` when `svelte` is
+   * set.
+   */
   include?: RegExp
+  /**
+   * Compile macros in `.svelte` files. Requires the `svelte` package.
+   * Off by default so a project that never uses Svelte does not match those
+   * files. `.svelte.ts` / `.svelte.js` rune modules are ordinary JS/TS and
+   * do not need this. Has no effect when `include` is set: that pattern is
+   * the whole filter.
+   */
+  svelte?: boolean
 }
 
 function escapeRegExp(value: string): string {
@@ -34,7 +46,11 @@ function escapeRegExp(value: string): string {
  * optimization, never a correctness dependency.
  */
 export function i18n(options: I18nPluginOptions): Plugin {
-  const include = options.include ?? /\.[cm]?[jt]sx?$/
+  const include =
+    options.include ??
+    (options.svelte === true
+      ? /\.(?:[cm]?[jt]sx?|svelte)$/
+      : /\.(?:[cm]?[jt]sx?)$/)
   const load = () =>
     loadCatalog({
       messagesDir: options.messagesDir,
