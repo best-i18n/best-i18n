@@ -10,6 +10,7 @@
 <p>{t`Nothing is looked up at runtime, so nothing has to be loaded.`}</p>
 <p>
   <Trans>
-    Read the <a href="https://github.com/best-i18n/best-i18n">README</a> to learn more.
+    Read the <a href="https://github.com/best-i18n/best-i18n">README</a> to learn
+    more.
   </Trans>
 </p>

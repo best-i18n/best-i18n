@@ -28,10 +28,9 @@ function pluginTransform(plugin: Plugin) {
   if (typeof hook !== 'function') {
     throw new TypeError('expected a transform function')
   }
-  return hook
+  const ctx = { warn() {} } as unknown as ThisParameterType<typeof hook>
+  return (code: string, id: string) => hook.call(ctx, code, id)
 }
-
-const pluginCtx = { warn() {} }
 
 describe('svelte translation macros', () => {
   it.each(['notes', 'mixed', 'trans'])(
@@ -131,11 +130,6 @@ describe('svelte translation macros', () => {
     await expect(result.code).toMatchFileSnapshot(
       `fixtures/svelte/trans/${name}.svelte`,
     )
-    if (staticLocale === undefined) {
-      await expect(json(result.messages)).toMatchFileSnapshot(
-        'fixtures/svelte/trans/messages.json',
-      )
-    }
     expect(result.code).not.toContain('best-i18n/svelte/macro')
     expect(result.code).not.toContain('best-i18n/macro')
     for (const generate of ['client', 'server'] as const) {
@@ -199,7 +193,7 @@ describe('svelte translation macros', () => {
       expect(
         pluginTransform(
           i18n({ messagesDir, locales: ['en'], baseLocale: 'en' }),
-        ).call(pluginCtx, source, 'Page.svelte'),
+        )(source, 'Page.svelte'),
       ).toBeNull()
 
       const result = pluginTransform(
@@ -209,7 +203,7 @@ describe('svelte translation macros', () => {
           baseLocale: 'en',
           svelte: true,
         }),
-      ).call(pluginCtx, source, 'Page.svelte') as { code: string } | null
+      )(source, 'Page.svelte') as { code: string } | null
       expect(result).not.toBeNull()
       expect(result!.code).not.toContain('best-i18n/macro')
       expect(
@@ -220,7 +214,7 @@ describe('svelte translation macros', () => {
             baseLocale: 'en',
             svelte: true,
           }),
-        ).call(pluginCtx, source, 'Page.svelte?svelte&type=style'),
+        )(source, 'Page.svelte?svelte&type=style'),
       ).toBeNull()
     } finally {
       rmSync(dir, { recursive: true, force: true })

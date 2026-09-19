@@ -1051,11 +1051,8 @@ function analyze(
         )
       }
 
-      const { text, expressions, placeholders, elements } = serializeSvelteTrans(
-        nodes,
-        code,
-        filename,
-      )
+      const { text, expressions, placeholders, elements } =
+        serializeSvelteTrans(nodes, code, filename)
 
       const localeVar = innermost(start, withLocaleVar)?.localeVar
       const line = lineAt(code, start)
