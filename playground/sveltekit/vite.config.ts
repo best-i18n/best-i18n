@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { i18n } from 'best-i18n/vite'
 import { defineConfig } from 'vite'
+import { i18n as localeConfig } from './src/lib/i18n.ts'
 
 export default defineConfig({
   server: { port: 3000 },
@@ -11,8 +12,8 @@ export default defineConfig({
     // Compile macros in .svelte files before SvelteKit's plugin sees them.
     i18n({
       messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
+      locales: localeConfig.locales,
+      baseLocale: localeConfig.baseLocale,
       staticLocale: process.env.I18N_STATIC_LOCALE,
       svelte: true,
     }),

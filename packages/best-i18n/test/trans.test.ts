@@ -71,6 +71,21 @@ describe('<Trans>', () => {
     )
   })
 
+  it('treats explicit JSX spaces as message text and matches existing translations', async () => {
+    const source = fixture('trans/explicit-space/input.tsx')
+    const [message] = extract(source, 'a.tsx')
+    expect(message!.text).toBe('Read the <a>docs</a> to learn more.')
+    expect(message!.expressions).toEqual([])
+    await expect(json(message)).toMatchFileSnapshot(
+      'fixtures/trans/explicit-space/messages.json',
+    )
+    const result = transform(source, 'a.tsx', OPTIONS)!
+    expect(result.missing).toEqual([])
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/trans/explicit-space/output.tsx',
+    )
+  })
+
   it('rebuilds the markup around a reordered translation', async () => {
     const result = transform(
       fixture('trans/reordered-translation/input.tsx'),

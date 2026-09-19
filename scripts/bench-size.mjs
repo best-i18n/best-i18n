@@ -3,18 +3,20 @@
 //
 //   node scripts/bench-size.mjs
 //
-// Two families, two methods - both apps in a family are measured identically,
+// Framework families, two methods - variants in a family are measured identically,
 // which is what makes the comparison within a table mean something:
 //
 //   next     serve the build and add up every /_next/static/*.js the HTML of
-//            /zh and /zh/about references, resolved back to files on disk.
+//            /zh, /zh/about and /zh/long reference, resolved to files on disk.
 //   vite     add up the emitted client assets. TanStack Start hands the client
 //            entry to the browser through a manifest rather than a script tag,
 //            so there is no href to follow; both apps split into the same three
-//            chunks, so the totals line up anyway.
+//            chunks, so the totals line up anyway. SvelteKit is reported in its
+//            own table and includes all client chunks, entries and route nodes.
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -67,6 +69,22 @@ const VARIANTS = [
     kind: 'vite',
     env: {},
   },
+  {
+    family: 'SvelteKit',
+    label: 'best-i18n',
+    dir: 'playground/sveltekit',
+    kind: 'vite',
+    clientDir: '.svelte-kit/output/client',
+    env: {},
+  },
+  {
+    family: 'SvelteKit',
+    label: 'best-i18n (staticLocale=zh)',
+    dir: 'playground/sveltekit',
+    kind: 'vite',
+    clientDir: '.svelte-kit/output/client',
+    env: { I18N_STATIC_LOCALE: 'zh' },
+  },
 ]
 
 function run(command, args, options) {
@@ -79,25 +97,81 @@ function run(command, args, options) {
   })
 }
 
-async function serve(cwd, port, env) {
+async function serve(cwd, env) {
+  const require = createRequire(path.join(cwd, 'package.json'))
+  // Own the actual server process, not a package-manager wrapper whose child
+  // survives kill(). Port 0 lets the OS choose a port for this build alone.
   const child = spawn(
-    'pnpm',
-    ['exec', 'next', 'start', '--port', String(port)],
-    { cwd, env: { ...process.env, ...env }, stdio: 'ignore' },
+    process.execPath,
+    [
+      require.resolve('next/dist/bin/next'),
+      'start',
+      '--hostname',
+      'localhost',
+      '--port',
+      '0',
+    ],
+    { cwd, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] },
   )
+  let output = ''
+  let origin
+  let spawnError
+  let exited = false
+  const closed = new Promise((resolve) => {
+    child.once('error', (error) => {
+      spawnError = error
+    })
+    child.once('close', () => {
+      exited = true
+      resolve()
+    })
+  })
+  child.stdout.on('data', (chunk) => {
+    output = (output + chunk.toString()).slice(-65536)
+    // Next reports this URL only after its own listener has bound the port.
+    origin ??= output.match(/http:\/\/localhost:\d+(?=\s)/)?.[0]
+  })
+  child.stderr.on('data', (chunk) => {
+    output = (output + chunk.toString()).slice(-65536)
+  })
 
-  // `next start` is ready when it answers, not when it says it is.
-  for (let attempt = 0; attempt < 60; attempt++) {
+  const stop = async () => {
+    if (exited) return
+    child.kill('SIGTERM')
+    const timeout = setTimeout(() => child.kill('SIGKILL'), 5000)
     try {
-      await fetch(`http://localhost:${port}/`)
-      return child
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await closed
+    } finally {
+      clearTimeout(timeout)
     }
   }
 
-  child.kill()
-  throw new Error(`server on ${port} never came up`)
+  try {
+    const deadline = Date.now() + 30000
+    while (Date.now() < deadline) {
+      if (spawnError) throw spawnError
+      if (exited)
+        throw new Error(
+          `Next.js exited before becoming ready in ${cwd}:\n${output}`,
+        )
+      if (origin) {
+        try {
+          const response = await fetch(`${origin}/zh`, {
+            signal: AbortSignal.timeout(2000),
+          })
+          await response.body?.cancel()
+          if (response.ok && !exited) return { origin, stop }
+        } catch {
+          // A bound socket may precede the request handler being ready.
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
+    throw new Error(`Next.js never became ready in ${cwd}:\n${output}`)
+  } catch (error) {
+    await stop()
+    throw error
+  }
 }
 
 function weigh(files) {
@@ -113,12 +187,17 @@ function weigh(files) {
   return { files: files.length, raw, gzip }
 }
 
-async function measureNext(cwd, port) {
+async function measureNext(cwd, origin) {
   const referenced = new Set()
   const pages = []
 
   for (const page of PAGES) {
-    const html = await (await fetch(`http://localhost:${port}${page}`)).text()
+    const response = await fetch(`${origin}${page}`, {
+      signal: AbortSignal.timeout(30000),
+    })
+    if (!response.ok)
+      throw new Error(`Cannot measure ${page}: HTTP ${response.status}`)
+    const html = await response.text()
     pages.push({
       page,
       html: Buffer.byteLength(html),
@@ -136,11 +215,16 @@ async function measureNext(cwd, port) {
   return { ...weigh(files), pages }
 }
 
-function measureVite(cwd) {
-  const assets = path.join(cwd, '.output/public/assets')
-  const files = readdirSync(assets)
-    .filter((name) => name.endsWith('.js'))
-    .map((name) => path.join(assets, name))
+function measureVite(cwd, clientDir = '.output/public/assets') {
+  const files = []
+  const collect = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name)
+      if (entry.isDirectory()) collect(file)
+      else if (entry.isFile() && entry.name.endsWith('.js')) files.push(file)
+    }
+  }
+  collect(path.join(cwd, clientDir))
 
   return { ...weigh(files), pages: [] }
 }
@@ -148,7 +232,7 @@ function measureVite(cwd) {
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`
 const results = []
 
-for (const [index, variant] of VARIANTS.entries()) {
+for (const variant of VARIANTS) {
   const cwd = path.join(root, variant.dir)
   const env = { ...process.env, ...variant.env }
 
@@ -157,15 +241,15 @@ for (const [index, variant] of VARIANTS.entries()) {
   if (variant.kind === 'next') {
     await run('pnpm', ['exec', 'next', 'build'], { cwd, env })
 
-    const server = await serve(cwd, 3200 + index, variant.env)
+    const server = await serve(cwd, variant.env)
     try {
-      results.push({ ...variant, ...(await measureNext(cwd, 3200 + index)) })
+      results.push({ ...variant, ...(await measureNext(cwd, server.origin)) })
     } finally {
-      server.kill()
+      await server.stop()
     }
   } else {
     await run('pnpm', ['exec', 'vite', 'build'], { cwd, env })
-    results.push({ ...variant, ...measureVite(cwd) })
+    results.push({ ...variant, ...measureVite(cwd, variant.clientDir) })
   }
 }
 

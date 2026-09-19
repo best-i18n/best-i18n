@@ -1,0 +1,19 @@
+{
+  "text": "Read the <a>docs</a> to learn more.",
+  "expressions": [],
+  "placeholders": [],
+  "elements": [
+    {
+      "token": "a",
+      "open": "<a href={url}>",
+      "close": "</a>",
+      "selfClosing": false
+    }
+  ],
+  "context": "",
+  "start": 80,
+  "end": 158,
+  "line": 3,
+  "braced": true,
+  "elementOk": true
+}

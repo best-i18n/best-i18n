@@ -256,6 +256,17 @@ function serializeChildren(
         if (expression === undefined) break
         if (expression.type === 'JSXEmptyExpression') break
 
+        // Formatters insert {' '} to preserve spaces around wrapped JSX.
+        // This is static message text, not a value a translator must retain.
+        if (
+          expression.type === 'Literal' &&
+          typeof expression.value === 'string' &&
+          /^\s*$/.test(expression.value)
+        ) {
+          out += expression.value
+          break
+        }
+
         const source = code.slice(
           expression.start as number,
           expression.end as number,

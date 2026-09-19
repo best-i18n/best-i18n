@@ -5,6 +5,7 @@ import viteReact from '@vitejs/plugin-react'
 import { i18n } from 'best-i18n/vite'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
+import { i18n as localeConfig } from './src/i18n.ts'
 
 export default defineConfig({
   resolve: {
@@ -17,8 +18,8 @@ export default defineConfig({
     // TanStack-specific.
     i18n({
       messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
+      locales: localeConfig.locales,
+      baseLocale: localeConfig.baseLocale,
       staticLocale: process.env.I18N_STATIC_LOCALE,
     }),
     tanstackStart(),
