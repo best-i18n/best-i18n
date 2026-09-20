@@ -251,6 +251,7 @@ const DEFAULT_COMPONENT_FROM = [
   'best-i18n/solid/macro',
 ]
 const REACT_MACRO = 'best-i18n/react/macro'
+const SOLID_MODULES = new Set(['best-i18n/solid', 'best-i18n/solid/macro'])
 
 /**
  * Every module specifier whose presence in a file means it may contain a
@@ -329,6 +330,8 @@ export interface ExtractOptions {
   componentFrom?: string[]
   /** Only to recognize the runtime `useLocale` - see `localeAliases`. */
   reactModule?: string
+  /** The file is Solid JSX: React's `useI18n()` is rejected up front. */
+  solid?: boolean
 }
 
 /** Collects the messages in `code` without modifying it. */
@@ -552,6 +555,33 @@ function analyze(
       (from.includes(module) && (name === tag || name === pluralName)) ||
       (hookFrom.includes(module) && name === hook) ||
       (componentFrom.includes(module) && name === component)
+    )
+  }
+
+  // Solid has no hook: a component body runs once, so there is nothing for
+  // `useI18n()` to re-run. Reject it here rather than in transform(), so the
+  // extractor sees it too - when the caller says the file is Solid, or when
+  // the file already imports a Solid entry point and so declares itself.
+  const solidFile =
+    options.solid === true ||
+    staticImports.some((declaration) =>
+      SOLID_MODULES.has(declaration.moduleRequest.value),
+    )
+  if (
+    solidFile &&
+    staticImports.some(
+      (declaration) =>
+        hookFrom.includes(declaration.moduleRequest.value) &&
+        declaration.entries.some(
+          (entry) =>
+            !entry.isType &&
+            entry.importName.kind === 'Name' &&
+            entry.importName.name === hook,
+        ),
+    )
+  ) {
+    throw new Error(
+      `best-i18n: Solid uses ${tag} and reactive accessors; React ${hook} is not supported.`,
     )
   }
 
@@ -1347,14 +1377,9 @@ export function transform(
     // Read by analyze to recognize `useLocale` calls, so a custom spelling
     // has to travel.
     reactModule: options.reactModule,
+    solid: options.solid,
   })
   if (messages.length === 0 && hookCalls.length === 0) return null
-
-  if (options.solid && hookCalls.length > 0) {
-    throw new Error(
-      'best-i18n: Solid uses t and reactive accessors; React useI18n is not supported.',
-    )
-  }
 
   const runtimeModule =
     options.runtimeModule ??
@@ -1814,9 +1839,17 @@ export function transform(
       }
     }
 
-    // Solid components run once. A directly returned <Trans> needs a JSX
-    // child expression so the locale branch is evaluated in a reactive scope.
-    if (options.solid && message.elements !== undefined && !message.braced) {
+    // Solid components run once. A <Trans> that is returned or stored rather
+    // than nested in JSX has to become a JSX child expression, so its locale
+    // read runs inside a reactive scope. A per-locale build has no locale
+    // read, and its fragment is already JSX; leave it as it is.
+    const isTrans = message.elements !== undefined
+    if (
+      options.solid &&
+      options.staticLocale === undefined &&
+      isTrans &&
+      !message.braced
+    ) {
       replacement = `<>{${replacement}}</>`
     }
 

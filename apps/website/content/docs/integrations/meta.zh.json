@@ -1,5 +1,5 @@
 {
   "title": "集成",
   "defaultOpen": true,
-  "pages": ["vite", "rolldown", "solid-start", "nextjs", "plain-javascript"]
+  "pages": ["vite", "rolldown", "solid", "nextjs", "plain-javascript"]
 }
