@@ -1,5 +1,12 @@
 {
   "title": "集成",
   "defaultOpen": true,
-  "pages": ["vite", "rolldown", "nextjs", "plain-javascript"]
+  "pages": [
+    "vite",
+    "tanstack-start",
+    "svelte",
+    "rolldown",
+    "nextjs",
+    "plain-javascript"
+  ]
 }

@@ -1,0 +1,79 @@
+---
+title: TanStack Start
+description: TanStack Start 跑在 Vite 插件上，加一个按请求绑定 locale 的中间件
+---
+
+TanStack Start 跑在 Vite 上，所以直接用 [`best-i18n/vite`](/zh/docs/integrations/vite)，
+再加普通的服务端绑定做 SSR。这一页只讲 Start 特有的接线：插件顺序、请求中间件
+和路由 URL 重写。
+
+完整示例见
+[`playground/tanstack-start`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start)。
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+    tanstackStart(),
+    // react 插件必须放在 start 后面
+  ],
+})
+```
+
+把整个请求包起来，下面的 `t` 都能读到正确的语言——路由组件、loader、server
+function——不需要每个组件再调一次：
+
+```ts
+// src/start.ts
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
+import { withRequestLocale } from 'best-i18n/server'
+import { i18n } from './i18n'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
+
+const localeMiddleware = createMiddleware().server(({ next, request }) =>
+  withRequestLocale(request, i18n, () => next()),
+)
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [csrfMiddleware, localeMiddleware],
+}))
+```
+
+路由树保持无前缀。进来时剥掉 `/zh`，出去时再加回去，所以普通的
+`<Link to="/about">` 在中文下会渲染成 `/zh/about`：
+
+```ts
+// src/router.tsx
+import { deLocalizeUrl, localizeUrl } from 'best-i18n/locale-url'
+import { getLocale } from 'best-i18n/runtime'
+import { i18n } from './i18n'
+
+createTanStackRouter({
+  routeTree,
+  rewrite: {
+    input: ({ url }) => deLocalizeUrl(url, i18n),
+    output: ({ url }) => localizeUrl(url, getLocale(), i18n),
+  },
+})
+```
+
+hydration 前先解析客户端语言，让首屏和 SSR 一致——详见[服务端渲染](/zh/docs/server)。
