@@ -3,68 +3,93 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { parsePo } from '../compiler/po.ts'
+import { fail as failCli, parseCli } from './args.ts'
 
-const HELP = `
-  i18n-compile - turn the PO catalogs into what the build consumes
+const NAME = 'i18n-compile'
 
-  Reads messages/messages.pot (source texts) and messages/<locale>.po, and
-  writes one catalog per locale. The output is a build artifact: edit the .po.
-
-  Usage
-    $ i18n-compile --locales en,zh [options]
-
-  Options
-    --locales <list>   comma separated, first one is the base locale
-    --base <locale>    override the base locale
-    --messages <dir>   catalog directory        (default: messages)
-    --outdir <dir>     output directory         (default: same as --messages)
-    --format <fmt>     json | js                (default: json)
-    --skip-fuzzy       leave fuzzy translations out, falling back to the source
-    -h, --help
-`
-
-function fail(message: string): never {
-  process.stderr.write(`i18n-compile: ${message}\n`)
-  process.exit(1)
+/** The command line, as cac hands it over. */
+interface Options {
+  locales?: string
+  base?: string
+  messages: string
+  outdir?: string
+  format: string
+  skipFuzzy?: boolean
 }
 
-const argv = process.argv.slice(2)
-let locales: string[] = []
-let baseOverride: string | undefined
-let messagesDir = 'messages'
-let outdir: string | undefined
-let format = 'json'
-let skipFuzzy = false
-
-for (let index = 0; index < argv.length; index++) {
-  const arg = argv[index]
-  const next = (): string => {
-    const value = argv[index + 1]
-    if (value === undefined) fail(`${arg} needs a value`)
-    index++
-    return value
-  }
-
-  if (arg === '-h' || arg === '--help') {
-    process.stdout.write(HELP)
-    process.exit(0)
-  } else if (arg === '--locales') locales = next().split(',')
-  else if (arg === '--base') baseOverride = next()
-  else if (arg === '--messages') messagesDir = next()
-  else if (arg === '--outdir') outdir = next()
-  else if (arg === '--format') format = next()
-  else if (arg === '--skip-fuzzy') skipFuzzy = true
-  else fail(`unknown option ${arg}`)
+/** The command line, validated and with defaults applied. */
+interface Config {
+  locales: string[]
+  base: string
+  messagesDir: string
+  outdir: string
+  format: 'json' | 'js'
+  skipFuzzy: boolean
 }
 
-if (locales.length === 0) fail('--locales is required')
-if (format !== 'json' && format !== 'js') fail(`unknown --format ${format}`)
+/** One locale's compiled catalog: key to translation, plurals as arrays. */
+type Catalog = Record<string, string | string[]>
 
-const base = baseOverride ?? locales[0]!
-const target = outdir ?? messagesDir
 const out = (line: string) => process.stdout.write(`${line}\n`)
+const fail: (message: string) => never = (message) => failCli(NAME, message)
 
-function read(file: string, locale: string) {
+function main(): number {
+  const config = configure()
+  const sources = readTemplate(config)
+  writeCatalog(config, config.base, sources)
+  for (const locale of config.locales.filter((item) => item !== config.base)) {
+    writeCatalog(config, locale, compileLocale(config, locale, sources))
+  }
+  return 0
+}
+
+// ------------------------------------------------------------- configure
+
+function configure(): Config {
+  const options = parseCli<Options>(
+    NAME,
+    'turn the PO catalogs into what the build consumes',
+    `  Reads messages/messages.pot (source texts) and messages/<locale>.po, and
+  writes one catalog per locale. The output is a build artifact: edit the .po.`,
+    (command) =>
+      command
+        .option(
+          '--locales <list>',
+          'comma separated, first one is the base locale',
+        )
+        .option('--base <locale>', 'override the base locale')
+        .option('--messages <dir>', 'catalog directory', {
+          default: 'messages',
+        })
+        .option(
+          '--outdir <dir>',
+          'output directory (default: same as --messages)',
+        )
+        .option('--format <fmt>', 'json | js', { default: 'json' })
+        .option(
+          '--skip-fuzzy',
+          'leave fuzzy translations out, falling back to the source',
+        ),
+  )
+
+  const locales = options.locales?.split(',').filter(Boolean) ?? []
+  if (locales.length === 0) fail('--locales is required')
+  const { format } = options
+  if (format !== 'json' && format !== 'js') fail(`unknown --format ${format}`)
+
+  return {
+    locales,
+    base: options.base ?? locales[0]!,
+    messagesDir: options.messages,
+    outdir: options.outdir ?? options.messages,
+    format,
+    skipFuzzy: options.skipFuzzy === true,
+  }
+}
+
+// ------------------------------------------------------------------ read
+
+function readPo(file: string, locale: string) {
   try {
     return parsePo(readFileSync(file, 'utf8'), locale)
   } catch (error) {
@@ -75,54 +100,46 @@ function read(file: string, locale: string) {
   }
 }
 
-function write(
-  locale: string,
-  catalog: Record<string, string | string[]>,
-): void {
-  mkdirSync(target, { recursive: true })
-  const sorted = Object.fromEntries(
-    Object.keys(catalog)
-      .sort()
-      .map((key) => [key, catalog[key]!]),
-  )
-
-  const file = path.join(target, `${locale}.${format}`)
-  const body =
-    format === 'js'
-      ? `// Generated by i18n-compile. Edit the .po file instead.\nexport default ${JSON.stringify(sorted, null, 2)}\n`
-      : `${JSON.stringify(sorted, null, 2)}\n`
-
-  writeFileSync(file, body)
-  out(`  ${file}  (${Object.keys(sorted).length} message(s))`)
-}
-
 // Keyed the way gettext identifies entries: the source text, prefixed by
 // the context when there is one. Plural entries map to their msgstr array.
 const keyOf = (entry: { context: string; source: string }) =>
   entry.context === '' ? entry.source : `${entry.context}\u0004${entry.source}`
 
-const template = read(path.join(messagesDir, 'messages.pot'), base)
-const sources: Record<string, string | string[]> = {}
-for (const entry of template.entries) {
-  if (entry.obsolete) continue
-  sources[keyOf(entry)] =
-    entry.pluralSource === undefined
-      ? entry.source
-      : [entry.source, entry.pluralSource]
+/** The base locale's catalog: every source text, keyed like the build does. */
+function readTemplate(config: Config): Catalog {
+  const template = readPo(
+    path.join(config.messagesDir, 'messages.pot'),
+    config.base,
+  )
+  const sources: Catalog = {}
+  for (const entry of template.entries) {
+    if (entry.obsolete) continue
+    sources[keyOf(entry)] =
+      entry.pluralSource === undefined
+        ? entry.source
+        : [entry.source, entry.pluralSource]
+  }
+  return sources
 }
 
-write(base, sources)
-
-for (const locale of locales.filter((item) => item !== base)) {
-  const po = read(path.join(messagesDir, `${locale}.po`), locale)
-  const catalog: Record<string, string | string[]> = {}
+/**
+ * One locale's translations, restricted to messages the template still has
+ * and to entries that are actually translated.
+ */
+function compileLocale(
+  config: Config,
+  locale: string,
+  sources: Catalog,
+): Catalog {
+  const po = readPo(path.join(config.messagesDir, `${locale}.po`), locale)
+  const catalog: Catalog = {}
   let fuzzySkipped = 0
 
   for (const entry of po.entries) {
     if (entry.obsolete) continue
     if (!(keyOf(entry) in sources)) continue
     if (entry.target === '') continue
-    if (entry.fuzzy && skipFuzzy) {
+    if (entry.fuzzy && config.skipFuzzy) {
       fuzzySkipped++
       continue
     }
@@ -132,6 +149,28 @@ for (const locale of locales.filter((item) => item !== base)) {
         : [entry.target, ...(entry.pluralTargets ?? [])]
   }
 
-  write(locale, catalog)
   if (fuzzySkipped > 0) out(`    ${fuzzySkipped} fuzzy entr(ies) skipped`)
+  return catalog
 }
+
+// ----------------------------------------------------------------- write
+
+function writeCatalog(config: Config, locale: string, catalog: Catalog): void {
+  mkdirSync(config.outdir, { recursive: true })
+  const sorted = Object.fromEntries(
+    Object.keys(catalog)
+      .sort()
+      .map((key) => [key, catalog[key]!]),
+  )
+
+  const file = path.join(config.outdir, `${locale}.${config.format}`)
+  const body =
+    config.format === 'js'
+      ? `// Generated by i18n-compile. Edit the .po file instead.\nexport default ${JSON.stringify(sorted, null, 2)}\n`
+      : `${JSON.stringify(sorted, null, 2)}\n`
+
+  writeFileSync(file, body)
+  out(`  ${file}  (${Object.keys(sorted).length} message(s))`)
+}
+
+process.exitCode = main()

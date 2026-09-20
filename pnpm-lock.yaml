@@ -194,6 +194,9 @@ importers:
 
   packages/best-i18n:
     dependencies:
+      cac:
+        specifier: ^7.0.0
+        version: 7.0.0
       gettext-parser:
         specifier: ^9.1.1
         version: 9.1.1
