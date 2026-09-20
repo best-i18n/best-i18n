@@ -2,6 +2,7 @@
 // READMEs are reproducible rather than remembered.
 //
 //   node scripts/bench-size.mjs
+//   node scripts/bench-size.mjs --family SvelteKit,SolidStart   # a subset
 //
 // Framework families, two methods - variants in a family are measured identically,
 // which is what makes the comparison within a table mean something:
@@ -87,6 +88,22 @@ const VARIANTS = [
     env: { I18N_STATIC_LOCALE: 'zh' },
   },
   {
+    family: 'SvelteKit',
+    label: 'paraglide',
+    dir: 'playground/sveltekit-paraglide',
+    kind: 'vite',
+    clientDir: '.svelte-kit/output/client',
+    env: {},
+  },
+  {
+    family: 'SvelteKit',
+    label: 'svelte-i18n',
+    dir: 'playground/sveltekit-svelte-i18n',
+    kind: 'vite',
+    clientDir: '.svelte-kit/output/client',
+    env: {},
+  },
+  {
     family: 'SolidStart v2',
     label: 'best-i18n',
     dir: 'playground/solid-start',
@@ -102,7 +119,52 @@ const VARIANTS = [
     clientDir: '.output/public/_build',
     env: { I18N_STATIC_LOCALE: 'zh' },
   },
+  {
+    family: 'SolidStart v2',
+    label: 'paraglide',
+    dir: 'playground/solid-start-paraglide',
+    kind: 'vite',
+    clientDir: '.output/public/_build',
+    env: {},
+  },
+  {
+    family: 'SolidStart v2',
+    label: '@solid-primitives/i18n',
+    dir: 'playground/solid-start-primitives',
+    kind: 'vite',
+    clientDir: '.output/public/_build',
+    env: {},
+  },
 ]
+
+// `--family A,B` limits the run to those tables; matching ignores case and
+// anything after the first word, so `solidstart` finds "SolidStart v2".
+const familyArg = process.argv.indexOf('--family')
+const wanted =
+  familyArg === -1
+    ? undefined
+    : new Set(
+        (process.argv[familyArg + 1] ?? '')
+          .split(',')
+          .map((name) =>
+            name
+              .trim()
+              .toLowerCase()
+              .replace(/[^a-z]/g, ''),
+          )
+          .filter(Boolean),
+      )
+const selected = VARIANTS.filter(
+  (variant) =>
+    wanted === undefined ||
+    wanted.has(variant.family.toLowerCase().replace(/[^a-z]/g, '')) ||
+    wanted.has(
+      variant.family
+        .split(' ')[0]
+        .toLowerCase()
+        .replace(/[^a-z]/g, ''),
+    ),
+)
 
 function run(command, args, options) {
   return new Promise((resolve, reject) => {
@@ -249,7 +311,7 @@ function measureVite(cwd, clientDir = '.output/public/assets') {
 const kb = (n) => `${(n / 1024).toFixed(1)} kB`
 const results = []
 
-for (const variant of VARIANTS) {
+for (const variant of selected) {
   const cwd = path.join(root, variant.dir)
   const env = { ...process.env, ...variant.env }
 

@@ -1,6 +1,6 @@
 ---
 title: 对比
-description: best-i18n 与 Lingui、next-intl、Paraglide 的关系——附实测数字
+description: best-i18n 与 Lingui、next-intl、Paraglide、svelte-i18n、@solid-primitives/i18n 的关系——附实测数字
 ---
 
 best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所以这一页与其说是比赛，
@@ -21,6 +21,19 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 | 按语言构建                           | `staticLocale`——纯字面量                  | 无                            | 无                     | 有，按语言出包        |
 | 本地化路径（`/about` → `/de/ueber`） | 无                                        | 无                            | 有                     | 有                    |
 
+Svelte 和 Solid 两族还各有一个完全没有编译步骤的运行时库：
+
+|                   | svelte-i18n                                 | @solid-primitives/i18n        |
+| ----------------- | ------------------------------------------- | ----------------------------- |
+| 消息是什么        | key（`$_('greeting')`）                     | key（`t('greeting')`）        |
+| 运行时装载什么    | ICU 格式化器（`intl-messageformat`）+ store | 扁平化字典 + `{{ }}` 模板填充 |
+| catalog 格式      | JSON                                        | JSON 或任意对象               |
+| 复数              | ICU，运行时                                 | 无内置                        |
+| 消息内嵌标记      | 仅字符串                                    | 仅字符串                      |
+| 按语言构建        | 无                                          | 无                            |
+| locale 解析、路由 | 无——自己带                                  | 无——自己带                    |
+| SSR 按请求绑定    | 无——一个全局 store                          | 无——你自己提供的 signal       |
+
 其中两个是 best-i18n 的直系祖先：宏的形态和 `<0>...</0>` 标记约定来自 Lingui，
 而 Paraglide 证明了编译期 i18n 加按语言 tree-shaking 根本上可行。与 Lingui 更深
 的分野在于运行的东西：Lingui 在运行时查 catalog，`<Trans>` 每次渲染都遍历消息
@@ -28,9 +41,10 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 
 ## 实测体积
 
-同族的两个应用用同一种方式测量——Next.js 上是 `/zh`、`/zh/about` 和 `/zh/long`
+同族的应用用同一种方式测量——Next.js 上是 `/zh`、`/zh/about` 和 `/zh/long`
 的 HTML 引用到的全部 `/_next/static/*.js`；TanStack Start 上是产出的客户端资
-产。`/zh/long` 是多文本场景：一篇刻意做长的文章，约 30 条服务端渲染的消息——
+产；SvelteKit 上是 `.svelte-kit/output/client` 下的全部 JS；SolidStart 上是
+`.output/public/_build` 下的全部 JS。`/zh/long` 是多文本场景：一篇刻意做长的文章，约 30 条服务端渲染的消息——
 整段落、复数、上下文、标记俱全——在两个 Next 孪生里各有一份镜像。
 
 ### Next.js——对 next-intl
@@ -50,13 +64,31 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 | best-i18n，`I18N_STATIC_LOCALE=zh` | 98.8 kB           | 309.7 kB |
 | paraglide                          | 106.9 kB          | 334.9 kB |
 
-两列 HTML 就是全部故事。两边的首页渲染同样几条消息，`/zh` 却是 2.4 kB 对
+### SvelteKit——对 Paraglide 和 svelte-i18n
+
+| 变体                               | 客户端 JS（gzip） | 原始     |
+| ---------------------------------- | ----------------- | -------- |
+| best-i18n                          | 32.1 kB           | 79.3 kB  |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 31.5 kB           | 78.2 kB  |
+| paraglide                          | 39.3 kB           | 102.8 kB |
+| svelte-i18n                        | 49.4 kB           | 136.7 kB |
+
+### SolidStart v2——对 @solid-primitives/i18n 和 Paraglide
+
+| 变体                               | 客户端 JS（gzip） | 原始    |
+| ---------------------------------- | ----------------- | ------- |
+| best-i18n                          | 16.7 kB           | 41.9 kB |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 16.4 kB           | 41.3 kB |
+| @solid-primitives/i18n             | 18.2 kB           | 44.8 kB |
+| paraglide                          | 26.0 kB           | 69.8 kB |
+
+Next 表的两列 HTML 就是全部故事。两边的首页渲染同样几条消息，`/zh` 却是 2.4 kB 对
 4.9 kB：差额就是 catalog——next-intl 把它装进每个页面的载荷，无论页面渲不渲染
 那些消息。best-i18n 的页面只携带自己渲染的文字——长文页那约 30 条消息只以
 HTML 的形式存在于 `/zh/long`，别处都没有，客户端 JS 里也没有。长文页本身两边
 接近（5.0 kB 对 5.5 kB）：真正渲染这些文字的页面为文字付费，无论是谁编译的。
 
-## 两个差距各是什么做的
+## 这些差距各是什么做的
 
 它们不是同一种差距，而这一点比数字本身更重要。
 
@@ -70,7 +102,37 @@ best-i18n 2.4 kB 的那个差距。
 **Paraglide 的约 8 kB 是一个 URL 路由器**——`URLPattern` 匹配器、cookie 处理、
 `preferredLanguage` 检测——不是消息查找。消息侧两个库都内联都 tree-shake，
 所以差距是固定的，不随 catalog 增长。它买到的东西是实打实的：Paraglide 能翻译
-路径本身，`/about` 变成 `/de/ueber`，这是 best-i18n 完全做不到的。
+路径本身，`/about` 变成 `/de/ueber`，这是 best-i18n 完全做不到的。这个路由器
+有多重取决于外面的打包器：同一个 chunk 在 SvelteKit 的共享 chunk 里是 8.7 kB，
+在 SolidStart 的构建里是 15.8 kB。
+
+**svelte-i18n 的约 17 kB 是一个 ICU 运行时**——`intl-messageformat` 加 formatjs
+解析器，每条消息都在浏览器里解析和格式化——再加每个语言一个字典 chunk。这和
+next-intl 是同一笔交易，只是发生在客户端：复数、`select`、日期、数字，每个页面
+都付一次钱。它也不带 locale 解析、路由和按请求绑定；playground 里这三样都是手
+工补的，而服务端那一个全局 store 是按请求写入的——它自己的 SvelteKit 指南就是
+这么做的——不同语言的并发请求会在这里竞争。
+
+**@solid-primitives/i18n 的约 1.5 kB 几乎算不上运行时**——一个扁平化的字典加
+`{{ name }}` 模板填充——所以它是所有测过的方案里离 best-i18n 最近的。两个懒加载
+的字典 chunk 都被计入了，虽然访客只下载一个。和 svelte-i18n 一样，它到翻译为止：
+playground 里的 locale signal、URL 前缀、中间件和 context provider 全是应用自己的
+代码。它没有复数。
+
+## Svelte 与 Solid
+
+这两个生态里的运行时库对自己的范围很坦诚：它们负责格式化文字，周边一切留给你。
+best-i18n 带给 Svelte 和 Solid 的，除了编译步骤，正是它们留下的那部分——解析链、
+URL 辅助函数、SSR 用的 `withRequestLocale`——以及四个替代方案都没有的一件事：消息
+内嵌标记。它们每一个都得把 `Read the <a>README</a> to learn more.` 手工拆成三个
+字符串，从而把每种语言的词序都钉死；`<Trans>` 保持它是一条消息，构建期按语言重组
+为 Svelte 标记或 Solid JSX。
+
+另一条轴是响应式。Paraglide 的 `setLocale()` 会整页导航，所以什么都不需要响应式。
+svelte-i18n 是 store——`$_` 和 `$locale`——`@solid-primitives/i18n` 是你传进去的
+signal。best-i18n 编译出的 locale 读取接入了各框架自己的响应式系统——Svelte 里是
+`createSubscriber`，Solid 里是 signal——所以模板里的 `` t`...` `` 会原地更新，而在
+URL 也该变的时候 `switchLocale` 仍然走整页导航。
 
 ## best-i18n 更贵的地方
 
@@ -106,5 +168,9 @@ gzip 会把它压平，剩下的只是重复字符串字面量的解析时间—
 诚实清单的其余部分——没有 ICU `select`、Next.js 私有 API、`AsyncLocalStorage`
 从哪来——在[限制](/zh/docs/limitations)。孪生 playground（
 [`playground/nextjs-intl`](https://github.com/best-i18n/best-i18n/tree/main/playground/nextjs-intl)、
-[`playground/tanstack-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide)）
+[`playground/tanstack-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide)、
+[`playground/sveltekit-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-paraglide)、
+[`playground/sveltekit-svelte-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n)、
+[`playground/solid-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-paraglide)、
+[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives)）
 里有完整的数字和全部前提条件。

@@ -33,9 +33,13 @@
     "build:tanstack": "pnpm --filter playground-tanstack-start build",
     "dev:sveltekit": "pnpm --filter playground-sveltekit dev",
     "build:sveltekit": "pnpm --filter playground-sveltekit build",
+    "dev:sveltekit-paraglide": "pnpm --filter playground-sveltekit-paraglide dev",
+    "dev:sveltekit-svelte-i18n": "pnpm --filter playground-sveltekit-svelte-i18n dev",
     "dev:paraglide": "pnpm --filter playground-tanstack-start-paraglide dev",
     "dev:solid-start": "pnpm --filter playground-solid-start dev",
     "build:solid-start": "pnpm --filter playground-solid-start build",
+    "dev:solid-start-paraglide": "pnpm --filter playground-solid-start-paraglide dev",
+    "dev:solid-start-primitives": "pnpm --filter playground-solid-start-primitives dev",
     "test:solid-start": "pnpm build && pnpm --filter playground-solid-start test"
   },
   "devDependencies": {

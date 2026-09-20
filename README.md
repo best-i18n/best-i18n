@@ -41,16 +41,22 @@ pnpm bench          # client JS a browser downloads, best-i18n vs next-intl
 
 ## Playgrounds
 
-Six playgrounds cover Next.js, TanStack Start, SvelteKit and SolidStart.
-The size comparison playgrounds use matching pages and messages.
+Ten playgrounds cover Next.js, TanStack Start, SvelteKit and SolidStart. In
+each family the apps share the same two pages, the same messages and the same
+URLs, so a comparison is between libraries rather than between apps.
 
-|                                                                                       |                                     |
-| ------------------------------------------------------------------------------------- | ----------------------------------- |
-| [`playground/nextjs`](./playground/nextjs#readme)                                     | best-i18n on the Next.js App Router |
-| [`playground/nextjs-intl`](./playground/nextjs-intl#readme)                           | the same app in next-intl           |
-| [`playground/tanstack-start`](./playground/tanstack-start#readme)                     | best-i18n on the plain Vite plugin  |
-| [`playground/sveltekit`](./playground/sveltekit#readme)                               | best-i18n on SvelteKit              |
-| [`playground/tanstack-start-paraglide`](./playground/tanstack-start-paraglide#readme) | the same app in Paraglide           |
+|                                                                                       |                                        |
+| ------------------------------------------------------------------------------------- | -------------------------------------- |
+| [`playground/nextjs`](./playground/nextjs#readme)                                     | best-i18n on the Next.js App Router    |
+| [`playground/nextjs-intl`](./playground/nextjs-intl#readme)                           | the same app in next-intl              |
+| [`playground/tanstack-start`](./playground/tanstack-start#readme)                     | best-i18n on the plain Vite plugin     |
+| [`playground/tanstack-start-paraglide`](./playground/tanstack-start-paraglide#readme) | the same app in Paraglide              |
+| [`playground/sveltekit`](./playground/sveltekit#readme)                               | best-i18n on SvelteKit                 |
+| [`playground/sveltekit-paraglide`](./playground/sveltekit-paraglide#readme)           | the same app in Paraglide              |
+| [`playground/sveltekit-svelte-i18n`](./playground/sveltekit-svelte-i18n#readme)       | the same app in svelte-i18n            |
+| [`playground/solid-start`](./playground/solid-start#readme)                           | best-i18n on SolidStart v2             |
+| [`playground/solid-start-paraglide`](./playground/solid-start-paraglide#readme)       | the same app in Paraglide              |
+| [`playground/solid-start-primitives`](./playground/solid-start-primitives#readme)     | the same app in @solid-primitives/i18n |
 
 ```bash
 pnpm build          # the playgrounds consume the built package
@@ -61,7 +67,7 @@ pnpm dev:solid-start
 pnpm dev:paraglide
 ```
 
-SolidStart v2: [`playground/solid-start`](./playground/solid-start#readme).
+Every playground has a `dev` script: `pnpm --filter playground-<name> dev`.
 
 ## Size
 
@@ -114,14 +120,35 @@ else, client JS included. The long page itself is close on both (5.0 kB
 against 5.5 kB): a page that actually renders the text pays for the text,
 whoever compiled it.
 
+### SvelteKit
+
+| variant                            | client JS (gzip) | raw      |
+| ---------------------------------- | ---------------- | -------- |
+| best-i18n                          | 32.1 kB          | 79.3 kB  |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 31.5 kB          | 78.2 kB  |
+| paraglide                          | 39.3 kB          | 102.8 kB |
+| svelte-i18n                        | 49.4 kB          | 136.7 kB |
+
+All JavaScript under `.svelte-kit/output/client`. Paraglide's extra 7 kB is
+one chunk: its `URLPattern` matcher and the cookie and `preferredLanguage`
+strategies - a routing runtime, not a message runtime. svelte-i18n's extra
+17 kB is `intl-messageformat` with the formatjs parser, because it formats
+ICU messages in the browser, plus one dictionary chunk per locale.
+
 ### SolidStart v2
 
-| variant | client JS (gzip) | raw |
-| --- | --- | --- |
-| best-i18n | 16.7 kB | 41.9 kB |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 16.4 kB | 41.3 kB |
+| variant                            | client JS (gzip) | raw     |
+| ---------------------------------- | ---------------- | ------- |
+| best-i18n                          | 16.7 kB          | 41.9 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 16.4 kB          | 41.3 kB |
+| @solid-primitives/i18n             | 18.2 kB          | 44.8 kB |
+| paraglide                          | 26.0 kB          | 69.8 kB |
 
-These totals include all emitted client JavaScript for the SolidStart example.
+All JavaScript under `.output/public/_build`. `@solid-primitives/i18n` is a
+small lookup-and-template runtime, so it lands within 1.5 kB of best-i18n;
+its two lazy dictionary chunks are counted even though a visitor downloads
+one. Paraglide's runtime chunk is 15.8 kB gzip here against 8.7 kB in the
+SvelteKit build - the same code, bundled without SvelteKit's chunk sharing.
 
 ### What the two gaps are made of
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "home": "首页",
+  "about": "关于",
+  "starter": "一个小而可长的起始模板。",
+  "rendered_on_server": "这段文字是在服务端渲染的。",
+  "inlines": "{name} 会把每条翻译内联到调用处。",
+  "no_runtime": "运行时不做任何查表，因此也没有任何东西需要加载。",
+  "add_one": "加一",
+  "you_have_items": "你有 {count} 项",
+  "read_the": "请阅读 ",
+  "readme": "README",
+  "to_learn_more": " 了解更多。"
+}
