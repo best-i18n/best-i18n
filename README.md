@@ -10,18 +10,24 @@ This is the monorepo. The package and its documentation live in
 packages/best-i18n     the package
   src/compiler/        parser, transform, PO reading and merging
   src/runtime/         locale at runtime: isomorphic, plus the Node server half
-  src/react/           useLocale, LocaleProvider, the useI18n and Trans macros
-  src/svelte.ts        reactive getLocale; src/svelte/macro.ts is <Trans>
-  src/integrations/    one folder per framework - vite, next
+  src/frameworks/      one directory per framework: runtime entry (index.ts),
+                       macros (macro.ts) and the compiler adapter (compiler.ts)
+                       for react, svelte and solid
+  src/integrations/    one per bundler or meta-framework - vite, rolldown, next
   src/cli/             i18n-extract, i18n-compile
   spike/               builds a fixture twice and asserts on the real bundles
-playground/nextjs      Next.js App Router, both locales, end to end
-playground/nextjs-intl the same app in next-intl, for size comparison
-playground/tanstack-start the same app on the plain Vite plugin
-playground/sveltekit       the same app on SvelteKit
-playground/solid-start     SolidStart v2 with reactive translations and SSR
-playground/tanstack-start-paraglide the same app in Paraglide
-scripts/bench-size.mjs builds each playground and weighs what a browser loads
+apps/website                         the docs site: Next.js and fumadocs, deployed to Cloudflare
+playground/nextjs                    Next.js App Router, both locales, end to end
+playground/nextjs-intl               the same app in next-intl, for size comparison
+playground/tanstack-start            the same app on the plain Vite plugin
+playground/tanstack-start-paraglide  the same app in Paraglide
+playground/sveltekit                 the same app on SvelteKit
+playground/sveltekit-paraglide       the same app in Paraglide
+playground/sveltekit-svelte-i18n     the same app in svelte-i18n
+playground/solid-start               the same app on SolidStart v2
+playground/solid-start-paraglide     the same app in Paraglide
+playground/solid-start-primitives    the same app in @solid-primitives/i18n
+scripts/bench-size.mjs               builds each playground and weighs what a browser loads
 ```
 
 A new framework is a new folder under `src/integrations` plus its subpath in

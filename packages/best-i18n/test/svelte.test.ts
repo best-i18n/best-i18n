@@ -228,7 +228,7 @@ describe('svelte translation macros', () => {
     )
     try {
       const runtime = pathToFileURL(
-        fileURLToPath(new URL('../src/svelte.ts', import.meta.url)),
+        fileURLToPath(new URL('../src/frameworks/svelte/index.ts', import.meta.url)),
       ).href
       const source = fixture('svelte/reactive-locale/input.svelte.js').replace(
         "'best-i18n/svelte'",
@@ -282,7 +282,7 @@ it.each([undefined, 'zh'])(
       expect(catalog.entries[0]!.references).toEqual([`${input}:1`])
       catalog.entries[0]!.target = '你好'
       writeFileSync(path.join(messagesDir, 'zh.po'), formatPo(catalog))
-      const runtime = new URL('../src/svelte.ts', import.meta.url).href
+      const runtime = new URL('../src/frameworks/svelte/index.ts', import.meta.url).href
       const result = await build({
         configFile: false,
         root: dir,

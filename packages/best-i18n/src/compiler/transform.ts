@@ -1,20 +1,30 @@
 import { MagicString } from 'magic-string'
-import { parseSync } from 'oxc-parser'
 import { isNonReferencePosition, resolveMacroBindings } from './bindings.ts'
+import {
+  DEFAULT_COMPONENT_FROM,
+  DEFAULT_FROM,
+  DEFAULT_HOOK_FROM,
+  refineAdapter,
+  selectAdapter,
+} from './frameworks.ts'
+import { REACT_MODULE } from './modules.ts'
 import { GERMANIC } from './plural.ts'
-import { parseSvelte } from './svelte.ts'
 import {
   renderTemplate,
   renderTrans,
-  serializeSvelteTrans,
-  serializeTrans,
   tokenForExpression,
   validatePluralForm,
   validateTemplateTranslation,
 } from './trans.ts'
-import type { StaticImport, StaticImportEntry } from './bindings.ts'
+import type {
+  FrameworkAdapter,
+  MacroNames,
+  ParsedFile,
+  ParsedSource,
+  TransContext,
+} from './adapter.ts'
+import type { StaticImportEntry } from './bindings.ts'
 import type { PluralRule } from './plural.ts'
-import type { ParsedSource, SvelteScript } from './svelte.ts'
 import type { TransElement } from './trans.ts'
 
 export interface Message {
@@ -249,17 +259,6 @@ export interface TransformResult {
   clientUnbound: Array<{ text: string; line: number }>
 }
 
-const DEFAULT_FROM = ['best-i18n/macro']
-const DEFAULT_HOOK_FROM = ['best-i18n/react/macro']
-const DEFAULT_COMPONENT_FROM = [
-  'best-i18n/react/macro',
-  'best-i18n/svelte/macro',
-  'best-i18n/solid/macro',
-]
-const REACT_MACRO = 'best-i18n/react/macro'
-const SOLID_MACRO = 'best-i18n/solid/macro'
-const SOLID_MODULES = new Set(['best-i18n/solid', SOLID_MACRO])
-
 /**
  * Every module specifier whose presence in a file means it may contain a
  * message. The one text-level signal a bundler can prefilter on - Rolldown's
@@ -276,23 +275,6 @@ export function macroSpecifiers(
     ]),
   ]
 }
-
-type Lang = 'ts' | 'tsx' | 'js' | 'jsx'
-
-// Plain `.js` (and `.mjs`/`.cjs`) parses as JSX: Next.js and CRA-style code
-// put JSX in `.js` routinely, and JSX is a syntactic superset of JS, so
-// nothing is lost by assuming it. TypeScript is the opposite - JSX in `.ts`
-// is ambiguous with type assertions - so only `.tsx` gets it there.
-const LANGS = new Map<string, Lang>([
-  ['ts', 'ts'],
-  ['tsx', 'tsx'],
-  ['mts', 'ts'],
-  ['cts', 'ts'],
-  ['js', 'jsx'],
-  ['jsx', 'jsx'],
-  ['mjs', 'jsx'],
-  ['cjs', 'jsx'],
-])
 
 function walk(
   node: unknown,
@@ -350,41 +332,6 @@ export function extract(
   return analyze(code, filename, options).messages
 }
 
-/**
- * End offset of the leading directive prologue (`'use client'`, `'use server'`).
- *
- * Injected imports have to go after it: a directive that is no longer the first
- * statement in the file is just a string expression, so prepending would
- * silently turn a client component into a server one.
- */
-function directivePrologue(program: unknown): {
-  end: number
-  directives: string[]
-} {
-  const body =
-    (program as { body?: Array<Record<string, unknown>> } | undefined)?.body ??
-    []
-  let end = 0
-  const directives: string[] = []
-
-  for (const statement of body) {
-    if (statement.type !== 'ExpressionStatement') break
-    const expression = statement.expression as
-      | { type?: string; value?: unknown }
-      | undefined
-    if (
-      expression?.type !== 'Literal' ||
-      typeof expression.value !== 'string'
-    ) {
-      break
-    }
-    end = statement.end as number
-    directives.push(expression.value)
-  }
-
-  return { end, directives }
-}
-
 interface TemplatePiece {
   value: { cooked: string | null; raw: string }
 }
@@ -424,94 +371,112 @@ function templateText(
     .join('')
 }
 
-/** Shared by extract() and transform(): messages plus useI18n() call sites. */
-function analyze(
-  code: string,
-  filename: string,
-  options: ExtractOptions = {},
-  input?: ParsedSource,
-): {
+/** What one analysis yields, shared by extract() and transform(). */
+interface Analysis {
   messages: Message[]
   hookCalls: HookCall[]
   localeAliases: Array<{ start: number; end: number; text: string }>
   /** See `reusableLocaleRead`. */
   reusableLocaleRead?: string
   macroImports: MacroImport[]
-  directiveEnd: number
-  directives: string[]
-  /** The component's `<script>` elements, so an emptied one can be dropped. */
-  svelteScripts?: SvelteScript[]
-  /** The file imports `best-i18n/solid/macro`, so it needs `solid: true`. */
-  solidMacro?: boolean
-} {
-  if (input === undefined && filename.split('?')[0]?.endsWith('.svelte')) {
-    const { contexts, insertion, scripts } = parseSvelte(code, filename)
-    const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
-    const hook = options.hook ?? 'useI18n'
-    const component = options.component ?? 'Trans'
-    for (const context of contexts) {
-      for (const declaration of context.module.staticImports) {
-        const request = declaration.moduleRequest.value
-        if (
-          (hookFrom.includes(request) || request === REACT_MACRO) &&
-          declaration.entries.some(
-            (entry) =>
-              !entry.isType &&
-              (entry.importName.name === hook ||
-                entry.importName.name === component),
-          )
-        ) {
-          throw new Error(
-            'best-i18n: Svelte supports t, plural, and <Trans> from ' +
-              'best-i18n/svelte/macro; React macros are not supported.',
-          )
-        }
-      }
-    }
-    const parts = contexts.map((context) =>
-      analyze(code, filename, options, context),
-    )
-    const imports = parts.flatMap((part) => part.macroImports)
-    return {
-      messages: parts
-        .flatMap((part) => part.messages)
-        .sort((a, b) => a.start - b.start),
-      hookCalls: [],
-      localeAliases: [],
-      macroImports: imports.filter(
-        (item, index) =>
-          imports.findIndex((other) => other.start === item.start) === index,
-      ),
-      directiveEnd: insertion,
-      directives: [],
-      svelteScripts: scripts,
-    }
+}
+
+function namesFrom(options: ExtractOptions): MacroNames {
+  return {
+    tag: options.tag ?? 't',
+    from: options.from ?? DEFAULT_FROM,
+    plural: options.plural ?? 'plural',
+    hook: options.hook ?? 'useI18n',
+    hookFrom: options.hookFrom ?? DEFAULT_HOOK_FROM,
+    component: options.component ?? 'Trans',
+    componentFrom: options.componentFrom ?? DEFAULT_COMPONENT_FROM,
   }
-  const tag = options.tag ?? 't'
-  const from = options.from ?? DEFAULT_FROM
-  const pluralName = options.plural ?? 'plural'
-  const hook = options.hook ?? 'useI18n'
-  const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
-  const component = options.component ?? 'Trans'
-  const componentFrom = options.componentFrom ?? DEFAULT_COMPONENT_FROM
+}
 
-  // Module ids carry query strings (TanStack Router appends `?tsr-split=...`,
-  // vite appends `?url` etc.), so strip them before looking at the extension.
-  // Guessing `ts` for a `.tsx` file makes the parser read JSX as a type
-  // assertion and fail.
-  const cleanName = filename.split('?')[0] ?? filename
-  const extension = cleanName.split('.').pop() ?? 'ts'
-  const lang = LANGS.get(extension) ?? 'ts'
+/**
+ * Shared by extract() and transform(): messages plus useI18n() call sites.
+ *
+ * The framework adapter decides how the file parses and what a `<Trans>` is
+ * there; everything after that - the macros, the scopes, the misuse guard -
+ * is the same for every framework and runs once per context the adapter
+ * produced.
+ */
+function analyze(
+  code: string,
+  filename: string,
+  options: ExtractOptions = {},
+): Analysis & {
+  adapter: FrameworkAdapter
+  parsed: ParsedFile
+  /** Every module specifier the file imports, for the adapter's own checks. */
+  requests: string[]
+} {
+  const names = namesFrom(options)
+  let adapter = selectAdapter(filename, options)
+  const parsed = adapter.parse(code, filename)
+  const requests = [
+    ...new Set(
+      parsed.contexts.flatMap((context) =>
+        context.module.staticImports.map(
+          (declaration) => declaration.moduleRequest.value,
+        ),
+      ),
+    ),
+  ]
+  adapter = refineAdapter(adapter, requests)
 
-  const parsed =
-    input ?? parseSync(filename, code, { sourceType: 'module', lang })
+  const parts = parsed.contexts.map((context) =>
+    analyzeContext(context, code, filename, names, adapter, options),
+  )
+  const macroImports = parts.flatMap((part) => part.macroImports)
+
+  return {
+    adapter,
+    parsed,
+    requests,
+    messages: parts
+      .flatMap((part) => part.messages)
+      .sort((a, b) => a.start - b.start),
+    hookCalls: parts.flatMap((part) => part.hookCalls),
+    localeAliases: parts.flatMap((part) => part.localeAliases),
+    reusableLocaleRead: parts.find(
+      (part) => part.reusableLocaleRead !== undefined,
+    )?.reusableLocaleRead,
+    // A Svelte instance script inherits the module script's imports, so one
+    // declaration can surface from two contexts; keep it once.
+    macroImports: macroImports.filter(
+      (item, index) =>
+        macroImports.findIndex((other) => other.start === item.start) === index,
+    ),
+  }
+}
+
+/** One script's analysis: the macros it uses and how it uses them. */
+function analyzeContext(
+  parsed: ParsedSource,
+  code: string,
+  filename: string,
+  names: MacroNames,
+  adapter: FrameworkAdapter,
+  options: ExtractOptions,
+): Analysis {
+  const {
+    tag,
+    from,
+    plural: pluralName,
+    hook,
+    hookFrom,
+    component,
+    componentFrom,
+  } = names
+
   if (parsed.errors.length > 0) {
     throw new Error(
       `best-i18n: failed to parse ${filename}: ${parsed.errors[0]?.message}`,
     )
   }
 
-  const staticImports = (parsed.module?.staticImports ?? []) as StaticImport[]
+  const staticImports = parsed.module.staticImports
 
   const { locals, namespaces } = resolveMacroBindings({
     staticImports,
@@ -540,7 +505,7 @@ function analyze(
   // own calls is what lets one component share a single subscription.
   const { locals: localeReadLocals } = resolveMacroBindings({
     staticImports,
-    from: [options.reactModule ?? 'best-i18n/react'],
+    from: [options.reactModule ?? REACT_MODULE],
     exportName: 'useLocale',
   })
 
@@ -556,8 +521,6 @@ function analyze(
     )
   }
 
-  const { end: directiveEnd, directives } = directivePrologue(parsed.program)
-
   // Which export of which module family is a macro. Matching mirrors
   // resolveMacroBindings: literal specifier, named (non-type) imports only.
   const isMacroEntry = (module: string, entry: StaticImportEntry): boolean => {
@@ -570,36 +533,8 @@ function analyze(
     )
   }
 
-  // Solid has no hook: a component body runs once, so there is nothing for
-  // `useI18n()` to re-run. Reject it here rather than in transform(), so the
-  // extractor sees it too - when the caller says the file is Solid, or when
-  // the file already imports a Solid entry point and so declares itself.
-  const solidMacro = staticImports.some(
-    (declaration) => declaration.moduleRequest.value === SOLID_MACRO,
-  )
-  const solidFile =
-    options.solid === true ||
-    solidMacro ||
-    staticImports.some((declaration) =>
-      SOLID_MODULES.has(declaration.moduleRequest.value),
-    )
-  if (
-    solidFile &&
-    staticImports.some(
-      (declaration) =>
-        hookFrom.includes(declaration.moduleRequest.value) &&
-        declaration.entries.some(
-          (entry) =>
-            !entry.isType &&
-            entry.importName.kind === 'Name' &&
-            entry.importName.name === hook,
-        ),
-    )
-  ) {
-    throw new Error(
-      `best-i18n: Solid uses ${tag} and reactive accessors; React ${hook} is not supported.`,
-    )
-  }
+  // Another framework's macro has nothing to compile to here.
+  adapter.checkImports?.(staticImports, names, filename)
 
   const macroImports: MacroImport[] = staticImports
     .filter((declaration) =>
@@ -629,15 +564,7 @@ function analyze(
     hookLocals.size === 0 &&
     componentLocals.size === 0
   ) {
-    return {
-      messages: [],
-      hookCalls: [],
-      localeAliases: [],
-      macroImports,
-      directiveEnd,
-      directives,
-      solidMacro,
-    }
+    return { messages: [], hookCalls: [], localeAliases: [], macroImports }
   }
 
   // `// i18n: why this wording` above a message becomes a `#.` comment in the
@@ -1058,168 +985,45 @@ function analyze(
     return false
   }
 
+  const transContext: TransContext = {
+    code,
+    filename,
+    component,
+    componentLocals,
+    parentOf,
+    takesElement,
+  }
+
   walk(parsed.program, (node, parent) => {
     parentOf.set(node, parent)
 
-    if (node.type === 'Component' && componentLocals.has(node.name as string)) {
-      const start = node.start as number
-      let context = ''
-      for (const attribute of (node.attributes ?? []) as Array<
-        Record<string, unknown>
-      >) {
-        if (attribute.type === 'Attribute' && attribute.name === 'ctx') {
-          const value = attribute.value as
-            | Array<{ type?: string; data?: string }>
-            | undefined
-          const text = value?.length === 1 ? value[0] : undefined
-          if (
-            text?.type !== 'Text' ||
-            typeof text.data !== 'string' ||
-            text.data === ''
-          ) {
-            throw new Error(
-              `best-i18n: <${component} ctx> must be a non-empty string ` +
-                `literal (${filename} offset ${start}).`,
-            )
-          }
-          context = text.data
-          continue
-        }
-        throw new Error(
-          `best-i18n: <${component}> takes no props other than ctx ` +
-            `(${filename} offset ${start}). Wrap it in an element if you ` +
-            'need one.',
-        )
-      }
-
-      const nodes =
-        (node.fragment as { nodes?: unknown[] } | undefined)?.nodes ?? []
-      const { text, expressions, placeholders, elements } =
-        serializeSvelteTrans(nodes, code, filename)
-      // Self-closing, or nothing but whitespace and comments once Svelte's
-      // whitespace rules have run: either way there is no message.
-      if (text === '') {
-        throw new Error(
-          `best-i18n: <${component} /> is empty (${filename} offset ${start}). ` +
-            'A message needs content.',
-        )
-      }
-
-      const localeVar = innermost(start, withLocaleVar)?.localeVar
-      const line = lineAt(code, start)
-      const description = descriptionFor(line)
-
-      allowedComponentStarts.add(start)
-      messages.push({
-        text,
-        expressions,
-        placeholders,
-        elements,
-        context,
-        ...(description === undefined ? {} : { description }),
-        start,
-        end: node.end as number,
-        line,
-        ...(localeVar === undefined ? {} : { localeVar }),
-        // A text-only message is a JS expression and needs braces in the
-        // template. Markup becomes `{#if}` / children, which is already
-        // template syntax.
-        braced: elements.length === 0,
-        elementOk: false,
-        svelte: true,
-      })
-      return
-    }
-
-    if (node.type !== 'JSXElement') return
-
-    const opening = node.openingElement as
-      | {
-          name?: { type?: string; name?: string }
-          attributes?: Array<Record<string, unknown>>
-          selfClosing?: boolean
-        }
-      | undefined
-
-    if (opening?.name?.type !== 'JSXIdentifier') return
-    if (!componentLocals.has(opening.name.name ?? '')) return
-
-    const start = node.start as number
-
-    // Attributes would have to survive translation, and none of them can:
-    // there is nowhere in the message to put them. `key` included - wrap the
-    // <Trans> in the element that needs it. `ctx` is the one exception: it is
-    // message metadata, not a prop.
-    let context = ''
-    for (const attribute of opening.attributes ?? []) {
-      const attributeName = (attribute.name as { name?: string } | undefined)
-        ?.name
-      if (attribute.type === 'JSXAttribute' && attributeName === 'ctx') {
-        const value = attribute.value as
-          | { type?: string; value?: unknown }
-          | null
-          | undefined
-        if (
-          value?.type !== 'Literal' ||
-          typeof value.value !== 'string' ||
-          value.value === ''
-        ) {
-          throw new Error(
-            `best-i18n: <${component} ctx> must be a non-empty string ` +
-              `literal (${filename} offset ${start}).`,
-          )
-        }
-        context = value.value
-        continue
-      }
-      throw new Error(
-        `best-i18n: <${component}> takes no props other than ctx ` +
-          `(${filename} offset ${start}). Wrap it in an element if you ` +
-          'need one.',
-      )
-    }
-
-    if (opening.selfClosing === true) {
-      throw new Error(
-        `best-i18n: <${component} /> is empty (${filename} offset ${start}). ` +
-          'A message needs content.',
-      )
-    }
-
-    const { text, expressions, placeholders, elements } = serializeTrans(
-      node.children as unknown[],
-      code,
-      filename,
-    )
+    const match = adapter.matchTrans(node, parent, transContext)
+    if (match === undefined) return
 
     // A `<Trans>` inside a component that already calls `useI18n()` reads that
     // variable, so it re-renders on a locale change like the tagged templates
     // around it - and, in a client component, gets its locale from the same
     // place they do. Without one it falls back to `getLocale()`.
-    const localeVar = innermost(start, withLocaleVar)?.localeVar
-
-    const line = lineAt(code, start)
+    const localeVar = innermost(match.start, withLocaleVar)?.localeVar
+    const line = lineAt(code, match.start)
     const description = descriptionFor(line)
 
+    allowedComponentStarts.add(match.start)
     messages.push({
-      text,
-      expressions,
-      placeholders,
-      elements,
-      context,
+      text: match.text,
+      expressions: match.expressions,
+      placeholders: match.placeholders,
+      elements: match.elements,
+      context: match.context,
       ...(description === undefined ? {} : { description }),
-      start,
-      end: node.end as number,
+      start: match.start,
+      end: match.end,
       line,
       ...(localeVar === undefined ? {} : { localeVar }),
-      // Among JSX children the replacement has to stay an expression; anywhere
-      // else - a variable, a prop, a return - it already is one.
-      braced: parent?.type === 'JSXElement' || parent?.type === 'JSXFragment',
-      ...(parent?.type === 'JSXExpressionContainer' &&
-      parentOf.get(parent)?.type === 'JSXAttribute'
-        ? { attribute: true }
-        : {}),
-      elementOk: takesElement(node),
+      braced: match.braced,
+      ...(match.attribute === true ? { attribute: true } : {}),
+      elementOk: match.elementOk,
+      ...(match.svelte === true ? { svelte: true } : {}),
     })
   })
 
@@ -1342,9 +1146,6 @@ function analyze(
     localeAliases,
     reusableLocaleRead,
     macroImports,
-    directiveEnd,
-    directives,
-    solidMacro,
   }
 }
 
@@ -1382,15 +1183,14 @@ export function transform(
   if (!imports.some((specifier) => code.includes(specifier))) return null
 
   const {
+    adapter,
+    parsed,
+    requests,
     messages,
     hookCalls,
     localeAliases,
     reusableLocaleRead,
     macroImports,
-    directiveEnd,
-    directives,
-    svelteScripts = [],
-    solidMacro = false,
   } = analyze(code, filename, {
     tag,
     from: options.from,
@@ -1404,25 +1204,14 @@ export function transform(
     reactModule: options.reactModule,
     solid: options.solid,
   })
-  // Compiled without `solid: true`, a Solid <Trans> would read the locale
-  // through best-i18n/runtime, which Solid does not track: setLocale() would
-  // leave the text as it was, and nothing would say why. Refuse instead.
-  if (solidMacro && options.solid !== true) {
-    throw new Error(
-      `best-i18n: ${filename} imports ${SOLID_MACRO}, but the plugin was not ` +
-        'told this is a Solid project. Set solid: true in the best-i18n ' +
-        'plugin options.',
-    )
-  }
+  // A configuration the file cannot be compiled under is an error here, not
+  // in extraction, which has no such configuration.
+  adapter.checkTransform?.(requests, options, filename)
   if (messages.length === 0 && hookCalls.length === 0) return null
 
-  const runtimeModule =
-    options.runtimeModule ??
-    (options.solid ? 'best-i18n/solid' : undefined) ??
-    (/\.svelte(?:\.[jt]s)?$/.test(filename.split('?')[0] ?? filename)
-      ? 'best-i18n/svelte'
-      : 'best-i18n/runtime')
-  const reactModule = options.reactModule ?? 'best-i18n/react'
+  const { directiveEnd, directives } = parsed
+  const runtimeModule = options.runtimeModule ?? adapter.runtimeModule
+  const reactModule = options.reactModule ?? REACT_MODULE
   const missing: TransformResult['missing'] = []
   const source = new MagicString(code)
   let needsRuntime = false
@@ -1491,7 +1280,8 @@ export function transform(
     (locale) => locale !== options.baseLocale,
   )
 
-  const isClientModule = !options.solid && directives.includes('use client')
+  const isClientModule =
+    adapter.clientDirectives && directives.includes('use client')
 
   /**
    * What a shared function has to agree on, which is more than a catalog key:
@@ -1665,7 +1455,7 @@ export function transform(
         message.elements,
         describe(locale),
         refs,
-        message.svelte !== true,
+        adapter.transFragment,
       )
     }
 
@@ -1676,18 +1466,21 @@ export function transform(
     const base = render(valueFor(options.baseLocale), options.baseLocale)
     if (others.length === 0) return base
 
-    // Svelte cannot put elements inside `{...}`, so markup becomes a template
-    // `{#if}` rather than a JS ternary of fragments.
-    if (message.svelte === true && (message.elements?.length ?? 0) > 0) {
-      const branches = others.map(
-        (locale, index) =>
-          `${
-            index === 0
-              ? `{#if ${localeExpr} === ${JSON.stringify(locale)}}`
-              : `{:else if ${localeExpr} === ${JSON.stringify(locale)}}`
-          }${render(valueFor(locale), locale)}`,
+    // Markup may not be expressible as a ternary of fragments - Svelte puts
+    // an `{#if}` in the template instead - so the adapter gets the branches.
+    if (
+      adapter.renderMarkupBranches !== undefined &&
+      (message.elements?.length ?? 0) > 0
+    ) {
+      return adapter.renderMarkupBranches(
+        message,
+        base,
+        others.map((locale) => ({
+          locale,
+          rendered: render(valueFor(locale), locale),
+        })),
+        localeExpr,
       )
-      return `${branches.join('')}{:else}${base}{/if}`
     }
 
     // A ternary chain, not an object literal and not an IIFE: nothing is
@@ -1847,10 +1640,7 @@ export function transform(
       const name = generatedComponent(message)
       replacement = `<${name}${attributes.map((a) => ` ${a}`).join('')} />`
       isElement = true
-    } else if (
-      (repeats.get(key) ?? 0) >= 2 &&
-      !(message.svelte === true && (message.elements?.length ?? 0) > 0)
-    ) {
+    } else if ((repeats.get(key) ?? 0) >= 2 && adapter.hoistable(message)) {
       // Hook-bound call sites pass the variable that already holds the
       // locale; others read it at call time, so one function serves both.
       const args = [
@@ -1874,19 +1664,10 @@ export function transform(
       }
     }
 
-    // Solid components run once. A <Trans> that is returned or stored rather
-    // than nested in JSX has to become a JSX child expression, so its locale
-    // read runs inside a reactive scope. A per-locale build has no locale
-    // read, and its fragment is already JSX; leave it as it is.
-    const isTrans = message.elements !== undefined
-    if (
-      options.solid &&
-      options.staticLocale === undefined &&
-      isTrans &&
-      !message.braced &&
-      message.attribute !== true
-    ) {
-      replacement = `<>{${replacement}}</>`
+    if (adapter.wrapReplacement !== undefined) {
+      replacement = adapter.wrapReplacement(message, replacement, {
+        staticLocale: options.staticLocale !== undefined,
+      })
     }
 
     source.overwrite(
@@ -1935,17 +1716,7 @@ export function transform(
     inject(declaration)
   }
 
-  // A `<script>` that held nothing but macro imports is now blank. Drop the
-  // element rather than leave an empty one behind - except the script the
-  // injected statements went into, which `slice` does not show.
-  for (const script of svelteScripts) {
-    if (injected && script.contentStart === directiveEnd) continue
-    if (source.slice(script.contentStart, script.contentEnd).trim() !== '') {
-      continue
-    }
-    const end = code[script.end] === '\n' ? script.end + 1 : script.end
-    source.remove(script.start, end)
-  }
+  adapter.finalize?.(source, code, parsed, injected)
 
   return {
     code: source.toString(),

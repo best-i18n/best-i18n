@@ -1,6 +1,9 @@
 import { createSubscriber } from 'svelte/reactivity'
-import { getLocale as readLocale, subscribeLocale } from './runtime/index.ts'
-import type { Locale } from './runtime/index.ts'
+import {
+  getLocale as readLocale,
+  subscribeLocale,
+} from '../../runtime/index.ts'
+import type { Locale } from '../../runtime/index.ts'
 
 const trackLocale = createSubscriber(subscribeLocale)
 
@@ -33,4 +36,4 @@ export const locale: { readonly current: Locale } = {
   },
 }
 
-export { configure, getLocales, setLocale } from './runtime/index.ts'
+export { configure, getLocales, setLocale } from '../../runtime/index.ts'

@@ -6,8 +6,8 @@ import {
   useRouter as useNextRouter,
 } from 'next/navigation'
 import { createElement } from 'react'
+import { useLocale, useUrlConfig } from '../../frameworks/react/index.ts'
 import { deLocalizePathname, localizePathname } from '../../locale-url.ts'
-import { useLocale, useUrlConfig } from '../../react/index.ts'
 import type { ComponentProps, ReactNode } from 'react'
 import type { UrlConfig } from '../../locale-url.ts'
 

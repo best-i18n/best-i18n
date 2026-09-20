@@ -100,7 +100,10 @@ export function tokenForExpression(
 }
 
 /** A token for an element: its tag name if usable and free, else a number. */
-function tokenForElement(name: string | undefined, taken: string[]): string {
+export function tokenForElement(
+  name: string | undefined,
+  taken: string[],
+): string {
   if (name !== undefined && IDENTIFIER.test(name) && !taken.includes(name)) {
     return name
   }
@@ -198,17 +201,6 @@ export function decodeEntities(text: string): string {
       return ENTITIES.get(body) ?? whole
     },
   )
-}
-
-interface SvelteTemplateNode {
-  type?: string
-  start?: number
-  end?: number
-  raw?: string
-  data?: string
-  name?: string
-  expression?: { type?: string; start?: number; end?: number }
-  fragment?: { nodes?: SvelteTemplateNode[] }
 }
 
 /** Turns the children of a `<Trans>` into a message plus its raw material. */
@@ -315,147 +307,6 @@ function serializeChildren(
           ? ''
           : serializeChildren(
               child.children ?? [],
-              code,
-              filename,
-              expressions,
-              placeholders,
-              elements,
-            )
-
-        out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`
-        break
-      }
-
-      default:
-        throw new Error(
-          `best-i18n: <Trans> in ${filename} contains a ${child.type} child, ` +
-            'which has no place in a message. Move it outside the <Trans>.',
-        )
-    }
-  }
-
-  return out
-}
-
-/**
- * Same stored message as `serializeTrans`, from a Svelte template rather than
- * JSX: `{name}` is an ExpressionTag, `<a>` a RegularElement, `<Button>` a
- * Component. Blocks, `{@html}` and the rest stay out — they are not a
- * sentence a translator can reorder.
- */
-export function serializeSvelteTrans(
-  children: readonly unknown[],
-  code: string,
-  filename: string,
-): TransMessage {
-  const expressions: string[] = []
-  const placeholders: string[] = []
-  const elements: TransElement[] = []
-
-  const text = serializeSvelteChildren(
-    children as SvelteTemplateNode[],
-    code,
-    filename,
-    expressions,
-    placeholders,
-    elements,
-  )
-
-  return { text, expressions, placeholders, elements }
-}
-
-const SVELTE_WS_START = /^[ \t\r\n]+/
-const SVELTE_WS_END = /[ \t\r\n]+$/
-const SVELTE_WS_RUN = /[ \t\r\n]+/g
-
-/**
- * Whitespace the way Svelte's compiler treats a fragment (`clean_nodes`), not
- * the way JSX does: a line break next to an element is one space, not
- * nothing, so a `<Trans>` reads the same as the component renders. The first
- * and last text of the fragment lose their outer whitespace, text following
- * text that already ends in whitespace loses its leading run, and every other
- * run collapses to one space.
- */
-function cleanSvelteText(nodes: SvelteTemplateNode[], index: number): string {
-  const raw = (node: SvelteTemplateNode) => node.raw ?? node.data ?? ''
-  let text = raw(nodes[index]!).replace(SVELTE_WS_RUN, ' ')
-  const previous = nodes[index - 1]
-  if (
-    previous === undefined ||
-    (previous.type === 'Text' && SVELTE_WS_END.test(raw(previous)))
-  ) {
-    text = text.replace(SVELTE_WS_START, '')
-  }
-  if (nodes[index + 1] === undefined) text = text.replace(SVELTE_WS_END, '')
-  return text
-}
-
-function serializeSvelteChildren(
-  children: SvelteTemplateNode[],
-  code: string,
-  filename: string,
-  expressions: string[],
-  placeholders: string[],
-  elements: TransElement[],
-): string {
-  let out = ''
-  // Comments vanish before Svelte looks at whitespace, so the text on either
-  // side of one is neighbours for the rules below.
-  const nodes = children.filter((child) => child.type !== 'Comment')
-
-  for (const [index, child] of nodes.entries()) {
-    switch (child.type) {
-      case 'Text': {
-        out += decodeEntities(cleanSvelteText(nodes, index))
-        break
-      }
-
-      case 'ExpressionTag': {
-        const expression = child.expression
-        if (expression === undefined) break
-        const source = code.slice(
-          expression.start as number,
-          expression.end as number,
-        )
-        out += `{${tokenForExpression(source, expressions, placeholders)}}`
-        break
-      }
-
-      case 'RegularElement':
-      case 'Component':
-      case 'SvelteElement':
-      case 'SvelteFragment': {
-        const nodes = child.fragment?.nodes ?? []
-        const name =
-          child.type === 'RegularElement' || child.type === 'Component'
-            ? child.name
-            : undefined
-        const token = tokenForElement(
-          name,
-          elements.map((element) => element.token),
-        )
-        const index = elements.length
-        elements.push({ token, open: '', close: '', selfClosing: false })
-
-        const selfClosing = nodes.length === 0
-        elements[index] = {
-          token,
-          open: selfClosing
-            ? code.slice(child.start as number, child.end as number)
-            : code.slice(child.start as number, nodes[0]!.start as number),
-          close: selfClosing
-            ? ''
-            : code.slice(
-                nodes[nodes.length - 1]!.end as number,
-                child.end as number,
-              ),
-          selfClosing,
-        }
-
-        const inner = selfClosing
-          ? ''
-          : serializeSvelteChildren(
-              nodes,
               code,
               filename,
               expressions,

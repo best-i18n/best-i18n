@@ -14,10 +14,10 @@ import {
   notifyLocaleListeners,
   primeLocale,
   subscribeLocale,
-} from '../runtime/index.ts'
+} from '../../runtime/index.ts'
 import type { ReactNode } from 'react'
-import type { UrlConfig } from '../locale-url.ts'
-import type { Locale } from '../runtime/index.ts'
+import type { UrlConfig } from '../../locale-url.ts'
+import type { Locale } from '../../runtime/index.ts'
 
 /**
  * Set by `LocaleProvider` when the host already knows the locale for this

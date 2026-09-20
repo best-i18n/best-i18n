@@ -1,6 +1,9 @@
 import { createSignal } from 'solid-js'
 import { isServer } from 'solid-js/web'
-import { getLocale as readLocale, subscribeLocale } from './runtime/index.ts'
+import {
+  getLocale as readLocale,
+  subscribeLocale,
+} from '../../runtime/index.ts'
 
 // One client-side signal bridges the shared locale store into Solid's graph.
 // Keep the actual locale in the runtime: SSR must read it per request, and
@@ -19,4 +22,4 @@ export function getLocale(): string {
   return readLocale()
 }
 
-export { configure, getLocales, setLocale } from './runtime/index.ts'
+export { configure, getLocales, setLocale } from '../../runtime/index.ts'

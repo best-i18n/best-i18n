@@ -1,4 +1,4 @@
-import type { TranslateMacro } from '../macro.ts'
+import type { TranslateMacro } from '../../macro.ts'
 
 /**
  * Hook-shaped compile-time macro, modelled on Lingui's `useLingui()`.

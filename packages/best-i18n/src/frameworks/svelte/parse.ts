@@ -3,14 +3,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { parseSync } from 'oxc-parser'
 import type { AST } from 'svelte/compiler'
-import type { StaticImport } from './bindings.ts'
-
-export interface ParsedSource {
-  program: unknown
-  module: { staticImports: StaticImport[] }
-  comments: Array<{ value: string; end: number }>
-  errors: Array<{ message: string }>
-}
+import type { ParsedSource } from '../../compiler/adapter.ts'
+import type { StaticImport } from '../../compiler/bindings.ts'
 
 /** A `<script>` element of the component, with the range of its content. */
 export interface SvelteScript {

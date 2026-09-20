@@ -89,7 +89,7 @@ it.each(
         }
       }
       writeFileSync(path.join(messagesDir, 'zh.po'), formatPo(po))
-      const runtime = new URL('../src/solid.ts', import.meta.url).href
+      const runtime = new URL('../src/frameworks/solid/index.ts', import.meta.url).href
       async function compile(target: string, filename: string) {
         const result = await build({
           configFile: false,
@@ -177,7 +177,7 @@ it('tracks locale changes in computations and disposes each owner', () => {
       runner,
       fixture('solid/reactive-locale/run.mjs').replace(
         "'best-i18n/solid'",
-        JSON.stringify(new URL('../src/solid.ts', import.meta.url).href),
+        JSON.stringify(new URL('../src/frameworks/solid/index.ts', import.meta.url).href),
       ),
     )
     expect(

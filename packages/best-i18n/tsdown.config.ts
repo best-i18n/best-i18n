@@ -6,12 +6,12 @@ import { defineConfig } from 'tsdown'
 export default defineConfig({
   entry: {
     'macro': 'src/macro.ts',
-    'react': 'src/react/index.ts',
-    'react-macro': 'src/react/macro.ts',
-    'solid': 'src/solid.ts',
-    'solid-macro': 'src/solid/macro.ts',
-    'svelte': 'src/svelte.ts',
-    'svelte-macro': 'src/svelte/macro.ts',
+    'react': 'src/frameworks/react/index.ts',
+    'react-macro': 'src/frameworks/react/macro.ts',
+    'solid': 'src/frameworks/solid/index.ts',
+    'solid-macro': 'src/frameworks/solid/macro.ts',
+    'svelte': 'src/frameworks/svelte/index.ts',
+    'svelte-macro': 'src/frameworks/svelte/macro.ts',
     'runtime': 'src/runtime/index.ts',
     'server': 'src/runtime/server.ts',
     'client': 'src/client.ts',
