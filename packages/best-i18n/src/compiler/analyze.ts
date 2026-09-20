@@ -16,7 +16,7 @@ import type {
   TransContext,
 } from './adapter.ts'
 import type { StaticImportEntry } from './bindings.ts'
-import type { ExtractOptions, Message } from './message.ts'
+import type { ExplicitLocale, ExtractOptions, Message } from './message.ts'
 
 /**
  * The analysis half of the compiler: finds every macro use in a file and
@@ -722,7 +722,99 @@ function collectHooks(context: Context): Hooks {
   }
 }
 
-/** t`...` and t.ctx('verb')`...`: the tagged-template macro. */
+/** What a chain of macro modifiers - `.ctx('verb')`, `.locale(lang)` - adds. */
+interface Modifiers {
+  /** The identifier the chain hangs off: `t` in `t.ctx('verb').locale(l)`. */
+  base: Record<string, unknown>
+  context: string
+  explicitLocale?: ExplicitLocale
+}
+
+/**
+ * Reads `t`, `t.ctx('verb')`, `t.locale(lang)` and any chain of the two, in
+ * either order, down to the identifier they hang off. `undefined` means the
+ * expression is not shaped like a macro at all; a chain that is shaped like
+ * one but misused is an error, because the user meant it.
+ */
+function unwrapModifiers(
+  node: Record<string, unknown>,
+  code: string,
+  filename: string,
+  allowed: ReadonlySet<'ctx' | 'locale'>,
+): Modifiers | undefined {
+  let current = node
+  let context = ''
+  let explicitLocale: ExplicitLocale | undefined
+  const seen = new Set<string>()
+
+  while (current.type === 'CallExpression') {
+    const callee = current.callee as
+      | {
+          type?: string
+          computed?: boolean
+          object?: Record<string, unknown>
+          property?: { type?: string; name?: string }
+        }
+      | undefined
+    if (callee?.type !== 'MemberExpression') return undefined
+    if (callee.computed === true) return undefined
+    if (callee.property?.type !== 'Identifier') return undefined
+    const modifier = callee.property.name ?? ''
+    if (!(allowed as ReadonlySet<string>).has(modifier)) return undefined
+    if (callee.object === undefined) return undefined
+
+    const at = `(${filename} offset ${current.start as number})`
+    if (seen.has(modifier)) {
+      throw new Error(`best-i18n: .${modifier}() is given twice ${at}.`)
+    }
+    seen.add(modifier)
+
+    const args = (current.arguments ?? []) as Array<Record<string, unknown>>
+    const argument = args[0]
+    if (args.length !== 1 || argument?.type === 'SpreadElement') {
+      throw new Error(
+        `best-i18n: .${modifier}() takes exactly one argument ${at}.`,
+      )
+    }
+
+    if (modifier === 'ctx') {
+      if (
+        argument.type !== 'Literal' ||
+        typeof argument.value !== 'string' ||
+        argument.value === ''
+      ) {
+        throw new Error(
+          `best-i18n: .ctx() takes exactly one non-empty string literal ${at} ` +
+            '- the context has to be statically visible.',
+        )
+      }
+      context = argument.value
+    } else {
+      const source = code.slice(
+        argument.start as number,
+        argument.end as number,
+      )
+      explicitLocale =
+        argument.type === 'Literal' && typeof argument.value === 'string'
+          ? { source, literal: argument.value }
+          : { source }
+    }
+
+    current = callee.object
+  }
+
+  if (current.type !== 'Identifier') return undefined
+  return {
+    base: current,
+    context,
+    ...(explicitLocale === undefined ? {} : { explicitLocale }),
+  }
+}
+
+const TAG_MODIFIERS: ReadonlySet<'ctx' | 'locale'> = new Set(['ctx', 'locale'])
+const PLURAL_MODIFIERS: ReadonlySet<'ctx' | 'locale'> = new Set(['locale'])
+
+/** t`...`, t.ctx('verb')`...`, t.locale(lang)`...`: the tagged-template macro. */
 function collectTags(context: Context, hooks: Hooks): void {
   const { parsed, code, filename, locals, messages, tagNodes, descriptionFor } =
     context
@@ -731,59 +823,21 @@ function collectTags(context: Context, hooks: Hooks): void {
   walk(parsed.program, (node) => {
     if (node.type !== 'TaggedTemplateExpression') return
 
-    // The tag is either the bare macro - t`...` - or a context call:
-    // t.ctx('verb')`...`, which disambiguates two identical texts (msgctxt).
-    const tagNode = node.tag as
-      | {
-          type?: string
-          name?: string
-          callee?: {
-            type?: string
-            computed?: boolean
-            object?: { type?: string; name?: string }
-            property?: { type?: string; name?: string }
-          }
-          arguments?: Array<{ type?: string; value?: unknown }>
-        }
-      | undefined
-
-    let nameNode: { type?: string; name?: string } | undefined
-    if (tagNode?.type === 'Identifier') {
-      nameNode = tagNode
-    } else if (tagNode?.type === 'CallExpression') {
-      const callee = tagNode.callee
-      if (callee?.type !== 'MemberExpression') return
-      if (callee.computed === true) return
-      if (callee.property?.type !== 'Identifier') return
-      if (callee.property.name !== 'ctx') return
-      if (callee.object?.type !== 'Identifier') return
-      nameNode = callee.object
-    } else {
-      return
-    }
-
+    // The tag is the bare macro - t`...` - or the macro behind modifiers:
+    // t.ctx('verb') disambiguates two identical texts (msgctxt), t.locale(l)
+    // renders in a named locale instead of the current one.
+    const tagNode = node.tag as Record<string, unknown> | undefined
+    if (tagNode === undefined) return
+    // Only a chain hanging off a macro binding is ours: check the shape first
+    // and the binding second, so `other.locale(x)` is left alone even when
+    // its shape is right, and a misused `t.ctx()` still gets its error.
+    const shape = unwrapModifiers(tagNode, code, filename, TAG_MODIFIERS)
+    if (shape === undefined) return
+    const nameNode = shape.base as { name?: string }
     const name = nameNode.name ?? ''
     const isHookVar = hookScopeAt(node.start as number, name) !== undefined
     if (!locals.has(name) && !isHookVar) return
-
-    let context = ''
-    if (tagNode!.type === 'CallExpression') {
-      const args = tagNode!.arguments ?? []
-      const argument = args[0]
-      if (
-        args.length !== 1 ||
-        argument?.type !== 'Literal' ||
-        typeof argument.value !== 'string' ||
-        argument.value === ''
-      ) {
-        throw new Error(
-          `best-i18n: ${name}.ctx() takes exactly one non-empty string ` +
-            `literal (${filename} offset ${node.start as number}) - the ` +
-            'context has to be statically visible.',
-        )
-      }
-      context = argument.value
-    }
+    const { context, explicitLocale } = shape
 
     tagNodes.add(nameNode)
 
@@ -819,6 +873,7 @@ function collectTags(context: Context, hooks: Hooks): void {
       end: node.end as number,
       line,
       ...(isHookVar ? { localeVar: name } : {}),
+      ...(explicitLocale === undefined ? {} : { explicitLocale }),
     })
   })
 }
@@ -840,9 +895,17 @@ function collectPlurals(context: Context, hooks: Hooks): void {
   walk(parsed.program, (node) => {
     if (node.type !== 'CallExpression') return
 
-    const callee = node.callee as { type?: string; name?: string } | undefined
-    if (callee?.type !== 'Identifier') return
+    // `plural(...)`, or `plural.locale(lang)(...)` for a named locale.
+    const shape = unwrapModifiers(
+      node.callee as Record<string, unknown>,
+      code,
+      filename,
+      PLURAL_MODIFIERS,
+    )
+    if (shape === undefined) return
+    const callee = shape.base as { name?: string }
     if (!pluralLocals.has(callee.name ?? '')) return
+    const { explicitLocale } = shape
 
     allowedPluralNodes.add(callee)
 
@@ -913,6 +976,7 @@ function collectPlurals(context: Context, hooks: Hooks): void {
       end: node.end as number,
       line,
       ...(localeVar === undefined ? {} : { localeVar }),
+      ...(explicitLocale === undefined ? {} : { explicitLocale }),
     })
   })
 }
@@ -1018,6 +1082,9 @@ function collectTrans(context: Context, hooks: Hooks): void {
       elementOk: match.elementOk,
       ...(match.svelte === true ? { svelte: true } : {}),
       ...(match.vue === true ? { vue: true } : {}),
+      ...(match.explicitLocale === undefined
+        ? {}
+        : { explicitLocale: match.explicitLocale }),
     })
   })
 }

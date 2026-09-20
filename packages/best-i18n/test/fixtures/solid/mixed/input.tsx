@@ -19,3 +19,6 @@ export function Details(props) {
 export function Attribute(props) {
   return <img alt={<T>Hello</T>} src={props.src} />;
 }
+export function Named(props) {
+  return <p><Trans locale="zh">Hello</Trans><Trans locale={props.lang}>Read <a href={props.href}>docs</a>.</Trans>{t.locale('zh')`Hello`}</p>;
+}

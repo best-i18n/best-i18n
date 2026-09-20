@@ -60,6 +60,10 @@ export interface VueProp {
   name: string
   /** `ctx="verb"` -> `verb`. Attributes only. */
   value?: string
+  /** `:locale="lang"` -> `locale`. Directives with an argument only. */
+  arg?: string
+  /** `:locale="lang"` -> `lang`. Directives with a value only. */
+  expression?: string
   start: number
   end: number
 }
@@ -100,6 +104,7 @@ interface RawNode {
     rawName?: string
     value?: { content: string } | undefined
     exp?: { content: string; loc: Loc } | undefined
+    arg?: { content: string } | undefined
     loc: Loc
   }>
   children?: RawNode[]
@@ -269,6 +274,12 @@ export function parseVue(
           name: prop.name,
           ...(prop.type === ATTRIBUTE && prop.value !== undefined
             ? { value: prop.value.content }
+            : {}),
+          ...(prop.type === DIRECTIVE && prop.arg !== undefined
+            ? { arg: prop.arg.content }
+            : {}),
+          ...(prop.type === DIRECTIVE && prop.exp !== undefined
+            ? { expression: prop.exp.content }
             : {}),
           start: prop.loc.start.offset,
           end: prop.loc.end.offset,

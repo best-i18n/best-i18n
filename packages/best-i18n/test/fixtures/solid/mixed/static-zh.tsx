@@ -17,3 +17,6 @@ export function Details(props) {
 export function Attribute(props) {
   return <img alt={`你好`} src={props.src} />;
 }
+export function Named(props) {
+  return <p>{`你好`}{(props.lang === "zh" ? <>{`阅读`}<a href={props.href}>{`文档`}</a>{`。`}</> : <>{`Read `}<a href={props.href}>{`docs`}</a>{`.`}</>)}{`你好`}</p>;
+}

@@ -92,8 +92,8 @@ The compiler rebuilds ordinary template markup per locale: `<template v-if>`
 blocks over the locale branches, or just the one locale's markup under
 `staticLocale`. Text becomes `{{ }}` interpolations, so what Vue renders is
 exactly what the translator saw. `<Trans>` takes no props other than `ctx`
-(a string literal) — wrap it in an element if you need a class or an event —
-and its children must be text, `{{ }}` interpolations, elements and
+(a string literal) and `locale` (`locale="zh"` or `:locale="lang"`) — wrap it in
+an element if you need a class or an event — and its children must be text, `{{ }}` interpolations, elements and
 components. `<template>`, `<slot>` and `<component>` have no place in a
 sentence and are rejected at build time.
 

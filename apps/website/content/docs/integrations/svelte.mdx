@@ -94,8 +94,8 @@ The catalog stores the elements as named placeholders — `Read the <a>docs</a>`
 The compiler rebuilds ordinary Svelte markup per locale: an `{#if}` chain over
 the locale branches, or just the one locale's markup under `staticLocale`.
 Nothing walks a message tree at runtime. `<Trans>` takes no props other than
-`ctx` (a string literal) — wrap it in an element if you need a class or an
-event — and its children must be text, `{expressions}`, elements and
+`ctx` (a string literal) and `locale` (`locale="zh"` or `locale={lang}`) — wrap
+it in an element if you need a class or an event — and its children must be text, `{expressions}`, elements and
 components. Blocks (`{#if}`, `{#each}`), `{@html}`, `{@render}` and snippets
 have no place in a sentence and are rejected at build time.
 

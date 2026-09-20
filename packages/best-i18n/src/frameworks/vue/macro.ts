@@ -30,10 +30,13 @@ import type { FunctionalComponent } from 'vue'
  *     </p>
  *   </template>
  */
-export const Trans: FunctionalComponent<{ ctx?: string }> = () => {
+export const Trans: FunctionalComponent<{
+  ctx?: string
+  locale?: string
+}> = () => {
   throw new Error(
     'best-i18n: <Trans> reached runtime, which means this file was never ' +
       'transformed. Is the bundler plugin installed, and is vue: true set?',
   )
 }
-Trans.props = ['ctx']
+Trans.props = ['ctx', 'locale']

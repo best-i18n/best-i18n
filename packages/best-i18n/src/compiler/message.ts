@@ -73,6 +73,18 @@ export interface Message {
    * rather than a JSX expression.
    */
   vue?: boolean
+  /**
+   * Set when the call site names its own locale - `t.locale(lang)`,
+   * `<Trans locale="zh">` - instead of reading the current one. `source` is
+   * the expression as written; `literal` is its value when it is a string
+   * literal, which compiles to that locale's text and nothing else.
+   */
+  explicitLocale?: ExplicitLocale
+}
+
+export interface ExplicitLocale {
+  source: string
+  literal?: string
 }
 
 /**

@@ -83,7 +83,8 @@ defineProps<{ docsUrl: string }>()
 
 编译器按语言重组为普通模板标记：各语言分支包在 `<template v-if>` 块里，或者在
 `staticLocale` 下只剩那一个语言的标记。文字变成 `{{ }}` 插值，所以 Vue 渲染出来的
-和翻译者看到的完全一样。`<Trans>` 除了 `ctx`（字符串字面量）不接受其他 props——
+和翻译者看到的完全一样。`<Trans>` 除了 `ctx`（字符串字面量）和 `locale`（`locale="zh"` 或
+`:locale="lang"`）不接受其他 props——
 需要 class 或事件就把它包进一个元素——子节点只能是文本、`{{ }}` 插值、元素和组件。
 `<template>`、`<slot>` 和 `<component>` 在一句话里没有位置，构建时会被拒绝。
 

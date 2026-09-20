@@ -1,0 +1,117 @@
+[
+  {
+    "text": "A small starter with room to grow.",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 193,
+    "end": 243,
+    "line": 7,
+    "explicitLocale": {
+      "source": "'zh'",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "A small starter with room to grow.",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 260,
+    "end": 310,
+    "line": 8,
+    "explicitLocale": {
+      "source": "lang"
+    }
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "context": "verb",
+    "start": 326,
+    "end": 358,
+    "line": 9,
+    "explicitLocale": {
+      "source": "'zh'",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "context": "verb",
+    "start": 374,
+    "end": 406,
+    "line": 10,
+    "explicitLocale": {
+      "source": "lang"
+    }
+  },
+  {
+    "text": "One item",
+    "plural": {
+      "count": "count",
+      "other": "{count} items"
+    },
+    "expressions": [
+      "count"
+    ],
+    "placeholders": [
+      "count"
+    ],
+    "context": "",
+    "start": 422,
+    "end": 478,
+    "line": 11,
+    "explicitLocale": {
+      "source": "lang"
+    }
+  },
+  {
+    "text": "Read the <a>docs</a>",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href=\"/docs\">",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 502,
+    "end": 582,
+    "line": 13,
+    "braced": true,
+    "elementOk": true,
+    "explicitLocale": {
+      "source": "\"zh\"",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "Read the <a>docs</a>",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href=\"/docs\">",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 612,
+    "end": 694,
+    "line": 18,
+    "braced": true,
+    "elementOk": true,
+    "explicitLocale": {
+      "source": "lang"
+    }
+  }
+]

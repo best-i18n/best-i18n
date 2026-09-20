@@ -31,6 +31,8 @@ import type { Component, Snippet } from 'svelte'
 export const Trans: Component<{
   children?: Snippet
   ctx?: string
+  /** Render in this locale instead of the current one; see `t.locale`. */
+  locale?: string
 }> = () => {
   throw new Error(
     'best-i18n: <Trans> reached runtime, which means this file was never ' +

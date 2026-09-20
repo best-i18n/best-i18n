@@ -14,6 +14,8 @@ export function Trans(props: {
   children?: JSX.Element
   /** Disambiguation context (gettext msgctxt). Must be a string literal. */
   ctx?: string
+  /** Render in this locale instead of the current one; see `t.locale`. */
+  locale?: string
 }): JSX.Element {
   void props
   throw new Error(

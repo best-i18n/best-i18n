@@ -340,6 +340,34 @@ const sign = t.ctx('adjective')`Open` // 营业中
 const markup = <Trans ctx='verb'>Open</Trans>
 ```
 
+### Naming the locale
+
+A call site can name the locale it wants instead of reading the current one:
+an email in the recipient's language, a preview of another locale, a label
+that must stay in the source language. `locale` is the last modifier on `t`
+and `plural`, and a prop on `<Trans>`:
+
+```tsx
+const zh = t.locale('zh')`Hello` // always 你好
+const theirs = t.locale(user.locale)`Hello` // whatever they chose
+const count = plural.locale(user.locale)(n, `One item`, `${n} items`)
+const rich = (
+  <Trans locale={user.locale}>
+    Read the <a href={url}>docs</a>
+  </Trans>
+)
+```
+
+Modifiers chain in either order: `t.ctx('verb').locale('zh')` and
+`t.locale('zh').ctx('verb')` are the same message. A string literal compiles to
+that locale's text alone - no branch, no locale read - and a literal that is
+not one of the configured locales is a build error. Any other expression
+compiles to a branch over its value at runtime. Either way the message does
+not subscribe to the current locale, so it does not update when the user
+switches, and in a `'use client'` module on Next.js it needs no hook and no
+generated component. A per-locale build leaves these branches in place: the
+build fixes the current locale, not the ones a call site asks for.
+
 ### Comments for the translator
 
 A `// i18n:` comment directly above (or on the line of) a message becomes a

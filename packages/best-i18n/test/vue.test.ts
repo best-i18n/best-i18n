@@ -136,7 +136,7 @@ describe('vue translation macros', () => {
         path.join(messagesDir, 'messages.pot'),
         formatPo({ locale: 'en', entries: [] }),
       )
-      const source = fixture('vue/mixed/input.vue')
+      const source = fixture('vue/vite-build/input.vue')
       const base = { messagesDir, locales: ['en'], baseLocale: 'en' }
       expect(pluginTransform(i18n(base))(source, 'Page.vue')).toBeNull()
 

@@ -17,7 +17,7 @@ import type {
   TransContext,
   TransMatch,
 } from '../../compiler/adapter.ts'
-import type { Message } from '../../compiler/message.ts'
+import type { ExplicitLocale, Message } from '../../compiler/message.ts'
 import type { TransElement, TransMessage } from '../../compiler/trans.ts'
 import type { SvelteScript } from './parse.ts'
 
@@ -193,9 +193,40 @@ function matchSvelteTrans(
 
   const start = node.start as number
   let context = ''
+  let explicitLocale: ExplicitLocale | undefined
   for (const attribute of (node.attributes ?? []) as Array<
     Record<string, unknown>
   >) {
+    if (attribute.type === 'Attribute' && attribute.name === 'locale') {
+      // `locale="zh"` is a Text value; `locale={lang}` an ExpressionTag,
+      // either as the whole value or as the one item of the value array.
+      const raw = attribute.value as
+        | true
+        | Record<string, unknown>
+        | Array<Record<string, unknown>>
+      const value = Array.isArray(raw) && raw.length === 1 ? raw[0]! : raw
+      if (value === true || Array.isArray(value)) {
+        throw new Error(
+          `best-i18n: <${component} locale> needs a value ` +
+            `(${filename} offset ${start}).`,
+        )
+      }
+      if (value.type === 'Text') {
+        const literal = value.data as string
+        explicitLocale = { source: JSON.stringify(literal), literal }
+      } else {
+        const expression = value.expression as Record<string, unknown>
+        const source = code.slice(
+          expression.start as number,
+          expression.end as number,
+        )
+        explicitLocale =
+          expression.type === 'Literal' && typeof expression.value === 'string'
+            ? { source, literal: expression.value }
+            : { source }
+      }
+      continue
+    }
     if (attribute.type === 'Attribute' && attribute.name === 'ctx') {
       const value = attribute.value as
         | Array<{ type?: string; data?: string }>
@@ -251,6 +282,7 @@ function matchSvelteTrans(
     braced: elements.length === 0,
     elementOk: false,
     svelte: true,
+    ...(explicitLocale === undefined ? {} : { explicitLocale }),
   }
 }
 
