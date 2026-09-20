@@ -660,13 +660,15 @@ function renderChildren(
   elements: TransElement[],
   describe: string,
   refs?: Map<string, string>,
+  interpolate: (expression: string) => string = (expression) =>
+    `{${expression}}`,
 ): string {
   let out = ''
   let run: MessagePart[] = []
 
   const flushRun = () => {
     if (run.length === 0) return
-    out += `{${renderFlat(run, expressions, placeholders)}}`
+    out += interpolate(renderFlat(run, expressions, placeholders))
     run = []
   }
 
@@ -704,7 +706,7 @@ function renderChildren(
       // have to be one expression: a flat run already is, a run with markup of
       // its own becomes a fragment.
       const children = hasElement(part.children)
-        ? `<>${renderChildren(part.children, expressions, placeholders, elements, describe, refs)}</>`
+        ? `<>${renderChildren(part.children, expressions, placeholders, elements, describe, refs, interpolate)}</>`
         : renderFlat(part.children, expressions, placeholders)
       out += `{${ref}(${part.children.length === 0 ? '' : children})}`
       continue
@@ -718,6 +720,8 @@ function renderChildren(
         placeholders,
         elements,
         describe,
+        refs,
+        interpolate,
       ) +
       element.close
   }
@@ -751,6 +755,7 @@ export function renderTrans(
   describe: string,
   refs?: string[],
   fragment = true,
+  interpolate?: (expression: string) => string,
 ): string {
   const parts = parseMessage(text, describe)
   validateTransParts(parts, placeholders, elements, describe)
@@ -769,6 +774,7 @@ export function renderTrans(
     elements,
     describe,
     byToken,
+    interpolate,
   )
   return fragment ? `<>${children}</>` : children
 }

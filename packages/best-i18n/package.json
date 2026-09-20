@@ -123,6 +123,18 @@
     "./solid/macro": {
       "types": "./dist/solid-macro.d.mts",
       "default": "./dist/solid-macro.mjs"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.mts",
+      "default": "./dist/vue.mjs"
+    },
+    "./vue/macro": {
+      "types": "./dist/vue-macro.d.mts",
+      "default": "./dist/vue-macro.mjs"
+    },
+    "./nuxt": {
+      "types": "./dist/nuxt.d.mts",
+      "default": "./dist/nuxt.mjs"
     }
   },
   "publishConfig": {
@@ -142,12 +154,18 @@
     "oxc-parser": "^0.149.0"
   },
   "devDependencies": {
+    "@nuxt/kit": "^4.5.2",
+    "@nuxt/schema": "^4.5.2",
     "@types/gettext-parser": "^9.0.0",
     "@types/node": "^25.9.6",
     "@types/react": "^19.3.0",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/server-renderer": "^3.5.43",
     "bumpp": "^12.3.0",
+    "h3": "^1.15.11",
     "happy-dom": "^20.14.5",
     "next": "^16.3.4",
+    "nitropack": "^2.13.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rolldown": "^1.2.8",
@@ -157,15 +175,18 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vite-plugin-solid": "^2.11.14",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "vue": "^3.5.43"
   },
   "peerDependencies": {
+    "@nuxt/kit": ">=3.13",
     "next": ">=15.2",
     "react": ">=18",
     "rolldown": ">=1",
     "solid-js": "^1.9.0",
     "svelte": "^5.7.0",
-    "vite": ">=6"
+    "vite": ">=6",
+    "vue": "^3.3.0"
   },
   "peerDependenciesMeta": {
     "next": {
@@ -184,6 +205,15 @@
       "optional": true
     },
     "solid-js": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "@nuxt/kit": {
+      "optional": true
+    },
+    "nuxt": {
       "optional": true
     }
   },

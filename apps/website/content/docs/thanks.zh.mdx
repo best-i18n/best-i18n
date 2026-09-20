@@ -1,0 +1,39 @@
+---
+title: 致谢
+description: best-i18n 的想法继承自哪些项目，又站在哪些项目之上
+---
+
+best-i18n 最好的想法不是自己发明的，而是继承来的。大致按各自在设计中占的分量
+排序：
+
+- [oxc-parser](https://oxc.rs/docs/guide/usage/parser)——每次 transform 底下的
+  解析器。正是它让"每次构建都重新解析每个文件"便宜到编译器不需要缓存、不需要
+  守护进程，它输出的 ESTree 也让同一套分析能同时服务 React、Svelte 脚本和
+  Solid。
+- [GNU gettext](https://www.gnu.org/software/gettext/)——这个包所说的 PO 工作流：
+  源文本即消息，用 `fuzzy` 代替数据丢失，用 `#~` 代替删除。几十年的翻译工具链
+  之所以能直接用，是因为这些约定被尊重了。
+- [Lingui](https://lingui.dev/)——宏的形态和消息内嵌标记的 `<0>...</0>` 占位符
+  约定。这里采用它的理由和它诞生的理由相同：翻译者永远不该看到 JSX 属性。
+- [Paraglide JS](https://paraglidejs.com/)——证明了编译期 i18n 加按语言
+  tree-shaking 根本上可行，也定下了 locale 策略 API 该长什么样的标杆。它和
+  best-i18n 的路由集成各自独立地收敛到了同样两个函数名。
+- [next-intl](https://next-intl.dev/)——一个完整的 Next.js App Router 集成该覆盖
+  什么，以它为参照。仓库里它的孪生 playground 是[对比页](/zh/docs/comparison)
+  上那些体积数字诚实的保证。
+- [gettext-parser](https://github.com/smhg/gettext-parser)——`i18n-extract` 和
+  `i18n-compile` 底下的 PO 编解码器。
+- [magic-string](https://github.com/rich-harris/magic-string)——每次 transform
+  都通过它写入，也是不用代码生成器就能得到正确 source map 的原因。
+- [Svelte](https://svelte.dev/)、[Solid](https://www.solidjs.com/) 和
+  [Vue](https://vuejs.org/)——`createSubscriber`、signal 和 `shallowRef`，这些
+  机制让编译出来的 locale 读取不需要自带运行时就能是响应式的。
+
+对比用的 playground——
+[next-intl](https://github.com/best-i18n/best-i18n/tree/main/playground/nextjs-intl)、
+[Paraglide](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide)、
+[svelte-i18n](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n)
+和
+[@solid-primitives/i18n](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives)
+——之所以存在，是因为这些库好到值得拿来测量。对比页上的每个数字，都是和别人
+做得很好的工作在比。

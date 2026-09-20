@@ -14,8 +14,10 @@ const MACRO_MODULE = 'best-i18n/macro'
 const COMPONENT_MODULE = 'best-i18n/react/macro'
 const SVELTE_COMPONENT_MODULE = 'best-i18n/svelte/macro'
 const SOLID_COMPONENT_MODULE = 'best-i18n/solid/macro'
+const VUE_COMPONENT_MODULE = 'best-i18n/vue/macro'
 const EXTENSIONS = new Set([
   '.svelte',
+  '.vue',
   '.ts',
   '.tsx',
   '.mts',
@@ -139,6 +141,7 @@ function configure(): Config {
               COMPONENT_MODULE,
               SVELTE_COMPONENT_MODULE,
               SOLID_COMPONENT_MODULE,
+              VUE_COMPONENT_MODULE,
             ].join(','),
           },
         )

@@ -21,18 +21,18 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 | 按语言构建                           | `staticLocale`——纯字面量                  | 无                            | 无                     | 有，按语言出包        |
 | 本地化路径（`/about` → `/de/ueber`） | 无                                        | 无                            | 有                     | 有                    |
 
-Svelte 和 Solid 两族还各有一个完全没有编译步骤的运行时库：
+Svelte、Solid 和 Nuxt 三族还各有一个自身没有编译步骤的运行时库：
 
-|                   | svelte-i18n                                 | @solid-primitives/i18n        |
-| ----------------- | ------------------------------------------- | ----------------------------- |
-| 消息是什么        | key（`$_('greeting')`）                     | key（`t('greeting')`）        |
-| 运行时装载什么    | ICU 格式化器（`intl-messageformat`）+ store | 扁平化字典 + `{{ }}` 模板填充 |
-| catalog 格式      | JSON                                        | JSON 或任意对象               |
-| 复数              | ICU，运行时                                 | 无内置                        |
-| 消息内嵌标记      | 仅字符串                                    | 仅字符串                      |
-| 按语言构建        | 无                                          | 无                            |
-| locale 解析、路由 | 无——自己带                                  | 无——自己带                    |
-| SSR 按请求绑定    | 无——一个全局 store                          | 无——你自己提供的 signal       |
+|                   | svelte-i18n                                 | @solid-primitives/i18n        | @nuxtjs/i18n（vue-i18n）                  |
+| ----------------- | ------------------------------------------- | ----------------------------- | ----------------------------------------- |
+| 消息是什么        | key（`$_('greeting')`）                     | key（`t('greeting')`）        | key（`$t('greeting')`）                   |
+| 运行时装载什么    | ICU 格式化器（`intl-messageformat`）+ store | 扁平化字典 + `{{ }}` 模板填充 | vue-i18n 消息编译器 + 格式化器            |
+| catalog 格式      | JSON                                        | JSON 或任意对象               | 每个语言一个 JSON / YAML                  |
+| 复数              | ICU，运行时                                 | 无内置                        | `\|` 分隔的形式，运行时                   |
+| 消息内嵌标记      | 仅字符串                                    | 仅字符串                      | `<i18n-t>` 组件加 slot，每次渲染          |
+| 按语言构建        | 无                                          | 无                            | 无（按语言懒加载 chunk）                  |
+| locale 解析、路由 | 无——自己带                                  | 无——自己带                    | 有——策略、`useLocalePath`、浏览器语言检测 |
+| SSR 按请求绑定    | 无——一个全局 store                          | 无——你自己提供的 signal       | 有——按应用实例                            |
 
 其中两个是 best-i18n 的直系祖先：宏的形态和 `<0>...</0>` 标记约定来自 Lingui，
 而 Paraglide 证明了编译期 i18n 加按语言 tree-shaking 根本上可行。与 Lingui 更深
@@ -44,7 +44,7 @@ Svelte 和 Solid 两族还各有一个完全没有编译步骤的运行时库：
 同族的应用用同一种方式测量——Next.js 上是 `/zh`、`/zh/about` 和 `/zh/long`
 的 HTML 引用到的全部 `/_next/static/*.js`；TanStack Start 上是产出的客户端资
 产；SvelteKit 上是 `.svelte-kit/output/client` 下的全部 JS；SolidStart 上是
-`.output/public/_build` 下的全部 JS。`/zh/long` 是多文本场景：一篇刻意做长的文章，约 30 条服务端渲染的消息——
+`.output/public/_build` 下的全部 JS；Nuxt 上是 `.output/public/_nuxt` 下的全部 JS。`/zh/long` 是多文本场景：一篇刻意做长的文章，约 30 条服务端渲染的消息——
 整段落、复数、上下文、标记俱全——在两个 Next 孪生里各有一份镜像。
 
 ### Next.js——对 next-intl
@@ -82,6 +82,14 @@ Svelte 和 Solid 两族还各有一个完全没有编译步骤的运行时库：
 | @solid-primitives/i18n             | 18.2 kB           | 44.8 kB |
 | paraglide                          | 26.0 kB           | 69.8 kB |
 
+### Nuxt 4——对 @nuxtjs/i18n
+
+| 变体                               | 客户端 JS（gzip） | 原始     |
+| ---------------------------------- | ----------------- | -------- |
+| best-i18n                          | 73.7 kB           | 199.0 kB |
+| best-i18n，`I18N_STATIC_LOCALE=zh` | 73.5 kB           | 198.5 kB |
+| @nuxtjs/i18n                       | 100.5 kB          | 279.3 kB |
+
 Next 表的两列 HTML 就是全部故事。两边的首页渲染同样几条消息，`/zh` 却是 2.4 kB 对
 4.9 kB：差额就是 catalog——next-intl 把它装进每个页面的载荷，无论页面渲不渲染
 那些消息。best-i18n 的页面只携带自己渲染的文字——长文页那约 30 条消息只以
@@ -112,6 +120,13 @@ next-intl 是同一笔交易，只是发生在客户端：复数、`select`、�
 都付一次钱。它也不带 locale 解析、路由和按请求绑定；playground 里这三样都是手
 工补的，而服务端那一个全局 store 是按请求写入的——它自己的 SvelteKit 指南就是
 这么做的——不同语言的并发请求会在这里竞争。
+
+**@nuxtjs/i18n 的约 27 kB 是 vue-i18n**——在浏览器里把 `$t('key', { count })`
+变成文字的消息编译器和格式化器，再加模块自己的路由策略和浏览器语言检测。这是
+测过的差距里最大的一个，也是最完整的替代方案：其他运行时库留给你自己做的路由和
+按请求绑定它都带了，`<i18n-t>` 组件也能处理消息内嵌标记——在运行时、每次渲染，
+和 Lingui 的 `<Trans>` 一样。best-i18n 的 Nuxt 模块覆盖了路由和绑定，但没有
+消息运行时。
 
 **@solid-primitives/i18n 的约 1.5 kB 几乎算不上运行时**——一个扁平化的字典加
 `{{ name }}` 模板填充——所以它是所有测过的方案里离 best-i18n 最近的。两个懒加载
@@ -172,5 +187,6 @@ gzip 会把它压平，剩下的只是重复字符串字面量的解析时间—
 [`playground/sveltekit-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-paraglide)、
 [`playground/sveltekit-svelte-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n)、
 [`playground/solid-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-paraglide)、
-[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives)）
+[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives)、
+[`playground/nuxt-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/nuxt-i18n)）
 里有完整的数字和全部前提条件。

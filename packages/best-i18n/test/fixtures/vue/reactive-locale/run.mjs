@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+globalThis.window = {};
+const { watchEffect, nextTick } = await import('vue');
+const { configure, getLocale, useLocale, setLocale } = await import('best-i18n/vue');
+configure({ baseLocale: 'en', locales: ['en', 'zh'] });
+const values = [];
+const current = [];
+const locale = useLocale();
+const stop = watchEffect(() => { values.push(getLocale()); current.push(locale.value); }, { flush: 'sync' });
+setLocale('zh');
+setLocale('zh');
+await nextTick();
+stop();
+setLocale('en');
+await nextTick();
+assert.deepEqual(values, ['en', 'zh']);
+assert.deepEqual(current, ['en', 'zh']);
+console.log('ok');

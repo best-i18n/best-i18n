@@ -1,0 +1,128 @@
+[
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 235,
+    "end": 243,
+    "line": 7
+  },
+  {
+    "text": "Say 'hi'",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 281,
+    "end": 292,
+    "line": 11
+  },
+  {
+    "text": "Hi {0}",
+    "expressions": [
+      "props.name"
+    ],
+    "placeholders": [
+      "0"
+    ],
+    "context": "",
+    "description": "greets the signed-in user",
+    "start": 362,
+    "end": 381,
+    "line": 13
+  },
+  {
+    "text": "One item",
+    "plural": {
+      "count": "props.count",
+      "other": "{0} items"
+    },
+    "expressions": [
+      "props.count"
+    ],
+    "placeholders": [
+      "0"
+    ],
+    "context": "",
+    "start": 397,
+    "end": 452,
+    "line": 14
+  },
+  {
+    "text": "Read the <a>docs</a> to learn <b>more</b>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href=\"/docs\">",
+        "close": "</a>",
+        "selfClosing": false
+      },
+      {
+        "token": "b",
+        "open": "<b>",
+        "close": "</b>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 470,
+    "end": 558,
+    "line": 16,
+    "braced": false,
+    "elementOk": false,
+    "vue": true
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "verb",
+    "start": 571,
+    "end": 601,
+    "line": 21,
+    "braced": false,
+    "elementOk": false,
+    "vue": true
+  },
+  {
+    "text": "Line one<br/>line two",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "br",
+        "open": "<br />",
+        "close": "",
+        "selfClosing": true
+      }
+    ],
+    "context": "",
+    "start": 611,
+    "end": 648,
+    "line": 22,
+    "braced": false,
+    "elementOk": false,
+    "vue": true
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 675,
+    "end": 683,
+    "line": 23
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 689,
+    "end": 697,
+    "line": 23
+  }
+]

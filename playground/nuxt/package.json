@@ -1,0 +1,26 @@
+{
+  "name": "playground-nuxt",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same app on Nuxt 4, through the best-i18n Nuxt module",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3000",
+    "build": "nuxt build",
+    "build:zh": "I18N_STATIC_LOCALE=zh nuxt build",
+    "preview": "nuxt preview",
+    "start": "node .output/server/index.mjs",
+    "extract": "i18n-extract --locales en,zh --src app --messages messages",
+    "prepare": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "best-i18n": "workspace:*",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.11"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "playground-nuxt-i18n",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same app as playground/nuxt, built with @nuxtjs/i18n, for size comparison",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3000",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "start": "node .output/server/index.mjs",
+    "prepare": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@nuxtjs/i18n": "^10.6.0",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.3.11"
+  }
+}
