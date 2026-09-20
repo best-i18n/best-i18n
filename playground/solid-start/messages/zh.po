@@ -1,0 +1,39 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/app.tsx:18
+msgid "Home"
+msgstr "首页"
+
+#: src/app.tsx:21
+#: src/routes/[[locale]]/about.tsx:6
+msgid "About"
+msgstr "关于"
+
+#: src/routes/[[locale]]/about.tsx:7
+msgid "Translations are compiled into your application."
+msgstr "翻译会编译到你的应用中。"
+
+#: src/routes/[[locale]]/index.tsx:7
+msgid "Hello from SolidStart!"
+msgstr "来自 SolidStart 的问候！"
+
+#: src/routes/[[locale]]/index.tsx:11
+msgid "Compile-time translations with SolidStart v2."
+msgstr "SolidStart v2 的编译时翻译。"
+
+#: src/routes/[[locale]]/index.tsx:13
+msgid "One click"
+msgid_plural "{0} clicks"
+msgstr[0] "{0} 次点击"
+
+#: src/routes/[[locale]]/index.tsx:16
+msgid "Read the <a>README</a> to learn more."
+msgstr "阅读<a>README</a>了解更多。"

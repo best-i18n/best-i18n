@@ -1,0 +1,169 @@
+[
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 138,
+    "end": 158,
+    "line": 4,
+    "braced": false,
+    "elementOk": true
+  },
+  {
+    "text": "Read <a>docs</a>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={props.href}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 199,
+    "end": 249,
+    "line": 5,
+    "braced": false,
+    "elementOk": true
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 305,
+    "end": 313,
+    "line": 7
+  },
+  {
+    "text": "One item",
+    "plural": {
+      "count": "props.count",
+      "other": "{0} items"
+    },
+    "expressions": [
+      "props.count"
+    ],
+    "placeholders": [
+      "0"
+    ],
+    "context": "",
+    "start": 358,
+    "end": 413,
+    "line": 8
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 500,
+    "end": 520,
+    "line": 11,
+    "braced": false,
+    "elementOk": false
+  },
+  {
+    "text": "Read <a>docs</a>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={props.href}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 589,
+    "end": 639,
+    "line": 14,
+    "braced": true,
+    "elementOk": true
+  },
+  {
+    "text": "Read <a>docs</a>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={props.href}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 639,
+    "end": 689,
+    "line": 14,
+    "braced": true,
+    "elementOk": true
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "context": "verb",
+    "start": 758,
+    "end": 777,
+    "line": 17
+  },
+  {
+    "text": "Hi {0}, <b><i>welcome</i></b>!",
+    "expressions": [
+      "props.name"
+    ],
+    "placeholders": [
+      "0"
+    ],
+    "elements": [
+      {
+        "token": "b",
+        "open": "<b>",
+        "close": "</b>",
+        "selfClosing": false
+      },
+      {
+        "token": "i",
+        "open": "<i>",
+        "close": "</i>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 786,
+    "end": 832,
+    "line": 17,
+    "braced": true,
+    "elementOk": true
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 865,
+    "end": 873,
+    "line": 17
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 951,
+    "end": 963,
+    "line": 20,
+    "braced": false,
+    "attribute": true,
+    "elementOk": false
+  }
+]

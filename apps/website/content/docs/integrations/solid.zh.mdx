@@ -1,0 +1,121 @@
+---
+title: Solid
+description: SolidStart v2 的响应式翻译与请求语言隔离
+---
+
+支持 [SolidStart v2](https://docs.solidjs.com/solid-start/v2)、Solid 1 和 Vite 8；SolidStart v2 本身要求 Node.js 24 或更新。完整示例见 [`playground/solid-start`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start).
+
+## 共享配置
+
+Vite 插件、服务端和客户端复用同一份语言配置：
+
+```ts
+// src/i18n.ts
+import type { UrlConfig } from 'best-i18n/locale-url'
+
+export const i18n: UrlConfig = {
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+}
+```
+
+将 `i18n` 放在 `solidStart()` 前，并启用 `solid: true`。示例使用 Nitro 的 Node 服务端部署。
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { solidStart } from '@solidjs/start/config'
+import { i18n } from 'best-i18n/vite'
+import { nitro } from 'nitro/vite'
+import { defineConfig } from 'vite'
+import { i18n as localeConfig } from './src/i18n.ts'
+
+export default defineConfig({
+  define: {
+    'import.meta.env.I18N_STATIC_LOCALE': JSON.stringify(
+      process.env.I18N_STATIC_LOCALE ?? '',
+    ),
+  },
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: localeConfig.locales,
+      baseLocale: localeConfig.baseLocale,
+      staticLocale: process.env.I18N_STATIC_LOCALE || undefined,
+      solid: true,
+    }),
+    solidStart({ middleware: './src/middleware.ts' }),
+    nitro(),
+  ],
+})
+```
+
+## 服务端与 hydration
+
+使用 v2 的 H3 中间件包裹 `next()`，让每个请求独立读取语言。静态构建固定使用构建语言：
+
+```ts
+// src/middleware.ts
+import { createMiddleware } from '@solidjs/start/middleware'
+import { withLocale, withRequestLocale } from 'best-i18n/server'
+import { i18n } from './i18n.ts'
+
+export default createMiddleware([
+  (event, next) =>
+    import.meta.env.I18N_STATIC_LOCALE
+      ? withLocale(import.meta.env.I18N_STATIC_LOCALE, next)
+      : withRequestLocale(event.req, i18n, next),
+])
+```
+
+在 `entry-server.tsx` 的文档组件中使用 `best-i18n/solid` 的 `getLocale()` 设置 `<html lang={getLocale()}>`，然后在 hydration 前读取这个值：
+
+```tsx
+// src/entry-client.tsx
+import { mount, StartClient } from '@solidjs/start/client'
+import { configure, setLocale } from 'best-i18n/solid'
+import { i18n } from './i18n.ts'
+
+configure(i18n)
+// Use the server-rendered language so hydration also matches static builds.
+setLocale(document.documentElement.lang || i18n.baseLocale)
+mount(() => <StartClient />, document.getElementById('app')!)
+```
+
+## 编写消息
+
+```tsx
+import { createSignal } from 'solid-js'
+import { t, plural } from 'best-i18n/macro'
+import { Trans } from 'best-i18n/solid/macro'
+
+export default function Counter() {
+  const [count, setCount] = createSignal(0)
+  const title = () => t`Hello from SolidStart!`
+
+  return (
+    <>
+      <h1>{title()}</h1>
+      <button onClick={() => setCount(count() + 1)}>
+        {plural(count(), `One click`, `${count()} clicks`)}
+      </button>
+      <p>
+        <Trans>
+          Read the <a href='/docs'>documentation</a> to learn more.
+        </Trans>
+      </p>
+    </>
+  )
+}
+```
+
+Solid 组件函数只执行一次。需要跟随语言变化的文本放在 JSX、accessor（如上面的 `title`）或 `createMemo` 中；`` const title = t`Hello` `` 只保存当时的结果。复用翻译逻辑可以返回 accessor，无需 React 的 `useI18n()`。
+
+`best-i18n/solid` 导出响应式 `getLocale()`，以及 `configure`、`getLocales`、`setLocale`。调用 `setLocale()` 会更新已跟踪的 JSX 和计算。需要带语言前缀的 URL 时，使用 `best-i18n/client` 的 `switchLocale(locale, i18n)`；它保存 cookie 并执行完整导航，也适用于按语言部署的静态构建。
+
+提取器默认识别 `best-i18n/solid/macro` 的 `<Trans>`。运行：
+
+```sh
+i18n-extract --src src --messages messages --locales en,zh
+```

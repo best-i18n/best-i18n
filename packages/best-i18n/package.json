@@ -115,6 +115,14 @@
     "./svelte/macro": {
       "types": "./dist/svelte-macro.d.mts",
       "default": "./dist/svelte-macro.mjs"
+    },
+    "./solid": {
+      "types": "./dist/solid.d.mts",
+      "default": "./dist/solid.mjs"
+    },
+    "./solid/macro": {
+      "types": "./dist/solid-macro.d.mts",
+      "default": "./dist/solid-macro.mjs"
     }
   },
   "publishConfig": {
@@ -137,20 +145,24 @@
     "@types/node": "^25.9.6",
     "@types/react": "^19.3.0",
     "bumpp": "^12.3.0",
+    "happy-dom": "^20.14.5",
     "next": "^16.3.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rolldown": "^1.2.8",
+    "solid-js": "^1.9.15",
     "svelte": "^5.57.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14",
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
     "next": ">=15.2",
     "react": ">=18",
     "rolldown": ">=1",
+    "solid-js": "^1.9.0",
     "svelte": "^5.7.0",
     "vite": ">=6"
   },
@@ -168,6 +180,9 @@
       "optional": true
     },
     "svelte": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     }
   },

@@ -1,0 +1,1 @@
+best-i18n: Component.tsx imports best-i18n/solid/macro, but the plugin was not told this is a Solid project. Set solid: true in the best-i18n plugin options.

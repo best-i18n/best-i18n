@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInThisContext } from 'node:vm';
+import { Window } from 'happy-dom';
+const window = new Window();
+for (const key of ['window', 'document', 'Node', 'Element', 'HTMLElement']) globalThis[key] = window[key] ?? window;
+const { hydrate } = await import('solid-js/web');
+const { createSignal } = await import('solid-js');
+const { configure, setLocale } = await import('best-i18n/solid');
+const { Page } = await import('./component.mjs');
+configure({ locales: ['en', 'zh'], baseLocale: 'en' });
+for (const locale of ['en', 'zh']) {
+  runInThisContext(readFileSync(new URL('./hydration.js', import.meta.url), 'utf8'));
+  const language = process.env.STATIC_LOCALE || locale;
+  setLocale(language);
+  const root = document.createElement('div');
+  root.innerHTML = readFileSync(new URL(`./${locale}.html`, import.meta.url), 'utf8');
+  const original = root.querySelector('section');
+  const [count, setCount] = createSignal(1);
+  const stop = hydrate(() => Page({ get count() { return count(); } }), root);
+  assert.equal(root.querySelector('section'), original, 'hydration must reuse SSR nodes');
+  assert.equal(root.querySelector('h1').textContent, language === 'zh' ? '你好' : 'Hello');
+  setCount(2);
+  assert.equal(root.querySelector('span').textContent, language === 'zh' ? '2 项' : '2 items');
+  setLocale(language === 'zh' ? 'en' : 'zh');
+  const after = process.env.STATIC_LOCALE || (language === 'zh' ? 'en' : 'zh');
+  assert.equal(root.querySelector('h1').textContent, after === 'zh' ? '你好' : 'Hello');
+  assert.equal(root.querySelector('span').textContent, after === 'zh' ? '2 项' : '2 items');
+  stop();
+}
+console.log('ok');

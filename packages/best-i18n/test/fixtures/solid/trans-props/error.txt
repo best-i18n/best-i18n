@@ -1,0 +1,1 @@
+best-i18n: <Trans> takes no props other than ctx (Component.tsx offset 73). Wrap it in an element if you need one.

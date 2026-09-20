@@ -71,6 +71,12 @@ export interface Message {
    * expression. Svelte cannot put elements inside `{...}`.
    */
   svelte?: boolean
+  /**
+   * Set for a JSX `<Trans>` that is a prop value - `alt={<Trans>...</Trans>}`.
+   * Solid reads attribute expressions inside an effect already, so the
+   * replacement must stay a plain expression there rather than a fragment.
+   */
+  attribute?: boolean
 }
 
 interface HookCall {
@@ -177,6 +183,8 @@ export interface TransformOptions {
   staticLocale?: string | undefined
   /** Module that exports `getLocale`. Only imported when needed. */
   runtimeModule?: string
+  /** Compile Solid JSX and use best-i18n/solid for reactive locale reads. */
+  solid?: boolean
   /** Name of the tagged template to treat as a message. */
   tag?: string
   /**
@@ -210,7 +218,7 @@ export interface TransformOptions {
    * Modules whose `component` export is the `<Trans>` macro. Same
    * literal-specifier matching as `from`.
    *
-   * @default ['best-i18n/react/macro', 'best-i18n/svelte/macro']
+   * @default ['best-i18n/react/macro', 'best-i18n/svelte/macro', 'best-i18n/solid/macro']
    */
   componentFrom?: string[]
 }
@@ -246,8 +254,11 @@ const DEFAULT_HOOK_FROM = ['best-i18n/react/macro']
 const DEFAULT_COMPONENT_FROM = [
   'best-i18n/react/macro',
   'best-i18n/svelte/macro',
+  'best-i18n/solid/macro',
 ]
 const REACT_MACRO = 'best-i18n/react/macro'
+const SOLID_MACRO = 'best-i18n/solid/macro'
+const SOLID_MODULES = new Set(['best-i18n/solid', SOLID_MACRO])
 
 /**
  * Every module specifier whose presence in a file means it may contain a
@@ -326,6 +337,8 @@ export interface ExtractOptions {
   componentFrom?: string[]
   /** Only to recognize the runtime `useLocale` - see `localeAliases`. */
   reactModule?: string
+  /** The file is Solid JSX: React's `useI18n()` is rejected up front. */
+  solid?: boolean
 }
 
 /** Collects the messages in `code` without modifying it. */
@@ -428,6 +441,8 @@ function analyze(
   directives: string[]
   /** The component's `<script>` elements, so an emptied one can be dropped. */
   svelteScripts?: SvelteScript[]
+  /** The file imports `best-i18n/solid/macro`, so it needs `solid: true`. */
+  solidMacro?: boolean
 } {
   if (input === undefined && filename.split('?')[0]?.endsWith('.svelte')) {
     const { contexts, insertion, scripts } = parseSvelte(code, filename)
@@ -555,6 +570,37 @@ function analyze(
     )
   }
 
+  // Solid has no hook: a component body runs once, so there is nothing for
+  // `useI18n()` to re-run. Reject it here rather than in transform(), so the
+  // extractor sees it too - when the caller says the file is Solid, or when
+  // the file already imports a Solid entry point and so declares itself.
+  const solidMacro = staticImports.some(
+    (declaration) => declaration.moduleRequest.value === SOLID_MACRO,
+  )
+  const solidFile =
+    options.solid === true ||
+    solidMacro ||
+    staticImports.some((declaration) =>
+      SOLID_MODULES.has(declaration.moduleRequest.value),
+    )
+  if (
+    solidFile &&
+    staticImports.some(
+      (declaration) =>
+        hookFrom.includes(declaration.moduleRequest.value) &&
+        declaration.entries.some(
+          (entry) =>
+            !entry.isType &&
+            entry.importName.kind === 'Name' &&
+            entry.importName.name === hook,
+        ),
+    )
+  ) {
+    throw new Error(
+      `best-i18n: Solid uses ${tag} and reactive accessors; React ${hook} is not supported.`,
+    )
+  }
+
   const macroImports: MacroImport[] = staticImports
     .filter((declaration) =>
       declaration.entries.some((entry) =>
@@ -590,6 +636,7 @@ function analyze(
       macroImports,
       directiveEnd,
       directives,
+      solidMacro,
     }
   }
 
@@ -1168,6 +1215,10 @@ function analyze(
       // Among JSX children the replacement has to stay an expression; anywhere
       // else - a variable, a prop, a return - it already is one.
       braced: parent?.type === 'JSXElement' || parent?.type === 'JSXFragment',
+      ...(parent?.type === 'JSXExpressionContainer' &&
+      parentOf.get(parent)?.type === 'JSXAttribute'
+        ? { attribute: true }
+        : {}),
       elementOk: takesElement(node),
     })
   })
@@ -1293,6 +1344,7 @@ function analyze(
     macroImports,
     directiveEnd,
     directives,
+    solidMacro,
   }
 }
 
@@ -1338,6 +1390,7 @@ export function transform(
     directiveEnd,
     directives,
     svelteScripts = [],
+    solidMacro = false,
   } = analyze(code, filename, {
     tag,
     from: options.from,
@@ -1349,11 +1402,23 @@ export function transform(
     // Read by analyze to recognize `useLocale` calls, so a custom spelling
     // has to travel.
     reactModule: options.reactModule,
+    solid: options.solid,
   })
+  // Compiled without `solid: true`, a Solid <Trans> would read the locale
+  // through best-i18n/runtime, which Solid does not track: setLocale() would
+  // leave the text as it was, and nothing would say why. Refuse instead.
+  if (solidMacro && options.solid !== true) {
+    throw new Error(
+      `best-i18n: ${filename} imports ${SOLID_MACRO}, but the plugin was not ` +
+        'told this is a Solid project. Set solid: true in the best-i18n ' +
+        'plugin options.',
+    )
+  }
   if (messages.length === 0 && hookCalls.length === 0) return null
 
   const runtimeModule =
     options.runtimeModule ??
+    (options.solid ? 'best-i18n/solid' : undefined) ??
     (/\.svelte(?:\.[jt]s)?$/.test(filename.split('?')[0] ?? filename)
       ? 'best-i18n/svelte'
       : 'best-i18n/runtime')
@@ -1426,7 +1491,7 @@ export function transform(
     (locale) => locale !== options.baseLocale,
   )
 
-  const isClientModule = directives.includes('use client')
+  const isClientModule = !options.solid && directives.includes('use client')
 
   /**
    * What a shared function has to agree on, which is more than a catalog key:
@@ -1807,6 +1872,21 @@ export function transform(
         needsRuntime = true
         if (isClientModule) clientUnbound.push(pointAt(message))
       }
+    }
+
+    // Solid components run once. A <Trans> that is returned or stored rather
+    // than nested in JSX has to become a JSX child expression, so its locale
+    // read runs inside a reactive scope. A per-locale build has no locale
+    // read, and its fragment is already JSX; leave it as it is.
+    const isTrans = message.elements !== undefined
+    if (
+      options.solid &&
+      options.staticLocale === undefined &&
+      isTrans &&
+      !message.braced &&
+      message.attribute !== true
+    ) {
+      replacement = `<>{${replacement}}</>`
     }
 
     source.overwrite(

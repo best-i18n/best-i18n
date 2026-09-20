@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+  font:
+    18px/1.6 system-ui,
+    sans-serif;
+  background: #f8fafc;
+  color: #172033;
+}
+main {
+  max-width: 760px;
+  margin: 64px auto;
+  padding: 24px;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+a {
+  color: #2765bc;
+}
+button {
+  padding: 8px 16px;
+  cursor: pointer;
+  font: inherit;
+}

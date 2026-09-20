@@ -1,0 +1,30 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: 2rem 1.5rem 4rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  padding-bottom: 1rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  margin-right: auto;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}

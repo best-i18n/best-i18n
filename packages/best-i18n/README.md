@@ -542,6 +542,18 @@ Markup in a message uses `<Trans>` from `best-i18n/svelte/macro`. React's
 `useI18n` is not supported. For SSR, use `withRequestLocale` from
 `best-i18n/server` and initialize the client locale before hydration.
 
+## SolidStart v2
+
+Enable `solid: true` on the Vite plugin before `solidStart()`. Import `t` and
+`plural` from `best-i18n/macro`, `<Trans>` from `best-i18n/solid/macro`, and
+reactive `getLocale()` / `setLocale()` from `best-i18n/solid`. Put translations
+in JSX, accessors or `createMemo` so they update when the locale changes.
+
+Wrap SolidStart v2 H3 middleware’s `next()` with `withRequestLocale` from
+`best-i18n/server` for request isolation. See the complete
+[SolidStart playground](../../playground/solid-start) and
+[integration guide](../../apps/website/content/docs/integrations/solid.mdx).
+
 ## License
 
 MIT

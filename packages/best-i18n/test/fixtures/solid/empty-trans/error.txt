@@ -1,0 +1,1 @@
+best-i18n: <Trans /> is empty (Component.tsx offset 73). A message needs content.

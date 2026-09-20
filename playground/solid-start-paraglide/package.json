@@ -1,0 +1,25 @@
+{
+  "name": "playground-solid-start-paraglide",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The same app as playground/solid-start, built with Paraglide, for size comparison",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --output-structure message-modules --strategy url cookie preferredLanguage baseLocale --silent",
+    "typecheck": "pnpm paraglide:compile && tsc --noEmit"
+  },
+  "dependencies": {
+    "@solidjs/router": "^1.0.0",
+    "@solidjs/start": "^2.0.5",
+    "solid-js": "^1.9.15"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.25.1",
+    "nitro": "^3.0.260903-beta",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

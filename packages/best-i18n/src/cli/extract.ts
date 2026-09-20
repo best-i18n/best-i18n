@@ -36,6 +36,7 @@ const HELP = `
 const MACRO_MODULE = 'best-i18n/macro'
 const COMPONENT_MODULE = 'best-i18n/react/macro'
 const SVELTE_COMPONENT_MODULE = 'best-i18n/svelte/macro'
+const SOLID_COMPONENT_MODULE = 'best-i18n/solid/macro'
 const EXTENSIONS = new Set([
   '.svelte',
   '.ts',
@@ -63,7 +64,11 @@ let tag = 't'
 let component = 'Trans'
 let hook = 'useI18n'
 let from: string[] = [MACRO_MODULE]
-let componentFrom: string[] = [COMPONENT_MODULE, SVELTE_COMPONENT_MODULE]
+let componentFrom: string[] = [
+  COMPONENT_MODULE,
+  SVELTE_COMPONENT_MODULE,
+  SOLID_COMPONENT_MODULE,
+]
 let hookFrom: string[] = [COMPONENT_MODULE]
 let check = false
 let force = false

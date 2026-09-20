@@ -1,6 +1,6 @@
 ---
 title: Comparison
-description: How best-i18n relates to Lingui, next-intl and Paraglide — with measured numbers
+description: How best-i18n relates to Lingui, next-intl, Paraglide, svelte-i18n and @solid-primitives/i18n — with measured numbers
 ---
 
 best-i18n inherited its best ideas from the libraries it gets compared to, so
@@ -22,6 +22,20 @@ reproducible rather than remembered.
 | Per-locale build                             | `staticLocale` — pure literals                      | no                              | no                      | yes, per-locale bundles  |
 | Localized pathnames (`/about` → `/de/ueber`) | no                                                  | no                              | yes                     | yes                      |
 
+The Svelte and Solid families add two runtime libraries that have no
+compile step at all:
+
+|                            | svelte-i18n                                   | @solid-primitives/i18n                    |
+| -------------------------- | --------------------------------------------- | ----------------------------------------- |
+| The message is             | a key (`$_('greeting')`)                      | a key (`t('greeting')`)                   |
+| Ships at runtime           | ICU formatter (`intl-messageformat`) + stores | flattened dictionary + `{{ }}` templating |
+| Catalog format             | JSON                                          | JSON or any object                        |
+| Plurals                    | ICU, at runtime                               | none built in                             |
+| Markup in messages         | strings only                                  | strings only                              |
+| Per-locale build           | no                                            | no                                        |
+| Locale resolution, routing | none — bring your own                         | none — bring your own                     |
+| Per-request SSR binding    | none — one global store                       | none — a signal you provide               |
+
 Two of these are best-i18n's direct ancestors: the macro shape and the
 `<0>...</0>` markup convention are Lingui's, and Paraglide proved that
 compile-time i18n with per-locale tree-shaking is viable at all. The deeper
@@ -31,9 +45,11 @@ ordinary JSX or Svelte markup by the time the browser sees it.
 
 ## Measured size
 
-Both apps in a family are measured the same way — on Next.js, every
+The apps in a family are measured the same way — on Next.js, every
 `/_next/static/*.js` the HTML of `/zh`, `/zh/about` and `/zh/long` references;
-on TanStack Start, the emitted client assets. `/zh/long` is the text-heavy
+on TanStack Start, the emitted client assets; on SvelteKit, everything under
+`.svelte-kit/output/client`; on SolidStart, everything under
+`.output/public/_build`. `/zh/long` is the text-heavy
 case: a deliberately long article of ~30 server-rendered messages — full
 paragraphs, plurals, context, markup — mirrored across both Next twins.
 
@@ -54,7 +70,25 @@ paragraphs, plurals, context, markup — mirrored across both Next twins.
 | best-i18n, `I18N_STATIC_LOCALE=zh` | 98.8 kB          | 309.7 kB |
 | paraglide                          | 106.9 kB         | 334.9 kB |
 
-The two HTML columns tell the story. Both home pages render the same handful
+### SvelteKit — against Paraglide and svelte-i18n
+
+| variant                            | client JS (gzip) | raw      |
+| ---------------------------------- | ---------------- | -------- |
+| best-i18n                          | 32.1 kB          | 79.3 kB  |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 31.5 kB          | 78.2 kB  |
+| paraglide                          | 39.3 kB          | 102.8 kB |
+| svelte-i18n                        | 49.4 kB          | 136.7 kB |
+
+### SolidStart v2 — against @solid-primitives/i18n and Paraglide
+
+| variant                            | client JS (gzip) | raw     |
+| ---------------------------------- | ---------------- | ------- |
+| best-i18n                          | 16.7 kB          | 41.9 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 16.4 kB          | 41.3 kB |
+| @solid-primitives/i18n             | 18.2 kB          | 44.8 kB |
+| paraglide                          | 26.0 kB          | 69.8 kB |
+
+The two HTML columns of the Next table tell the story. Both home pages render the same handful
 of messages, yet `/zh` reads 2.4 kB against 4.9 kB: the difference is the
 catalog, which next-intl ships in every page's payload whether the page
 renders those messages or not. best-i18n's pages carry only the text they
@@ -63,7 +97,7 @@ else, client JS included. The long page itself is close on both (5.0 kB
 against 5.5 kB): a page that actually renders the text pays for the text,
 whoever compiled it.
 
-## What the two gaps are made of
+## What the gaps are made of
 
 They are not the same kind of gap, and the difference matters more than the
 numbers.
@@ -82,6 +116,44 @@ handling, `preferredLanguage` detection — not message lookup. On the message
 side both libraries inline and tree-shake, so the gap is fixed rather than
 growing with the catalog. What it buys is real: Paraglide can translate the
 path itself, `/about` becoming `/de/ueber`, which best-i18n cannot do at all.
+How much the router weighs depends on the bundler around it: the same chunk is
+8.7 kB inside SvelteKit's shared chunks and 15.8 kB in the SolidStart build.
+
+**svelte-i18n's ~17 kB is an ICU runtime** — `intl-messageformat` with the
+formatjs parser, parsing and formatting every message in the browser — plus
+one dictionary chunk per locale. It is the same trade next-intl makes, made
+on the client: plurals, `select`, dates and numbers, paid for on every page.
+It also brings no locale resolution, no routing and no per-request binding;
+the playground adds all three by hand, and on the server the library's one
+global store is written per request, which its own SvelteKit guide does and
+which concurrent requests in different languages can race on.
+
+**@solid-primitives/i18n's ~1.5 kB is barely a runtime** — a flattened
+dictionary and a `{{ name }}` template fill — which is why it lands closest to
+best-i18n of anything measured. The two lazy dictionary chunks are counted
+even though a visitor downloads one. Like svelte-i18n, it stops at
+translation: the locale signal, the URL prefix, the middleware and the
+context provider in the playground are all the app's own code. It has no
+plurals.
+
+## Svelte and Solid
+
+The runtime libraries in those two ecosystems are honest about their scope:
+they format text and leave everything around it to you. What best-i18n brings
+to Svelte and Solid, beyond the compile step, is the part they leave out — the
+resolution chain, the URL helpers, `withRequestLocale` for SSR — and one thing
+none of the four alternatives has: markup inside a message. Every one of them
+splits `Read the <a>README</a> to learn more.` into three strings by hand,
+which fixes the word order for every language; `<Trans>` keeps it one message
+and rebuilds it as Svelte markup or Solid JSX per locale at build time.
+
+Reactivity is the other axis. Paraglide's `setLocale()` navigates, so nothing
+has to be reactive. svelte-i18n is a store — `$_` and `$locale` — and
+`@solid-primitives/i18n` is a signal you pass in. best-i18n compiles to a
+locale read that is wired into each framework's reactivity —
+`createSubscriber` in Svelte, a signal in Solid — so `` t`...` `` in a
+template updates in place, and `switchLocale` still navigates when the URL
+should change too.
 
 ## Where best-i18n costs more
 
@@ -126,5 +198,9 @@ The rest of the honest list — no ICU `select`, the Next.js private API, where
 `AsyncLocalStorage` has to come from — lives in
 [Limitations](/docs/limitations). The playgrounds
 ([`playground/nextjs-intl`](https://github.com/best-i18n/best-i18n/tree/main/playground/nextjs-intl),
-[`playground/tanstack-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide))
+[`playground/tanstack-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide),
+[`playground/sveltekit-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-paraglide),
+[`playground/sveltekit-svelte-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n),
+[`playground/solid-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-paraglide),
+[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives))
 carry the full numbers and the caveats.
