@@ -136,6 +136,7 @@
     "spike": "node ./spike/run.mjs"
   },
   "dependencies": {
+    "cac": "^7.0.0",
     "gettext-parser": "^9.1.1",
     "magic-string": "^1.3.1",
     "oxc-parser": "^0.149.0"
