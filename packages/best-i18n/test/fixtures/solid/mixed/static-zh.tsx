@@ -14,3 +14,6 @@ export function Repeated(props) {
 export function Details(props) {
   return <article><label>{`Open`}</label>{<>{`Hi ${props.name}, `}<b><i>{`welcome`}</i></b>{`!`}</>}<button onClick={props.onClick}>{`你好`}</button></article>;
 }
+export function Attribute(props) {
+  return <img alt={`你好`} src={props.src} />;
+}

@@ -37,10 +37,24 @@ export function resolveLocale(request: Request): Locale {
     .find((part) => part.startsWith('LOCALE='))
     ?.slice('LOCALE='.length)
   if (isLocale(cookie)) return cookie
-  const accepted = request.headers
-    .get('accept-language')
-    ?.split(',')
-    .map((part) => part.trim().split(';')[0]?.split('-')[0])
-    .find(isLocale)
-  return accepted ?? baseLocale
+  return acceptedLocale(request.headers.get('accept-language')) ?? baseLocale
+}
+
+/**
+ * The supported locale with the highest `q`; `q=0` means "never", and a
+ * missing `q` is 1. `zh-CN;q=0.9, en;q=0.8` picks `zh`.
+ */
+function acceptedLocale(header: string | null): Locale | undefined {
+  let best: { locale: Locale; q: number } | undefined
+  for (const part of header?.split(',') ?? []) {
+    const [tag = '', ...params] = part.trim().split(';')
+    const quality = params
+      .map((param) => param.trim())
+      .find((param) => param.startsWith('q='))
+    const q = quality === undefined ? 1 : Number(quality.slice(2))
+    const locale = tag.trim().toLowerCase().split('-')[0]
+    if (!isLocale(locale) || !(q > 0)) continue
+    if (best === undefined || q > best.q) best = { locale, q }
+  }
+  return best?.locale
 }

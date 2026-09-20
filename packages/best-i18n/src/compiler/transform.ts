@@ -71,6 +71,12 @@ export interface Message {
    * expression. Svelte cannot put elements inside `{...}`.
    */
   svelte?: boolean
+  /**
+   * Set for a JSX `<Trans>` that is a prop value - `alt={<Trans>...</Trans>}`.
+   * Solid reads attribute expressions inside an effect already, so the
+   * replacement must stay a plain expression there rather than a fragment.
+   */
+  attribute?: boolean
 }
 
 interface HookCall {
@@ -251,7 +257,8 @@ const DEFAULT_COMPONENT_FROM = [
   'best-i18n/solid/macro',
 ]
 const REACT_MACRO = 'best-i18n/react/macro'
-const SOLID_MODULES = new Set(['best-i18n/solid', 'best-i18n/solid/macro'])
+const SOLID_MACRO = 'best-i18n/solid/macro'
+const SOLID_MODULES = new Set(['best-i18n/solid', SOLID_MACRO])
 
 /**
  * Every module specifier whose presence in a file means it may contain a
@@ -434,6 +441,8 @@ function analyze(
   directives: string[]
   /** The component's `<script>` elements, so an emptied one can be dropped. */
   svelteScripts?: SvelteScript[]
+  /** The file imports `best-i18n/solid/macro`, so it needs `solid: true`. */
+  solidMacro?: boolean
 } {
   if (input === undefined && filename.split('?')[0]?.endsWith('.svelte')) {
     const { contexts, insertion, scripts } = parseSvelte(code, filename)
@@ -565,8 +574,12 @@ function analyze(
   // `useI18n()` to re-run. Reject it here rather than in transform(), so the
   // extractor sees it too - when the caller says the file is Solid, or when
   // the file already imports a Solid entry point and so declares itself.
+  const solidMacro = staticImports.some(
+    (declaration) => declaration.moduleRequest.value === SOLID_MACRO,
+  )
   const solidFile =
     options.solid === true ||
+    solidMacro ||
     staticImports.some((declaration) =>
       SOLID_MODULES.has(declaration.moduleRequest.value),
     )
@@ -623,6 +636,7 @@ function analyze(
       macroImports,
       directiveEnd,
       directives,
+      solidMacro,
     }
   }
 
@@ -1201,6 +1215,10 @@ function analyze(
       // Among JSX children the replacement has to stay an expression; anywhere
       // else - a variable, a prop, a return - it already is one.
       braced: parent?.type === 'JSXElement' || parent?.type === 'JSXFragment',
+      ...(parent?.type === 'JSXExpressionContainer' &&
+      parentOf.get(parent)?.type === 'JSXAttribute'
+        ? { attribute: true }
+        : {}),
       elementOk: takesElement(node),
     })
   })
@@ -1326,6 +1344,7 @@ function analyze(
     macroImports,
     directiveEnd,
     directives,
+    solidMacro,
   }
 }
 
@@ -1371,6 +1390,7 @@ export function transform(
     directiveEnd,
     directives,
     svelteScripts = [],
+    solidMacro = false,
   } = analyze(code, filename, {
     tag,
     from: options.from,
@@ -1384,6 +1404,16 @@ export function transform(
     reactModule: options.reactModule,
     solid: options.solid,
   })
+  // Compiled without `solid: true`, a Solid <Trans> would read the locale
+  // through best-i18n/runtime, which Solid does not track: setLocale() would
+  // leave the text as it was, and nothing would say why. Refuse instead.
+  if (solidMacro && options.solid !== true) {
+    throw new Error(
+      `best-i18n: ${filename} imports ${SOLID_MACRO}, but the plugin was not ` +
+        'told this is a Solid project. Set solid: true in the best-i18n ' +
+        'plugin options.',
+    )
+  }
   if (messages.length === 0 && hookCalls.length === 0) return null
 
   const runtimeModule =
@@ -1853,7 +1883,8 @@ export function transform(
       options.solid &&
       options.staticLocale === undefined &&
       isTrans &&
-      !message.braced
+      !message.braced &&
+      message.attribute !== true
     ) {
       replacement = `<>{${replacement}}</>`
     }

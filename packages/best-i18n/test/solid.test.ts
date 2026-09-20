@@ -205,3 +205,19 @@ it.each(['react-hook', 'empty-trans', 'trans-props', 'macro-reference'])(
     )
   },
 )
+
+it('rejects a Solid <Trans> when solid is not enabled', async () => {
+  let error: unknown
+  try {
+    transform(fixture('solid/no-option/input.tsx'), 'Component.tsx', {
+      ...options,
+      solid: undefined,
+    })
+  } catch (caught) {
+    error = caught
+  }
+  expect(error).toBeInstanceOf(Error)
+  await expect(`${(error as Error).message}\n`).toMatchFileSnapshot(
+    'fixtures/solid/no-option/error.txt',
+  )
+})

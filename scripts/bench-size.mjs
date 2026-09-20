@@ -138,32 +138,35 @@ const VARIANTS = [
 ]
 
 // `--family A,B` limits the run to those tables; matching ignores case and
-// anything after the first word, so `solidstart` finds "SolidStart v2".
+// anything after the first word, so `solidstart` finds "SolidStart v2". An
+// unknown name is an error, not an empty run that exits 0.
+const normalize = (name) => name.toLowerCase().replace(/[^a-z]/g, '')
+const familyKeys = (family) =>
+  new Set([normalize(family), normalize(family.split(' ')[0])])
 const familyArg = process.argv.indexOf('--family')
 const wanted =
   familyArg === -1
     ? undefined
-    : new Set(
-        (process.argv[familyArg + 1] ?? '')
-          .split(',')
-          .map((name) =>
-            name
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z]/g, ''),
-          )
-          .filter(Boolean),
-      )
+    : (process.argv[familyArg + 1] ?? '')
+        .split(',')
+        .map((name) => normalize(name.trim()))
+        .filter(Boolean)
+if (wanted !== undefined) {
+  const known = new Set(VARIANTS.flatMap((v) => [...familyKeys(v.family)]))
+  const unknown = wanted.filter((name) => !known.has(name))
+  if (wanted.length === 0 || unknown.length > 0) {
+    const families = [...new Set(VARIANTS.map((v) => v.family))].join(', ')
+    process.stderr.write(
+      `bench-size: unknown --family ${unknown.map((n) => JSON.stringify(n)).join(', ') || '(empty)'}. ` +
+        `Known families: ${families}\n`,
+    )
+    process.exit(1)
+  }
+}
 const selected = VARIANTS.filter(
   (variant) =>
     wanted === undefined ||
-    wanted.has(variant.family.toLowerCase().replace(/[^a-z]/g, '')) ||
-    wanted.has(
-      variant.family
-        .split(' ')[0]
-        .toLowerCase()
-        .replace(/[^a-z]/g, ''),
-    ),
+    wanted.some((name) => familyKeys(variant.family).has(name)),
 )
 
 function run(command, args, options) {

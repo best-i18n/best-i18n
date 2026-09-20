@@ -16,3 +16,6 @@ export function Repeated(props) {
 export function Details(props) {
   return <article><label>{t.ctx('verb')`Open`}</label><T>Hi {props.name}, <b><i>welcome</i></b>!</T><button onClick={props.onClick}>{t`Hello`}</button></article>;
 }
+export function Attribute(props) {
+  return <img alt={<T>Hello</T>} src={props.src} />;
+}

@@ -18,3 +18,6 @@ export function Repeated(props) {
 export function Details(props) {
   return <article><label>{(__i18nGetLocale() === "zh" ? `Open` : `Open`)}</label>{(__i18nGetLocale() === "zh" ? <>{`Hi ${props.name}, `}<b><i>{`welcome`}</i></b>{`!`}</> : <>{`Hi ${props.name}, `}<b><i>{`welcome`}</i></b>{`!`}</>)}<button onClick={props.onClick}>{__i18nM3(__i18nGetLocale())}</button></article>;
 }
+export function Attribute(props) {
+  return <img alt={__i18nM1(__i18nGetLocale())} src={props.src} />;
+}
