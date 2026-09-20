@@ -8,7 +8,7 @@ This is the monorepo. The package and its documentation live in
 
 ```text
 packages/best-i18n     the package
-  src/compiler/        parser, transform, PO reading and merging
+  src/compiler/        analysis, emission, the framework adapter seam, PO reading and merging
   src/runtime/         locale at runtime: isomorphic, plus the Node server half
   src/frameworks/      one directory per framework: runtime entry (index.ts),
                        macros (macro.ts) and the compiler adapter (compiler.ts)

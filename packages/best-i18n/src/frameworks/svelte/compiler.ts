@@ -10,16 +10,16 @@ import {
   tokenForExpression,
 } from '../../compiler/trans.ts'
 import { parseSvelte } from './parse.ts'
+import type { MagicString } from 'magic-string'
 import type {
   FrameworkAdapter,
   ParsedFile,
   TransContext,
   TransMatch,
 } from '../../compiler/adapter.ts'
+import type { Message } from '../../compiler/message.ts'
 import type { TransElement, TransMessage } from '../../compiler/trans.ts'
-import type { Message } from '../../compiler/transform.ts'
 import type { SvelteScript } from './parse.ts'
-import type { MagicString } from 'magic-string'
 
 /** `.svelte` components and `.svelte.ts` / `.svelte.js` rune modules. */
 export const SVELTE_FILE = /\.svelte(?:\.[jt]s)?$/

@@ -3,8 +3,8 @@
 // for parse() and finalize() and still sit in a FrameworkAdapter[] list.
 import type { MagicString } from 'magic-string'
 import type { StaticImport } from './bindings.ts'
+import type { Message, TransformOptions } from './message.ts'
 import type { TransElement } from './trans.ts'
-import type { Message, TransformOptions } from './transform.ts'
 
 /**
  * One script's worth of parsed source: the shape `oxc-parser` returns, and
