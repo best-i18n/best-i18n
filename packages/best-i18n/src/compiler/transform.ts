@@ -14,7 +14,7 @@ import {
 } from './trans.ts'
 import type { StaticImport, StaticImportEntry } from './bindings.ts'
 import type { PluralRule } from './plural.ts'
-import type { ParsedSource } from './svelte.ts'
+import type { ParsedSource, SvelteScript } from './svelte.ts'
 import type { TransElement } from './trans.ts'
 
 export interface Message {
@@ -426,9 +426,11 @@ function analyze(
   macroImports: MacroImport[]
   directiveEnd: number
   directives: string[]
+  /** The component's `<script>` elements, so an emptied one can be dropped. */
+  svelteScripts?: SvelteScript[]
 } {
   if (input === undefined && filename.split('?')[0]?.endsWith('.svelte')) {
-    const { contexts, insertion } = parseSvelte(code, filename)
+    const { contexts, insertion, scripts } = parseSvelte(code, filename)
     const hookFrom = options.hookFrom ?? DEFAULT_HOOK_FROM
     const hook = options.hook ?? 'useI18n'
     const component = options.component ?? 'Trans'
@@ -467,6 +469,7 @@ function analyze(
       ),
       directiveEnd: insertion,
       directives: [],
+      svelteScripts: scripts,
     }
   }
   const tag = options.tag ?? 't'
@@ -1044,15 +1047,16 @@ function analyze(
 
       const nodes =
         (node.fragment as { nodes?: unknown[] } | undefined)?.nodes ?? []
-      if (nodes.length === 0) {
+      const { text, expressions, placeholders, elements } =
+        serializeSvelteTrans(nodes, code, filename)
+      // Self-closing, or nothing but whitespace and comments once Svelte's
+      // whitespace rules have run: either way there is no message.
+      if (text === '') {
         throw new Error(
           `best-i18n: <${component} /> is empty (${filename} offset ${start}). ` +
             'A message needs content.',
         )
       }
-
-      const { text, expressions, placeholders, elements } =
-        serializeSvelteTrans(nodes, code, filename)
 
       const localeVar = innermost(start, withLocaleVar)?.localeVar
       const line = lineAt(code, start)
@@ -1333,6 +1337,7 @@ export function transform(
     macroImports,
     directiveEnd,
     directives,
+    svelteScripts = [],
   } = analyze(code, filename, {
     tag,
     from: options.from,
@@ -1812,7 +1817,9 @@ export function transform(
     )
   }
 
+  let injected = false
   const inject = (statement: string) => {
+    injected = true
     if (directiveEnd === 0) {
       source.prepend(`${statement};\n`)
     } else {
@@ -1846,6 +1853,18 @@ export function transform(
 
   for (const declaration of componentDecls) {
     inject(declaration)
+  }
+
+  // A `<script>` that held nothing but macro imports is now blank. Drop the
+  // element rather than leave an empty one behind - except the script the
+  // injected statements went into, which `slice` does not show.
+  for (const script of svelteScripts) {
+    if (injected && script.contentStart === directiveEnd) continue
+    if (source.slice(script.contentStart, script.contentEnd).trim() !== '') {
+      continue
+    }
+    const end = code[script.end] === '\n' ? script.end + 1 : script.end
+    source.remove(script.start, end)
   }
 
   return {

@@ -364,6 +364,32 @@ export function serializeSvelteTrans(
   return { text, expressions, placeholders, elements }
 }
 
+const SVELTE_WS_START = /^[ \t\r\n]+/
+const SVELTE_WS_END = /[ \t\r\n]+$/
+const SVELTE_WS_RUN = /[ \t\r\n]+/g
+
+/**
+ * Whitespace the way Svelte's compiler treats a fragment (`clean_nodes`), not
+ * the way JSX does: a line break next to an element is one space, not
+ * nothing, so a `<Trans>` reads the same as the component renders. The first
+ * and last text of the fragment lose their outer whitespace, text following
+ * text that already ends in whitespace loses its leading run, and every other
+ * run collapses to one space.
+ */
+function cleanSvelteText(nodes: SvelteTemplateNode[], index: number): string {
+  const raw = (node: SvelteTemplateNode) => node.raw ?? node.data ?? ''
+  let text = raw(nodes[index]!).replace(SVELTE_WS_RUN, ' ')
+  const previous = nodes[index - 1]
+  if (
+    previous === undefined ||
+    (previous.type === 'Text' && SVELTE_WS_END.test(raw(previous)))
+  ) {
+    text = text.replace(SVELTE_WS_START, '')
+  }
+  if (nodes[index + 1] === undefined) text = text.replace(SVELTE_WS_END, '')
+  return text
+}
+
 function serializeSvelteChildren(
   children: SvelteTemplateNode[],
   code: string,
@@ -373,16 +399,16 @@ function serializeSvelteChildren(
   elements: TransElement[],
 ): string {
   let out = ''
+  // Comments vanish before Svelte looks at whitespace, so the text on either
+  // side of one is neighbours for the rules below.
+  const nodes = children.filter((child) => child.type !== 'Comment')
 
-  for (const child of children) {
+  for (const [index, child] of nodes.entries()) {
     switch (child.type) {
       case 'Text': {
-        out += decodeEntities(cleanJsxText(child.raw ?? child.data ?? ''))
+        out += decodeEntities(cleanSvelteText(nodes, index))
         break
       }
-
-      case 'Comment':
-        break
 
       case 'ExpressionTag': {
         const expression = child.expression
