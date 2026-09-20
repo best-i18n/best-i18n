@@ -1,4 +1,10 @@
-[
-  "en",
-  "zh"
-]
+{
+  "values": [
+    "en",
+    "zh"
+  ],
+  "current": [
+    "en",
+    "zh"
+  ]
+}

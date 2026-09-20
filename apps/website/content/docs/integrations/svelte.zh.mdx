@@ -1,0 +1,253 @@
+---
+title: Svelte
+description: Svelte 5 与 SvelteKit 跑在 Vite 插件上，只多一个 svelte:true
+---
+
+没有 Svelte 专用包。Svelte 跑在 Vite 上，所以直接用
+[`best-i18n/vite`](/zh/docs/integrations/vite)，只多一个选项 `svelte: true`，
+让插件去编译 `.svelte` 文件里的宏。另外有两个很小的入口覆盖 Svelte 自己需要的
+东西：`best-i18n/svelte` 提供响应式的 locale 读取，`best-i18n/svelte/macro`
+提供 `<Trans>`。完整示例见
+[`playground/sveltekit`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit)。
+
+## 安装配置
+
+安装 `svelte@^5.7`——它是可选的 peer dependency，不会自动装上——然后把
+`i18n(...)` 放在插件数组里 `sveltekit()`（或 `@sveltejs/vite-plugin-svelte` 的
+`svelte()`）的**前面**。宏必须在 Svelte 编译组件之前被编译掉。
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { sveltekit } from '@sveltejs/kit/vite'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+      svelte: true,
+    }),
+    sveltekit(),
+  ],
+})
+```
+
+响应式读取 locale 需要 **runes 模式**。可以直接用 runes 写组件，或加
+`<svelte:options runes={true} />`，或者整个项目打开：
+
+```js
+// svelte.config.js
+const config = {
+  compilerOptions: { runes: true },
+}
+```
+
+`svelte: true` 只是把默认的文件过滤放宽到 `.svelte`。如果你自己传了
+`include`，那个正则就是全部的过滤条件，`svelte` 不再起作用。`.svelte.ts` /
+`.svelte.js` rune 模块是普通 TypeScript，无论如何都会被编译。
+
+## 在组件里写消息
+
+`t`、`plural` 和导入别名都来自 `best-i18n/macro`，与 JS/TS 完全一样。实例脚本、
+module 脚本、模板表达式和属性里都可以用：
+
+```svelte
+<script lang="ts">
+  import { plural, t } from 'best-i18n/macro'
+
+  let { name, count } = $props<{ name: string; count: number }>()
+  let title = $derived(t`Welcome`)
+</script>
+
+<h1 title={t`Welcome`}>{title}</h1>
+<p>{t`Hello ${name}`}</p>
+<p>{plural(count, `One item`, `${count} items`)}</p>
+```
+
+句子里带标记就用 `best-i18n/svelte/macro` 的 `<Trans>`。catalog 把元素存成
+具名占位符——`Read the <a>docs</a>`——翻译可以挪动链接，却永远看不到属性：
+
+```svelte
+<script lang="ts">
+  import { Trans } from 'best-i18n/svelte/macro'
+
+  let { docsUrl } = $props<{ docsUrl: string }>()
+</script>
+
+<p>
+  <Trans>Read the <a href={docsUrl}>documentation</a> to learn more.</Trans>
+</p>
+<p><Trans ctx="verb">Open</Trans></p>
+```
+
+编译器按语言重组为普通 Svelte 标记：一条覆盖各语言分支的 `{#if}` 链，或者在
+`staticLocale` 下只剩那一个语言的标记。运行时没有任何消息树遍历。`<Trans>`
+除了 `ctx`（字符串字面量）不接受其他 props——需要 class 或事件就把它包进一个
+元素——子节点只能是文本、`{表达式}`、元素和组件。块（`{#if}`、`{#each}`）、
+`{@html}`、`{@render}` 和 snippet 在一句话里没有位置，构建时会被拒绝。
+
+普通模板文字不会被单独提取；消息永远是 ``t`...``、`plural(...)` 或
+`<Trans>`。
+
+## 响应式
+
+每条编译后的消息都通过 `best-i18n/svelte` 读取 locale，它用 `createSubscriber`
+接入了 Svelte 的响应式系统。这意味着：
+
+- 模板表达式和属性——``{t`...`}``、`title={t`...`}`、编译后的
+  `<Trans>`——在语言切换时自动更新，不需要额外代码。
+- 脚本里的普通初始化只执行一次。需要跟随语言变化的文本放进
+  ``$derived(t`...`)``，就像上面的 `title`。
+- `.svelte.ts` / `.svelte.js` 模块用的是同一个响应式读取函数，所以下面的
+  `href()` 这类辅助函数在 `$derived` 和 effect 里都是正确的。
+
+自己的代码也通过同一个入口读 locale。组件里用 `locale.current` 这个响应式
+getter——和 `$app/state`、`svelte/reactivity` 同一种形状——所以语言切换器不需要
+`$derived`：
+
+```svelte
+<script lang="ts">
+  import { switchLocale } from 'best-i18n/client'
+  import { locale } from 'best-i18n/svelte'
+  import { i18n } from '$lib/i18n'
+</script>
+
+{#each i18n.locales as item (item)}
+  <button
+    disabled={item === locale.current}
+    onclick={() => switchLocale(item, i18n)}
+  >
+    {item}
+  </button>
+{/each}
+```
+
+`getLocale()` 是同一个读取的函数形式，追踪位置完全一样。它沿用
+`best-i18n/runtime` 的名字，给 `.svelte.ts` 模块和跨框架共享的代码用。
+`best-i18n/svelte` 还重新导出了 `configure`、`getLocales` 和 `setLocale`。
+React 的 `useI18n` 宏在 Svelte 文件里不支持，构建时会报错；同样的问题在 Svelte
+里的答案是 `$derived`。
+
+## SvelteKit
+
+SvelteKit 在此之上加了服务端渲染和路由。三个 hook 就能搞定。URL 形状只描述
+一次，所有 hook 共用：
+
+```ts
+// src/lib/i18n.ts
+import type { UrlConfig } from 'best-i18n/locale-url'
+
+export const i18n: UrlConfig = {
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  exclude: '^/(_app|api)',
+}
+```
+
+**按请求绑定 locale。** SvelteKit 在 `handle` 里把整个请求交给你，所以渲染
+可以整个放进 `withRequestLocale`。它之下的每个 `t`——layout、page、`load`
+函数——都能读到正确的 locale，不需要每个组件再调一次。顺手把 `lang` 写到
+文档上：
+
+```ts
+// src/hooks.server.ts
+import { getLocale } from 'best-i18n/runtime'
+import { withRequestLocale } from 'best-i18n/server'
+import { i18n } from '$lib/i18n'
+import type { Handle } from '@sveltejs/kit'
+
+export const handle: Handle = ({ event, resolve }) =>
+  withRequestLocale(event.request, i18n, () => {
+    const locale = getLocale()
+    return resolve(event, {
+      transformPageChunk: ({ html }) => html.replaceAll('%lang%', locale),
+    })
+  })
+```
+
+```text
+<!-- src/app.html -->
+<html lang="%lang%">
+```
+
+**路由树保持无前缀。** `reroute` 在进来时剥掉 `/zh`，所以 `/zh/about` 仍然
+渲染 `src/routes/about`，地址栏不变。它放在通用的 `src/hooks.ts` 里，因为
+SvelteKit 只从那里读取 `reroute`。`normalizeUrl` 会剥掉 `/__data.json`，客户端
+导航的数据请求也能被一并重写：
+
+```ts
+// src/hooks.ts
+import { normalizeUrl } from '@sveltejs/kit'
+import { deLocalizePathname } from 'best-i18n/locale-url'
+import { i18n } from '$lib/i18n'
+import type { Reroute } from '@sveltejs/kit'
+
+export const reroute: Reroute = ({ url }) => {
+  const { url: page, denormalize } = normalizeUrl(url)
+  const rest = deLocalizePathname(page.pathname, i18n)
+  if (rest === page.pathname) return
+  return denormalize(rest).pathname
+}
+```
+
+链接反向走一个小小的 rune 模块，这样 `href('/about')` 在中文下渲染成
+`/zh/about`，并在语言切换时更新：
+
+```ts
+// src/lib/href.svelte.ts
+import { localizePathname } from 'best-i18n/locale-url'
+import { getLocale } from 'best-i18n/svelte'
+import { i18n } from './i18n'
+
+export function href(path: string): string {
+  return localizePathname(path, getLocale(), i18n)
+}
+```
+
+**hydration 前先解析客户端 locale。** 客户端沿用服务端的解析顺序——URL 前缀、
+cookie、`Accept-Language`、基础语言——让首次客户端渲染与它要 hydrate 的 HTML
+一致：
+
+```ts
+// src/hooks.client.ts
+import { resolveClientLocale } from 'best-i18n/client'
+import { setLocale } from 'best-i18n/svelte'
+import { i18n } from '$lib/i18n'
+import type { ClientInit } from '@sveltejs/kit'
+
+export const init: ClientInit = () => {
+  setLocale(
+    resolveClientLocale({
+      pathname: window.location.pathname,
+      cookie: document.cookie,
+      languages: navigator.languages,
+      config: i18n,
+    }),
+  )
+}
+```
+
+有一个 SvelteKit 设置需要留意：`kit.paths.relative` 保持 `false`。相对 base
+会破坏 `/zh` 和 `/zh/about` 之间的客户端导航，因为它们处在不同深度。解析链和
+URL 辅助函数的完整说明见 [locale 解析与 URL](/zh/docs/server)。
+
+## 提取与按语言构建
+
+`i18n-extract` 会和 `.ts`/`.tsx` 一起扫描 `.svelte` 文件，不需要额外配置：
+
+```bash
+i18n-extract --locales en,zh --src src --messages messages
+```
+
+设置 `staticLocale` 后，每条消息都塌缩为那个语言的字面量——没有 `{#if}` 链，
+没有 `getLocale` 导入，产物里没有任何其他语言：
+
+```bash
+I18N_STATIC_LOCALE=zh vite build
+```

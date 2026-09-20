@@ -11,6 +11,9 @@ import { getLocale as __i18nGetLocale } from "best-i18n/svelte";
   {#if __i18nGetLocale() === "zh"}{`阅读`}<a href={url}>{`文档`}</a>{`了解更多。`}{:else}{`Read the `}<a href={url}>{`docs`}</a>{` to learn more.`}{/if}
 </p>
 <p>
+  {#if __i18nGetLocale() === "zh"}{`阅读`}<a href={url}>{`文档`}</a>{`了解更多。`}{:else}{`Read the `}<a href={url}>{`docs`}</a>{` to learn more.`}{/if}
+</p>
+<p>
   {#if __i18nGetLocale() === "zh"}{`你好 ${name}，你有 `}<b>{`${count} 项`}</b>{`。`}{:else}{`Hi ${name}, you have `}<b>{`${count} items`}</b>{`.`}{/if}
 </p>
 <p>{(__i18nGetLocale() === "zh" ? `只有文字。` : `Just words.`)}</p>

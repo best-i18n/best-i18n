@@ -36,133 +36,15 @@ catalog 工作流见[提取与翻译](/zh/docs/extraction)。
 
 ## TanStack Start
 
-没有 TanStack 专用包：Start 跑在 Vite 上，所以用这个插件和普通的服务端绑定。
-完整示例见
-[`playground/tanstack-start`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start)。
-
-```ts
-// vite.config.ts
-import process from 'node:process'
-import { fileURLToPath } from 'node:url'
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import { i18n } from 'best-i18n/vite'
-import { defineConfig } from 'vite'
-
-export default defineConfig({
-  plugins: [
-    i18n({
-      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
-      staticLocale: process.env.I18N_STATIC_LOCALE,
-    }),
-    tanstackStart(),
-    // react 插件必须放在 start 后面
-  ],
-})
-```
-
-把整个请求包起来，下面的 `t` 都能读到正确的语言——路由组件、loader、server
-function——不需要每个组件再调一次：
-
-```ts
-// src/start.ts
-import {
-  createCsrfMiddleware,
-  createMiddleware,
-  createStart,
-} from '@tanstack/react-start'
-import { withRequestLocale } from 'best-i18n/server'
-import { i18n } from './i18n'
-
-const csrfMiddleware = createCsrfMiddleware({
-  filter: (ctx) => ctx.handlerType === 'serverFn',
-})
-
-const localeMiddleware = createMiddleware().server(({ next, request }) =>
-  withRequestLocale(request, i18n, () => next()),
-)
-
-export const startInstance = createStart(() => ({
-  requestMiddleware: [csrfMiddleware, localeMiddleware],
-}))
-```
-
-路由树保持无前缀。进来时剥掉 `/zh`，出去时再加回去，所以普通的
-`<Link to="/about">` 在中文下会渲染成 `/zh/about`：
-
-```ts
-// src/router.tsx
-import { deLocalizeUrl, localizeUrl } from 'best-i18n/locale-url'
-import { getLocale } from 'best-i18n/runtime'
-import { i18n } from './i18n'
-
-createTanStackRouter({
-  routeTree,
-  rewrite: {
-    input: ({ url }) => deLocalizeUrl(url, i18n),
-    output: ({ url }) => localizeUrl(url, getLocale(), i18n),
-  },
-})
-```
-
-hydration 前先解析客户端语言，让首屏和 SSR 一致——详见[服务端渲染](/zh/docs/server)。
+TanStack Start 直接用这个插件，再加一个请求中间件和路由 URL 重写。它有单独的
+页面：[TanStack Start](/zh/docs/integrations/tanstack-start)。
 
 ## Svelte 5 与 SvelteKit
 
-安装 Svelte 5（可选 peer dependency），设置 `svelte: true`，并把 `i18n(...)`
-放在 Vite 插件数组中 `svelte()` 或 `sveltekit()` 的**前面**。提取命令会自动扫描
-`.svelte` 文件，插件会在 Svelte 编译组件之前，处理脚本、模板表达式和属性中的
-翻译宏。完整示例见
-[`playground/sveltekit`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit)。
+Svelte 跑在同一个插件上，只多一个选项 `svelte: true`，再加 SvelteKit 侧的几个
+hook。它有单独的页面：[Svelte](/zh/docs/integrations/svelte)。
 
-```ts
-// vite.config.ts
-import { fileURLToPath } from 'node:url'
-import { sveltekit } from '@sveltejs/kit/vite'
-import { i18n } from 'best-i18n/vite'
-import { defineConfig } from 'vite'
+## Solid 与 SolidStart v2
 
-export default defineConfig({
-  plugins: [
-    i18n({
-      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
-      locales: ['en', 'zh'],
-      baseLocale: 'en',
-      svelte: true,
-    }),
-    sveltekit(),
-  ],
-})
-```
-
-```svelte
-<script lang="ts">
-  import { t, plural } from 'best-i18n/macro'
-  import { setLocale } from 'best-i18n/svelte'
-
-  let { name, count } = $props<{ name: string; count: number }>()
-  let title = $derived(t`Welcome`)
-</script>
-
-<h1>{title}</h1>
-<p>{t`Hello ${name}`}</p>
-<p>{plural(count, `One item`, `${count} items`)}</p>
-<button onclick={() => setLocale('zh')}>中文</button>
-```
-
-响应式切换语言需要 Svelte 5 的 **runes 模式**：像上面一样使用 runes，或设置
-`<svelte:options runes={true} />`、编译器选项 `runes: true`。编译后的消息通过
-`best-i18n/svelte` 订阅语言变化。脚本中需要随语言更新的文本应使用
-``$derived(t`...`)``；普通变量初始化只执行一次。`.svelte.ts` 和 `.svelte.js`
-rune 模块也使用响应式语言读取函数。
-
-`t`、导入别名、上下文、`plural` 以及 `best-i18n/svelte/macro` 的 `<Trans>` 沿用
-JS/TS 的 PO 工作流。`<Trans>` 把标记存成具名占位符（`Read the <a>docs</a>`），
-翻译可以挪动链接；编译器按语言重组为普通 Svelte 标记。不支持 React 的
-`useI18n`——用 ``$derived(t`...`)`` 和 `best-i18n/svelte`。设置 `staticLocale`
-后会移除语言读取逻辑。普通模板文字不会自动提取，需要写成 ``t`...`` 或
-`<Trans>`。
-
-SSR 时用 `best-i18n/server` 的 `withRequestLocale` 按请求绑定语言，并在
-hydration 前初始化客户端语言。详见[服务端渲染](/zh/docs/server)。
+Solid 跑在同一个插件上，只多一个选项 `solid: true`，再加 SolidStart 侧的中间件和
+路由钩子。它有单独的页面：[Solid](/zh/docs/integrations/solid)。

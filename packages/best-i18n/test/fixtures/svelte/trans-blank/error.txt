@@ -1,0 +1,1 @@
+best-i18n: <Trans /> is empty (Page.svelte offset 65). A message needs content.

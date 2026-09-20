@@ -521,22 +521,26 @@ A full SvelteKit app is in `playground/sveltekit`.
 ```svelte
 <script lang="ts">
   import { t } from 'best-i18n/macro'
-  import { setLocale } from 'best-i18n/svelte'
+  import { locale, setLocale } from 'best-i18n/svelte'
   let { name } = $props<{ name: string }>()
   let title = $derived(t`Welcome`)
 </script>
 
 <h1>{title}</h1>
 <p>{t`Hello ${name}`}</p>
-<button onclick={() => setLocale('zh')}>中文</button>
+<button disabled={locale.current === 'zh'} onclick={() => setLocale('zh')}>
+  中文
+</button>
 ```
 
 Reactive language switching requires Svelte 5 runes mode. Use `$derived` for
-reactive text in scripts; ordinary initializers run once. `staticLocale`
-compiles translations to literals without the locale runtime. Markup in a
-message uses `<Trans>` from `best-i18n/svelte/macro`. React's `useI18n` is
-not supported. For SSR, use `withLocale` from `best-i18n/server` and
-initialize the client locale before hydration.
+reactive text in scripts; ordinary initializers run once. `locale.current`
+from `best-i18n/svelte` is the reactive locale getter for templates;
+`getLocale()` is the same read as a function, for `.svelte.ts` modules.
+`staticLocale` compiles translations to literals without the locale runtime.
+Markup in a message uses `<Trans>` from `best-i18n/svelte/macro`. React's
+`useI18n` is not supported. For SSR, use `withRequestLocale` from
+`best-i18n/server` and initialize the client locale before hydration.
 
 ## SolidStart v2
 

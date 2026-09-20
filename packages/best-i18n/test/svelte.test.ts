@@ -83,7 +83,7 @@ describe('svelte translation macros', () => {
     },
   )
 
-  it.each(['module-script', 'instance-scope'])(
+  it.each(['module-script', 'instance-scope', 'instance-shadow'])(
     'preserves %s bindings',
     async (name) => {
       const result = transform(
@@ -157,6 +157,7 @@ describe('svelte translation macros', () => {
     'macro-action',
     'shadow-index',
     'trans-if-block',
+    'trans-blank',
     'trans-empty',
     'trans-props',
   ])('rejects %s', async (name) => {

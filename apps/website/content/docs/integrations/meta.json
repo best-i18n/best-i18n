@@ -1,5 +1,13 @@
 {
   "title": "Integrations",
   "defaultOpen": true,
-  "pages": ["vite", "rolldown", "solid", "nextjs", "plain-javascript"]
+  "pages": [
+    "vite",
+    "tanstack-start",
+    "svelte",
+    "solid",
+    "rolldown",
+    "nextjs",
+    "plain-javascript"
+  ]
 }

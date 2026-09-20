@@ -14,6 +14,14 @@
   </Trans>
 </p>
 <p>
+  <Trans>
+    Read the
+    <a href={url}>docs</a>
+    <!-- the same message once a formatter has folded it -->
+    to learn more.
+  </Trans>
+</p>
+<p>
   <Trans>Hi {name}, you have <b>{count} items</b>.</Trans>
 </p>
 <p><Trans>Just words.</Trans></p>

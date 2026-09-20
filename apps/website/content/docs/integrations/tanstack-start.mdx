@@ -1,0 +1,82 @@
+---
+title: TanStack Start
+description: TanStack Start on the Vite plugin, with per-request locale middleware
+---
+
+TanStack Start runs on Vite, so it uses [`best-i18n/vite`](/docs/integrations/vite)
+unchanged, plus the plain server binding for SSR. This page is the wiring that
+is specific to Start: the plugin order, a request middleware, and router URL
+rewriting.
+
+A full app is in
+[`playground/tanstack-start`](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start).
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+    }),
+    tanstackStart(),
+    // react's plugin has to come after start's
+  ],
+})
+```
+
+Wrap the request so every `t` below it sees the right locale — route
+components, loaders, server functions — with no per-component call:
+
+```ts
+// src/start.ts
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from '@tanstack/react-start'
+import { withRequestLocale } from 'best-i18n/server'
+import { i18n } from './i18n'
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
+
+const localeMiddleware = createMiddleware().server(({ next, request }) =>
+  withRequestLocale(request, i18n, () => next()),
+)
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [csrfMiddleware, localeMiddleware],
+}))
+```
+
+The route tree stays unprefixed. Strip `/zh` on the way in and put it back on
+the way out, so a plain `<Link to="/about">` renders `/zh/about` while Chinese
+is active:
+
+```ts
+// src/router.tsx
+import { deLocalizeUrl, localizeUrl } from 'best-i18n/locale-url'
+import { getLocale } from 'best-i18n/runtime'
+import { i18n } from './i18n'
+
+createTanStackRouter({
+  routeTree,
+  rewrite: {
+    input: ({ url }) => deLocalizeUrl(url, i18n),
+    output: ({ url }) => localizeUrl(url, getLocale(), i18n),
+  },
+})
+```
+
+Resolve the client locale before hydration so the first paint matches SSR —
+see [Server rendering](/docs/server).

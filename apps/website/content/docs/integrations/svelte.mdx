@@ -1,0 +1,266 @@
+---
+title: Svelte
+description: Svelte 5 and SvelteKit on the Vite plugin, with svelte:true
+---
+
+There is no Svelte-specific package. Svelte runs on Vite, so it uses
+[`best-i18n/vite`](/docs/integrations/vite) with one extra option,
+`svelte: true`, which lets the plugin compile macros inside `.svelte` files.
+Two small entry points cover what Svelte itself needs: `best-i18n/svelte` for a
+reactive locale read, and `best-i18n/svelte/macro` for `<Trans>`. A full app
+is in
+[`playground/sveltekit`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit).
+
+## Setup
+
+Install `svelte@^5.7` — it is an optional peer dependency, so nothing pulls it
+in for you — then put `i18n(...)` **before** `sveltekit()` (or `svelte()` from
+`@sveltejs/vite-plugin-svelte`) in the plugins array. The macros have to be
+compiled away before Svelte compiles the component.
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { sveltekit } from '@sveltejs/kit/vite'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+      svelte: true,
+    }),
+    sveltekit(),
+  ],
+})
+```
+
+Reactive locale reads need **runes mode**. Either write components with runes,
+add `<svelte:options runes={true} />`, or turn it on for the whole project:
+
+```js
+// svelte.config.js
+const config = {
+  compilerOptions: { runes: true },
+}
+```
+
+`svelte: true` only widens the default file filter to `.svelte`. If you pass
+your own `include`, that pattern is the whole filter and `svelte` has no
+effect. `.svelte.ts` / `.svelte.js` rune modules are ordinary TypeScript and
+are compiled either way.
+
+## Writing messages in a component
+
+`t`, `plural` and aliased imports come from `best-i18n/macro`, exactly as in
+JS/TS. They work in the instance script, the module script, template
+expressions and attributes:
+
+```svelte
+<script lang="ts">
+  import { plural, t } from 'best-i18n/macro'
+
+  let { name, count } = $props<{ name: string; count: number }>()
+  let title = $derived(t`Welcome`)
+</script>
+
+<h1 title={t`Welcome`}>{title}</h1>
+<p>{t`Hello ${name}`}</p>
+<p>{plural(count, `One item`, `${count} items`)}</p>
+```
+
+A sentence with markup in it uses `<Trans>` from `best-i18n/svelte/macro`.
+The catalog stores the elements as named placeholders — `Read the <a>docs</a>`
+— so a translation can move the link without ever seeing an attribute:
+
+```svelte
+<script lang="ts">
+  import { Trans } from 'best-i18n/svelte/macro'
+
+  let { docsUrl } = $props<{ docsUrl: string }>()
+</script>
+
+<p>
+  <Trans>Read the <a href={docsUrl}>documentation</a> to learn more.</Trans>
+</p>
+<p><Trans ctx="verb">Open</Trans></p>
+```
+
+The compiler rebuilds ordinary Svelte markup per locale: an `{#if}` chain over
+the locale branches, or just the one locale's markup under `staticLocale`.
+Nothing walks a message tree at runtime. `<Trans>` takes no props other than
+`ctx` (a string literal) — wrap it in an element if you need a class or an
+event — and its children must be text, `{expressions}`, elements and
+components. Blocks (`{#if}`, `{#each}`), `{@html}`, `{@render}` and snippets
+have no place in a sentence and are rejected at build time.
+
+Plain markup text is never extracted on its own; a message is always a
+``t`...``, a `plural(...)` or a `<Trans>`.
+
+## Reactivity
+
+Every compiled message reads the locale through `best-i18n/svelte`, which is
+wired into Svelte's reactivity with `createSubscriber`. That means:
+
+- Template expressions and attributes — ``{t`...`}``, `title={t`...`}`, a
+  compiled `<Trans>` — update when the locale changes, with no extra code.
+- In a script, an ordinary initializer runs once. Text that should follow the
+  locale goes in ``$derived(t`...`)``, as `title` does above.
+- `.svelte.ts` / `.svelte.js` modules use the same reactive reader, so a
+  helper like `href()` below is correct inside `$derived` and effects.
+
+Your own code reads the locale through the same entry point. In a component,
+`locale.current` is the reactive getter — the shape `$app/state` and
+`svelte/reactivity` use — so a locale switcher needs no `$derived`:
+
+```svelte
+<script lang="ts">
+  import { switchLocale } from 'best-i18n/client'
+  import { locale } from 'best-i18n/svelte'
+  import { i18n } from '$lib/i18n'
+</script>
+
+{#each i18n.locales as item (item)}
+  <button
+    disabled={item === locale.current}
+    onclick={() => switchLocale(item, i18n)}
+  >
+    {item}
+  </button>
+{/each}
+```
+
+`getLocale()` is the same read as a function, tracked in exactly the same
+places. It keeps the name `best-i18n/runtime` uses, for `.svelte.ts` modules
+and code shared with other frameworks. `best-i18n/svelte` also re-exports
+`configure`, `getLocales` and `setLocale`. React's `useI18n` macro is not
+supported in Svelte files and is rejected at build time; `$derived` is the
+Svelte answer to the same problem.
+
+## SvelteKit
+
+SvelteKit adds server rendering and routing on top. Three hooks do all of it.
+The URL shape is described once and shared by every hook:
+
+```ts
+// src/lib/i18n.ts
+import type { UrlConfig } from 'best-i18n/locale-url'
+
+export const i18n: UrlConfig = {
+  locales: ['en', 'zh'],
+  baseLocale: 'en',
+  exclude: '^/(_app|api)',
+}
+```
+
+**Bind the locale per request.** SvelteKit hands over the whole request in
+`handle`, so the render can sit inside `withRequestLocale`. Every `t` below
+it — layouts, pages, `load` functions — reads the right locale with no
+per-component call. Stamp `lang` on the document while you are there:
+
+```ts
+// src/hooks.server.ts
+import { getLocale } from 'best-i18n/runtime'
+import { withRequestLocale } from 'best-i18n/server'
+import { i18n } from '$lib/i18n'
+import type { Handle } from '@sveltejs/kit'
+
+export const handle: Handle = ({ event, resolve }) =>
+  withRequestLocale(event.request, i18n, () => {
+    const locale = getLocale()
+    return resolve(event, {
+      transformPageChunk: ({ html }) => html.replaceAll('%lang%', locale),
+    })
+  })
+```
+
+```text
+<!-- src/app.html -->
+<html lang="%lang%">
+```
+
+**Keep the route tree unprefixed.** `reroute` strips `/zh` on the way in so
+`/zh/about` renders `src/routes/about`; the address bar is untouched. It lives
+in the universal `src/hooks.ts`, because SvelteKit only reads `reroute` from
+there. `normalizeUrl` peels off `/__data.json` so client-side data requests
+are rewritten too:
+
+```ts
+// src/hooks.ts
+import { normalizeUrl } from '@sveltejs/kit'
+import { deLocalizePathname } from 'best-i18n/locale-url'
+import { i18n } from '$lib/i18n'
+import type { Reroute } from '@sveltejs/kit'
+
+export const reroute: Reroute = ({ url }) => {
+  const { url: page, denormalize } = normalizeUrl(url)
+  const rest = deLocalizePathname(page.pathname, i18n)
+  if (rest === page.pathname) return
+  return denormalize(rest).pathname
+}
+```
+
+Links go the other way through a small rune module, so `href('/about')`
+renders `/zh/about` while Chinese is active and updates when the locale
+changes:
+
+```ts
+// src/lib/href.svelte.ts
+import { localizePathname } from 'best-i18n/locale-url'
+import { getLocale } from 'best-i18n/svelte'
+import { i18n } from './i18n'
+
+export function href(path: string): string {
+  return localizePathname(path, getLocale(), i18n)
+}
+```
+
+**Resolve the client locale before hydration.** The client mirrors the
+server's resolution order — URL prefix, cookie, `Accept-Language`, base
+locale — so the first client render agrees with the HTML it hydrates:
+
+```ts
+// src/hooks.client.ts
+import { resolveClientLocale } from 'best-i18n/client'
+import { setLocale } from 'best-i18n/svelte'
+import { i18n } from '$lib/i18n'
+import type { ClientInit } from '@sveltejs/kit'
+
+export const init: ClientInit = () => {
+  setLocale(
+    resolveClientLocale({
+      pathname: window.location.pathname,
+      cookie: document.cookie,
+      languages: navigator.languages,
+      config: i18n,
+    }),
+  )
+}
+```
+
+One SvelteKit setting matters: keep `kit.paths.relative` at `false`. A
+relative base breaks client navigation between `/zh` and `/zh/about`, which
+live at different depths. The resolution chain and the URL helpers are
+described in full in [Locale resolution and URLs](/docs/server).
+
+## Extraction and per-locale builds
+
+`i18n-extract` scans `.svelte` files alongside `.ts`/`.tsx`; nothing to
+configure:
+
+```bash
+i18n-extract --locales en,zh --src src --messages messages
+```
+
+With `staticLocale` set, every message collapses to that locale's literal —
+no `{#if}` chain, no `getLocale` import, no other language anywhere in the
+output:
+
+```bash
+I18N_STATIC_LOCALE=zh vite build
+```

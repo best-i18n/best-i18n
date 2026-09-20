@@ -4,7 +4,5 @@ import { getLocale as __i18nGetLocale } from "best-i18n/svelte";
   export const title = t`Untouched`
 </script>
 
-<script>
-  </script>
 
 <h1>{(__i18nGetLocale() === "zh" ? `你好` : `Hello`)}</h1>

@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module'
+import path from 'node:path'
+import process from 'node:process'
 import { parseSync } from 'oxc-parser'
 import type { AST } from 'svelte/compiler'
 import type { StaticImport } from './bindings.ts'
@@ -10,7 +12,117 @@ export interface ParsedSource {
   errors: Array<{ message: string }>
 }
 
-const require = createRequire(import.meta.url)
+/** A `<script>` element of the component, with the range of its content. */
+export interface SvelteScript {
+  start: number
+  end: number
+  contentStart: number
+  contentEnd: number
+}
+
+function isMissingCompiler(cause: unknown): cause is Error {
+  return (
+    cause instanceof Error &&
+    (cause as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND' &&
+    cause.message.startsWith("Cannot find module 'svelte/compiler'")
+  )
+}
+
+/**
+ * Finds the Svelte compiler the component will later be compiled with: the
+ * one the component's own project resolves, then the working directory's,
+ * and only then whatever sits next to this library. Resolving from here
+ * alone would miss a `svelte` installed only in a sub-package of a monorepo
+ * that hoisted best-i18n to its root.
+ */
+function resolveCompiler(filename: string): string {
+  const bases = [
+    ...new Set([
+      path.resolve(filename),
+      path.join(process.cwd(), '__best-i18n__.js'),
+    ]),
+    import.meta.url,
+  ]
+  let missing: Error | undefined
+  for (const base of bases) {
+    try {
+      return createRequire(base).resolve('svelte/compiler')
+    } catch (cause) {
+      // Any other failure - a broken package, an exports map that refuses
+      // the subpath - is the real diagnosis; do not paper over it.
+      if (!isMissingCompiler(cause)) throw cause
+      missing = cause
+    }
+  }
+  throw new Error('best-i18n: install svelte@^5 to translate .svelte files.', {
+    cause: missing,
+  })
+}
+
+function collectPatternNames(pattern: unknown, names: Set<string>): void {
+  if (pattern === null || typeof pattern !== 'object') return
+  const node = pattern as Record<string, unknown>
+  switch (node.type) {
+    case 'Identifier':
+      names.add(node.name as string)
+      break
+    case 'ObjectPattern':
+      for (const property of (node.properties ?? []) as Array<
+        Record<string, unknown>
+      >) {
+        collectPatternNames(
+          property.type === 'RestElement' ? property.argument : property.value,
+          names,
+        )
+      }
+      break
+    case 'ArrayPattern':
+      for (const element of (node.elements ?? []) as unknown[]) {
+        collectPatternNames(element, names)
+      }
+      break
+    case 'AssignmentPattern':
+      collectPatternNames(node.left, names)
+      break
+    case 'RestElement':
+      collectPatternNames(node.argument, names)
+      break
+    default:
+  }
+}
+
+/**
+ * Names the instance script declares at its top level. The template resolves
+ * an identifier here before it looks at `<script module>`, so any of these
+ * hides a same-named macro imported there.
+ */
+function declaredNames(program: unknown): Set<string> {
+  const names = new Set<string>()
+  const body =
+    (program as { body?: Array<Record<string, unknown>> } | undefined)?.body ??
+    []
+  for (const statement of body) {
+    const declaration =
+      statement.type === 'ExportNamedDeclaration'
+        ? (statement.declaration as Record<string, unknown> | null)
+        : statement
+    if (declaration === null) continue
+    if (declaration.type === 'VariableDeclaration') {
+      for (const item of (declaration.declarations ?? []) as Array<
+        Record<string, unknown>
+      >) {
+        collectPatternNames(item.id, names)
+      }
+    } else if (
+      declaration.type === 'FunctionDeclaration' ||
+      declaration.type === 'ClassDeclaration'
+    ) {
+      const id = declaration.id as { name?: string } | null
+      if (typeof id?.name === 'string') names.add(id.name)
+    }
+  }
+  return names
+}
 
 /** Keep Svelte optional for applications that only compile JS/TS. */
 export function parseSvelte(
@@ -19,32 +131,21 @@ export function parseSvelte(
 ): {
   contexts: ParsedSource[]
   insertion: number
+  scripts: SvelteScript[]
 } {
-  let compilerPath: string
-  try {
-    compilerPath = require.resolve('svelte/compiler')
-  } catch (cause) {
-    if (
-      !(cause instanceof Error) ||
-      (cause as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND' ||
-      !cause.message.startsWith("Cannot find module 'svelte/compiler'")
-    )
-      throw cause
-    throw new Error(
-      'best-i18n: install svelte@^5 to translate .svelte files.',
-      { cause },
-    )
-  }
-  // Load outside the catch: failures inside an installed compiler must retain
-  // their original diagnostics, including missing transitive dependencies.
-  const parser: typeof import('svelte/compiler') = require(compilerPath)
+  const compilerPath = resolveCompiler(filename)
+  // Load outside the resolver's catch: failures inside an installed compiler
+  // must retain their original diagnostics, including missing transitive
+  // dependencies.
+  const parser: typeof import('svelte/compiler') = createRequire(
+    import.meta.url,
+  )(compilerPath)
   const ast = parser.parse(code, { filename, modern: true })
   const insertionScript = ast.module ?? ast.instance
+  const contentRange = (script: AST.Script) =>
+    script.content as typeof script.content & { start: number; end: number }
   const parseScript = (script: AST.Script): ParsedSource => {
-    const { start, end } = script.content as typeof script.content & {
-      start: number
-      end: number
-    }
+    const { start, end } = contentRange(script)
     // Preserve UTF-16 offsets and newlines so diagnostics, edits and PO
     // references point into the original component, including non-ASCII text.
     const padded =
@@ -63,11 +164,13 @@ export function parseSvelte(
   const module = ast.module ? parseScript(ast.module) : undefined
   const instance = ast.instance ? parseScript(ast.instance) : undefined
   const instanceImports = instance?.module.staticImports ?? []
-  const instanceNames = new Set(
-    instanceImports.flatMap((item) =>
-      item.entries.map((entry) => entry.localName.value),
-    ),
-  )
+  // Whatever the instance script binds itself - an import, a `const`, a
+  // function - shadows the module script's macro of the same name, so the
+  // template's `t` is that binding and not the macro.
+  const instanceNames = declaredNames(instance?.program)
+  for (const item of instanceImports) {
+    for (const entry of item.entries) instanceNames.add(entry.localName.value)
+  }
   const inheritedImports = (module?.module.staticImports ?? []).map((item) => ({
     ...item,
     entries: item.entries.filter(
@@ -128,9 +231,20 @@ export function parseSvelte(
     ],
     errors: instance?.errors ?? [],
   })
+  const scripts: SvelteScript[] = []
+  for (const script of [ast.module, ast.instance]) {
+    if (!script) continue
+    const { start, end } = contentRange(script)
+    scripts.push({
+      start: script.start,
+      end: script.end,
+      contentStart: start,
+      contentEnd: end,
+    })
+  }
   return {
     contexts,
-    insertion:
-      (insertionScript?.content as { start?: number } | undefined)?.start ?? 0,
+    insertion: insertionScript ? contentRange(insertionScript).start : 0,
+    scripts,
   }
 }

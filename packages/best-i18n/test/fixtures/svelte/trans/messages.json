@@ -20,6 +20,26 @@
     "svelte": true
   },
   {
+    "text": "Read the <a>docs</a> to learn more.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={url}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 300,
+    "end": 438,
+    "line": 17,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true
+  },
+  {
     "text": "Hi {name}, you have <b>{count} items</b>.",
     "expressions": [
       "name",
@@ -38,9 +58,9 @@
       }
     ],
     "context": "",
-    "start": 300,
-    "end": 356,
-    "line": 17,
+    "start": 450,
+    "end": 506,
+    "line": 25,
     "braced": false,
     "elementOk": false,
     "svelte": true
@@ -51,9 +71,9 @@
     "placeholders": [],
     "elements": [],
     "context": "",
-    "start": 365,
-    "end": 391,
-    "line": 19,
+    "start": 515,
+    "end": 541,
+    "line": 27,
     "braced": true,
     "elementOk": false,
     "svelte": true
@@ -64,9 +84,9 @@
     "placeholders": [],
     "elements": [],
     "context": "verb",
-    "start": 399,
-    "end": 429,
-    "line": 20,
+    "start": 549,
+    "end": 579,
+    "line": 28,
     "braced": true,
     "elementOk": false,
     "svelte": true
@@ -90,9 +110,9 @@
       }
     ],
     "context": "",
-    "start": 437,
-    "end": 473,
-    "line": 21,
+    "start": 587,
+    "end": 623,
+    "line": 29,
     "braced": false,
     "elementOk": false,
     "svelte": true
@@ -110,9 +130,9 @@
       }
     ],
     "context": "",
-    "start": 481,
-    "end": 518,
-    "line": 22,
+    "start": 631,
+    "end": 668,
+    "line": 30,
     "braced": false,
     "elementOk": false,
     "svelte": true
@@ -122,8 +142,8 @@
     "expressions": [],
     "placeholders": [],
     "context": "",
-    "start": 527,
-    "end": 535,
-    "line": 23
+    "start": 677,
+    "end": 685,
+    "line": 31
   }
 ]
