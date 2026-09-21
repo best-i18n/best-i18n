@@ -13,7 +13,8 @@ const name = 'nuxt-i18n'
     sentence.)
   -->
   <p>
-    {{ $t('read_the') }}<a href="https://github.com/best-i18n/best-i18n">{{ $t('readme') }}</a
+    {{ $t('read_the')
+    }}<a href="https://github.com/best-i18n/best-i18n">{{ $t('readme') }}</a
     >{{ $t('to_learn_more') }}
   </p>
 </template>
