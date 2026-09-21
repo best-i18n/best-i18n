@@ -1,6 +1,7 @@
 import { generate as DefaultImage } from 'fumadocs-ui/og'
 import { notFound } from 'next/navigation'
 import { ImageResponse } from 'next/og'
+import { Logo } from '~/components/logo'
 import { i18n } from '~/lib/i18n'
 import { appName } from '~/lib/shared'
 import { getPageImageUrl, source } from '~/lib/source'
@@ -15,6 +16,7 @@ export async function withGET(lang: string, slug: string[]) {
       title={page.data.title}
       description={page.data.description}
       site={appName}
+      icon={<Logo />}
     />,
     {
       width: 1200,

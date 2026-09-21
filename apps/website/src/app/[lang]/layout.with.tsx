@@ -4,7 +4,7 @@ import { LocaleProvider } from 'best-i18n/react'
 import { Inter } from 'next/font/google'
 import { Provider } from '~/components/provider'
 import { i18nConfig } from '~/lib/best-i18n'
-import { appName, siteUrl } from '~/lib/shared'
+import { appName } from '~/lib/shared'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
@@ -16,9 +16,6 @@ export async function withGenerateMetadata(lang: string): Promise<Metadata> {
   setRequestLocale(lang)
 
   return {
-    // Absolute URLs for og:image and friends; without it Next falls back to
-    // localhost in the static export.
-    metadataBase: new URL(siteUrl),
     icons: [{ rel: 'icon', type: 'image/svg+xml', url: '/favicon.svg' }],
     title: {
       template: `%s | ${appName}`,
