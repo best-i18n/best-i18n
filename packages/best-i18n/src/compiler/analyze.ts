@@ -1017,6 +1017,7 @@ function collectTrans(context: Context, hooks: Hooks): void {
       ...(match.attribute === true ? { attribute: true } : {}),
       elementOk: match.elementOk,
       ...(match.svelte === true ? { svelte: true } : {}),
+      ...(match.vue === true ? { vue: true } : {}),
     })
   })
 }

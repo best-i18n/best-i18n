@@ -1,0 +1,46 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app/app.vue:16
+msgid "Home"
+msgstr "首页"
+
+#: app/app.vue:17
+#: app/pages/about.vue:9
+msgid "About"
+msgstr "关于"
+
+#: app/components/Counter.vue:8
+msgid "You have {0} items"
+msgstr "你有 {0} 项"
+
+#: app/components/Counter.vue:13
+msgid "Add one"
+msgstr "加一"
+
+#: app/pages/about.vue:10
+msgid "{name} inlines every translation at the call site."
+msgstr "{name} 会把每条翻译内联到调用处。"
+
+#: app/pages/about.vue:11
+msgid "Nothing is looked up at runtime, so nothing has to be loaded."
+msgstr "运行时不做任何查表，因此也没有任何东西需要加载。"
+
+#: app/pages/about.vue:17
+msgid "Read the <a>README</a> to learn more."
+msgstr "请阅读 <a>README</a> 了解更多。"
+
+#: app/pages/index.vue:6
+msgid "A small starter with room to grow."
+msgstr "一个小而可长的起始模板。"
+
+#: app/pages/index.vue:7
+msgid "This paragraph was rendered on the server."
+msgstr "这段文字是在服务端渲染的。"

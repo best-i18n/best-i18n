@@ -1,0 +1,45 @@
+---
+title: Thanks
+description: The projects best-i18n inherited its ideas from, and the ones it stands on
+---
+
+best-i18n did not invent its best ideas, it inherited them. In rough order of
+how much of the design each one accounts for:
+
+- [oxc-parser](https://oxc.rs/docs/guide/usage/parser) — the parser under
+  every transform. It is what makes parsing each file on every build cheap
+  enough that the compiler needs no cache and no daemon, and its ESTree output
+  is what lets one analysis serve React, Svelte scripts and Solid alike.
+- [GNU gettext](https://www.gnu.org/software/gettext/) — the PO workflow this
+  package speaks: source text as the message, `fuzzy` instead of data loss,
+  `#~` instead of deletion. Decades of translator tooling work because these
+  conventions are respected.
+- [Lingui](https://lingui.dev/) — the macro shape and the `<0>...</0>`
+  placeholder convention for markup in messages, adopted here for the same
+  reason it exists there: a translator should never see a JSX attribute.
+- [Paraglide JS](https://paraglidejs.com/) — the proof that compile-time i18n
+  with per-locale tree-shaking is viable, and the bar for what a
+  locale-strategy API can look like. Its router integration and best-i18n's
+  converged on the same two function names independently.
+- [next-intl](https://next-intl.dev/) — the reference for what a complete
+  Next.js App Router integration covers. Its playground twin in this repo is
+  what keeps the size claims on the [comparison page](/docs/comparison) honest.
+- [gettext-parser](https://github.com/smhg/gettext-parser) — the PO codec
+  underneath `i18n-extract` and `i18n-compile`.
+- [magic-string](https://github.com/rich-harris/magic-string) — the string
+  editor every transform writes through, and the reason source maps come out
+  right without a code generator.
+- [Svelte](https://svelte.dev/), [Solid](https://www.solidjs.com/) and
+  [Vue](https://vuejs.org/) — for `createSubscriber`, signals and
+  `shallowRef`, the mechanisms that let a compiled locale read be reactive
+  without a runtime of its own.
+
+The comparison playgrounds -
+[next-intl](https://github.com/best-i18n/best-i18n/tree/main/playground/nextjs-intl),
+[Paraglide](https://github.com/best-i18n/best-i18n/tree/main/playground/tanstack-start-paraglide),
+[svelte-i18n](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n)
+and
+[@solid-primitives/i18n](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives)
+
+- exist because those libraries are good enough to measure against. Every
+  number on the comparison page is a comparison with work someone else did well.

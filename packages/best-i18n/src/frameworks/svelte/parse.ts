@@ -1,7 +1,5 @@
-import { createRequire } from 'node:module'
-import path from 'node:path'
-import process from 'node:process'
 import { parseSync } from 'oxc-parser'
+import { requireFromProject } from '../../compiler/resolve.ts'
 import type { AST } from 'svelte/compiler'
 import type { ParsedSource } from '../../compiler/adapter.ts'
 import type { StaticImport } from '../../compiler/bindings.ts'
@@ -12,45 +10,6 @@ export interface SvelteScript {
   end: number
   contentStart: number
   contentEnd: number
-}
-
-function isMissingCompiler(cause: unknown): cause is Error {
-  return (
-    cause instanceof Error &&
-    (cause as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND' &&
-    cause.message.startsWith("Cannot find module 'svelte/compiler'")
-  )
-}
-
-/**
- * Finds the Svelte compiler the component will later be compiled with: the
- * one the component's own project resolves, then the working directory's,
- * and only then whatever sits next to this library. Resolving from here
- * alone would miss a `svelte` installed only in a sub-package of a monorepo
- * that hoisted best-i18n to its root.
- */
-function resolveCompiler(filename: string): string {
-  const bases = [
-    ...new Set([
-      path.resolve(filename),
-      path.join(process.cwd(), '__best-i18n__.js'),
-    ]),
-    import.meta.url,
-  ]
-  let missing: Error | undefined
-  for (const base of bases) {
-    try {
-      return createRequire(base).resolve('svelte/compiler')
-    } catch (cause) {
-      // Any other failure - a broken package, an exports map that refuses
-      // the subpath - is the real diagnosis; do not paper over it.
-      if (!isMissingCompiler(cause)) throw cause
-      missing = cause
-    }
-  }
-  throw new Error('best-i18n: install svelte@^5 to translate .svelte files.', {
-    cause: missing,
-  })
 }
 
 function collectPatternNames(pattern: unknown, names: Set<string>): void {
@@ -127,13 +86,11 @@ export function parseSvelte(
   insertion: number
   scripts: SvelteScript[]
 } {
-  const compilerPath = resolveCompiler(filename)
-  // Load outside the resolver's catch: failures inside an installed compiler
-  // must retain their original diagnostics, including missing transitive
-  // dependencies.
-  const parser: typeof import('svelte/compiler') = createRequire(
-    import.meta.url,
-  )(compilerPath)
+  const parser = requireFromProject<typeof import('svelte/compiler')>(
+    'svelte/compiler',
+    filename,
+    'install svelte@^5 to translate .svelte files.',
+  )
   const ast = parser.parse(code, { filename, modern: true })
   const insertionScript = ast.module ?? ast.instance
   const contentRange = (script: AST.Script) =>

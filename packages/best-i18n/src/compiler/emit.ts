@@ -239,6 +239,7 @@ export function createEmitter(input: {
         describe(locale),
         refs,
         adapter.transFragment,
+        adapter.interpolate,
       )
     }
 

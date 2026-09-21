@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 .svelte-kit
 .svelte-build-*
 .svelte-test-*
+.vue-build-*
+.vue-runtime-*
+.vue-test-*

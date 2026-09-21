@@ -67,6 +67,7 @@ PO workflow, the URL helpers - is the same either way.
 | Vite, and anything on it (TanStack Start, React Router, SvelteKit, Astro) | `best-i18n/vite`     |
 | Next.js (App Router, Turbopack or webpack)                                | `best-i18n/next`     |
 | Rolldown used directly, and tools built on it (tsdown, ...)               | `best-i18n/rolldown` |
+| Nuxt 4 (Vue 3 alone uses `best-i18n/vite` with `vue: true`)               | `best-i18n/nuxt`     |
 
 rolldown-vite keeps the Vite plugin API, so it takes `best-i18n/vite`
 unchanged; `best-i18n/rolldown` is for Rolldown without Vite around it.
@@ -494,6 +495,9 @@ pattern for paths that must never be localized (`/api/...`).
 
 best-i18n did not invent its best ideas, it inherited them:
 
+- [oxc-parser](https://oxc.rs/docs/guide/usage/parser) — the parser under
+  every transform. It is what makes parsing each file on every build cheap
+  enough that the compiler needs no cache and no daemon.
 - [GNU gettext](https://www.gnu.org/software/gettext/) — the PO workflow this
   package speaks: source text as the message, `fuzzy` instead of data loss,
   `#~` instead of deletion. Decades of translator tooling work because these
@@ -553,6 +557,37 @@ Wrap SolidStart v2 H3 middleware’s `next()` with `withRequestLocale` from
 `best-i18n/server` for request isolation. See the complete
 [SolidStart playground](../../playground/solid-start) and
 [integration guide](../../apps/website/content/docs/integrations/solid.mdx).
+
+## Vue 3 and Nuxt 4
+
+Enable `vue: true` on the Vite plugin before `vue()`. Import `t` and `plural`
+from `best-i18n/macro`, `<Trans>` from `best-i18n/vue/macro`, and the reactive
+`useLocale()` / `getLocale()` / `setLocale()` from `best-i18n/vue`. Template
+expressions update on their own; script text that should follow the locale
+goes in a `computed`.
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { t } from 'best-i18n/macro'
+import { useLocale } from 'best-i18n/vue'
+
+const title = computed(() => t`Welcome`)
+const locale = useLocale()
+</script>
+
+<template>
+  <h1 :title="t`Welcome`">{{ title }}</h1>
+  <p>{{ locale }}</p>
+</template>
+```
+
+On Nuxt, list `best-i18n/nuxt` in `modules` and put the locales under
+`bestI18n`. The module adds the Vite plugin, a route per locale prefix, a
+Nitro plugin that binds the locale to each request through Nitro's async
+context, and a Nuxt plugin that stamps `<html lang>` and reads it back before
+hydration. See the complete [Nuxt playground](../../playground/nuxt) and
+[integration guide](../../apps/website/content/docs/integrations/vue.mdx).
 
 ## License
 

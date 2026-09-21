@@ -67,6 +67,12 @@ export interface Message {
    * replacement must stay a plain expression there rather than a fragment.
    */
   attribute?: boolean
+  /**
+   * Set for a Vue `<Trans>`: the replacement is template markup - `{{ }}`
+   * around a text-only message, `<template v-if>` blocks around markup -
+   * rather than a JSX expression.
+   */
+  vue?: boolean
 }
 
 /**
@@ -111,6 +117,11 @@ export interface TransformOptions {
   runtimeModule?: string
   /** Compile Solid JSX and use best-i18n/solid for reactive locale reads. */
   solid?: boolean
+  /**
+   * Read the locale through best-i18n/vue in every file, not only in `.vue`
+   * components, so a composable's `computed(() => t\`...\`)` tracks it.
+   */
+  vue?: boolean
   /** Name of the tagged template to treat as a message. */
   tag?: string
   /**
@@ -204,4 +215,6 @@ export interface ExtractOptions {
   reactModule?: string
   /** The file is Solid JSX: React's `useI18n()` is rejected up front. */
   solid?: boolean
+  /** The project is Vue: `.ts` files read the locale through best-i18n/vue. */
+  vue?: boolean
 }

@@ -52,7 +52,7 @@ describe('optional svelte compiler loading', () => {
     expect(bases).toHaveLength(3)
     expect(bases[0]).toBe(path.resolve('/apps/web/src/Page.svelte'))
     expect(path.dirname(bases[1]!)).toBe(process.cwd())
-    expect(bases[2]).toMatch(/src\/frameworks\/svelte\/parse\.ts$/)
+    expect(bases[2]).toMatch(/src\/compiler\/resolve\.ts$/)
   })
 
   it('stops at the first base that resolves the compiler', () => {

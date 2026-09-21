@@ -15,6 +15,7 @@
 //            chunks, so the totals line up anyway. SvelteKit is reported in its
 //            own table and includes all client chunks, entries and route nodes.
 //            SolidStart v2 also gets its own table, covering all _build JS.
+//            Nuxt builds through `nuxt build` and is measured under _nuxt.
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -133,6 +134,30 @@ const VARIANTS = [
     dir: 'playground/solid-start-primitives',
     kind: 'vite',
     clientDir: '.output/public/_build',
+    env: {},
+  },
+  {
+    family: 'Nuxt 4',
+    label: 'best-i18n',
+    dir: 'playground/nuxt',
+    kind: 'nuxt',
+    clientDir: '.output/public/_nuxt',
+    env: {},
+  },
+  {
+    family: 'Nuxt 4',
+    label: 'best-i18n (staticLocale=zh)',
+    dir: 'playground/nuxt',
+    kind: 'nuxt',
+    clientDir: '.output/public/_nuxt',
+    env: { I18N_STATIC_LOCALE: 'zh' },
+  },
+  {
+    family: 'Nuxt 4',
+    label: '@nuxtjs/i18n',
+    dir: 'playground/nuxt-i18n',
+    kind: 'nuxt',
+    clientDir: '.output/public/_nuxt',
     env: {},
   },
 ]
@@ -330,7 +355,10 @@ for (const variant of selected) {
       await server.stop()
     }
   } else {
-    await run('pnpm', ['exec', 'vite', 'build'], { cwd, env })
+    // Nuxt drives Vite itself; the emitted client assets are measured alike.
+    const command =
+      variant.kind === 'nuxt' ? ['nuxt', 'build'] : ['vite', 'build']
+    await run('pnpm', ['exec', ...command], { cwd, env })
     results.push({ ...variant, ...measureVite(cwd, variant.clientDir) })
   }
 }

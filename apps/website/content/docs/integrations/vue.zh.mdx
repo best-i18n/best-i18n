@@ -1,0 +1,175 @@
+---
+title: Vue
+description: Vue 3 跑在 Vite 插件上只多一个 vue:true，Nuxt 4 通过 best-i18n/nuxt 模块接入
+---
+
+Vue 跑在 [`best-i18n/vite`](/zh/docs/integrations/vite) 上，只多一个选项
+`vue: true`：让插件编译 `.vue` 组件里的宏，并且让每一处编译出的 locale 读取都走
+`best-i18n/vue`，这样 composable 里的 `computed` 也能跟随语言。两个很小的入口覆盖
+Vue 自己需要的东西：`best-i18n/vue` 提供响应式 locale，`best-i18n/vue/macro` 提供
+`<Trans>`。Nuxt 有一个模块 `best-i18n/nuxt` 把这些都接好。完整 Nuxt 示例见
+[`playground/nuxt`](https://github.com/best-i18n/best-i18n/tree/main/playground/nuxt)。
+
+## 用 Vite 配置
+
+安装 `vue@^3.3`（可选的 peer dependency），然后把 `i18n(...)` 放在插件数组里
+`vue()` 的**前面**。宏必须在 Vue 编译组件之前被编译掉。
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+      vue: true,
+    }),
+    vue(),
+  ],
+})
+```
+
+`vue: true` 做两件事：把默认的文件过滤放宽到 `.vue`；让插件编译的每个文件（包括
+`.ts` composable）都用 `best-i18n/vue` 作为运行时。如果你自己传了 `include`，那个
+正则就是全部的过滤条件。
+
+## 在组件里写消息
+
+`t`、`plural` 和导入别名都来自 `best-i18n/macro`，与 JS/TS 完全一样。`<script setup>`、
+普通 `<script>`、`{{ }}` 插值、`:prop` 绑定和 `@event` 处理器里都可以用：
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { plural, t } from 'best-i18n/macro'
+
+const props = defineProps<{ name: string; count: number }>()
+// 需要跟随语言的脚本文本放进 computed；普通 const 只求值一次。
+const title = computed(() => t`Welcome`)
+</script>
+
+<template>
+  <h1 :title="t`Welcome`">{{ title }}</h1>
+  <p>{{ t`Hello ${props.name}` }}</p>
+  <p>{{ plural(props.count, `One item`, `${props.count} items`) }}</p>
+</template>
+```
+
+句子里带标记就用 `best-i18n/vue/macro` 的 `<Trans>`。catalog 把元素存成具名占位符
+——`Read the <a>docs</a>`——翻译可以挪动链接，却永远看不到属性：
+
+```vue
+<script setup lang="ts">
+import { Trans } from 'best-i18n/vue/macro'
+
+defineProps<{ docsUrl: string }>()
+</script>
+
+<template>
+  <p>
+    <Trans>Read the <a :href="docsUrl">documentation</a> to learn more.</Trans>
+  </p>
+  <p><Trans ctx="verb">Open</Trans></p>
+</template>
+```
+
+编译器按语言重组为普通模板标记：各语言分支包在 `<template v-if>` 块里，或者在
+`staticLocale` 下只剩那一个语言的标记。文字变成 `{{ }}` 插值，所以 Vue 渲染出来的
+和翻译者看到的完全一样。`<Trans>` 除了 `ctx`（字符串字面量）不接受其他 props——
+需要 class 或事件就把它包进一个元素——子节点只能是文本、`{{ }}` 插值、元素和组件。
+`<template>`、`<slot>` 和 `<component>` 在一句话里没有位置，构建时会被拒绝。
+
+只有 `<script setup>` 里的导入对模板可见，模板里要用的宏得在那里导入。只有普通
+`<script>` 的组件仍然可以在脚本里用 `t`。
+
+## 响应式
+
+每条编译后的消息都通过 `best-i18n/vue` 读取 locale，那里是一个 `shallowRef`，
+渲染会追踪它。这意味着：
+
+- 模板表达式——``{{ t`...` }}``、``:title="t`...`"``、编译后的 `<Trans>`——在语言切换
+  时自动更新，不需要额外代码。
+- 脚本里的普通初始化只执行一次。需要跟随语言的文本放进 ``computed(() => t`...`)``。
+- 用 `vue: true` 编译的 `.ts` composable 用的是同一个响应式读取，它的 `computed`
+  也会跟随语言。
+
+自己的代码也通过同一个入口读 locale。`useLocale()` 返回一个 computed ref，是 Vue
+composable 惯用的形状；`getLocale()` 是同一个读取的函数形式，追踪位置完全一样：
+
+```vue
+<script setup lang="ts">
+import { switchLocale } from 'best-i18n/client'
+import { useLocale } from 'best-i18n/vue'
+import { i18n } from '@/i18n'
+
+const locale = useLocale()
+</script>
+
+<template>
+  <button
+    v-for="item in i18n.locales"
+    :key="item"
+    :disabled="item === locale"
+    @click="switchLocale(item, i18n)"
+  >
+    {{ item }}
+  </button>
+</template>
+```
+
+`best-i18n/vue` 还重新导出了 `configure`、`getLocales` 和 `setLocale`。React 的
+`useI18n` 宏在 Vue 文件里不支持，构建时会报错；同样的问题在 Vue 里的答案是
+`computed`。
+
+## Nuxt
+
+Nuxt 在此之上加了服务端渲染和文件路由。模块负责接线：
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ['best-i18n/nuxt'],
+  bestI18n: {
+    locales: ['en', 'zh'],
+    baseLocale: 'en',
+    staticLocale: process.env.I18N_STATIC_LOCALE || undefined,
+  },
+})
+```
+
+`bestI18n` 和其他地方的 URL 配置同形——`locales`、`baseLocale`、`cookieName`——
+再加 `messagesDir`（默认 `messages`，相对项目根）和 `staticLocale`。`exclude` 也
+接受，但 Nuxt 下基本用不上：这里没有任何重写，它唯一的效果是把匹配的路径固定为
+默认语言，只有某些 server route 永远不该本地化时才需要设。有了它，模块会：
+
+- 加上带 `vue: true` 的 Vite 插件；
+- 给每个页面在每个非默认语言前缀下加一份副本，所以 `/zh/about` 是一条真实路由，
+  请求时不需要重写任何东西；
+- 打开 `experimental.asyncContext`，并安装一个 Nitro 插件按请求解析 locale——URL
+  前缀、cookie、`Accept-Language`——再通过 Nitro 的 async context 交给这个请求里的
+  每一次 `getLocale()`，组件、composable 和 server route 一视同仁；
+- 安装一个 Nuxt 插件，服务端把 locale 写到 `<html lang>`，客户端在 hydration 前
+  从那里读回来，让首次客户端渲染与 HTML 一致。
+
+链接走 `localizePathname`，中文下 `/about` 变成 `/zh/about`；`best-i18n/client` 的
+`switchLocale` 把选择记进 cookie 并整页导航。页面代码里没有任何 Nuxt 专有的东西。
+
+按语言构建——`I18N_STATIC_LOCALE=zh nuxt build`——会把每条消息塌缩为中文字面量，
+并让服务端不管 URL 和请求头怎么说都用中文回应。每个语言各部署一份，前面放语言
+感知的路由。
+
+## 提取
+
+`i18n-extract` 会和 `.ts` 一起扫描 `.vue` 文件；Nuxt 项目把它指向 `app`：
+
+```bash
+i18n-extract --locales en,zh --src app --messages messages
+```

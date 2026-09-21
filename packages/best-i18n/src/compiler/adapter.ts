@@ -59,6 +59,8 @@ export interface TransMatch {
   attribute?: boolean
   /** See `Message.svelte`. */
   svelte?: boolean
+  /** See `Message.vue`. */
+  vue?: boolean
 }
 
 /** What the core hands an adapter alongside a candidate `<Trans>` node. */
@@ -97,6 +99,11 @@ export interface FrameworkAdapter<P extends ParsedFile = ParsedFile> {
    * expression. A template language has no such need.
    */
   readonly transFragment: boolean
+  /**
+   * How an expression is written into markup when a `<Trans>` is rebuilt:
+   * `{expr}` in JSX and Svelte, `{{ expr }}` in a Vue template.
+   */
+  readonly interpolate?: (expression: string) => string
   parse(code: string, filename: string): P
   /**
    * Reject imports that cannot mean anything here - another framework's

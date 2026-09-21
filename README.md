@@ -27,6 +27,8 @@ playground/sveltekit-svelte-i18n     the same app in svelte-i18n
 playground/solid-start               the same app on SolidStart v2
 playground/solid-start-paraglide     the same app in Paraglide
 playground/solid-start-primitives    the same app in @solid-primitives/i18n
+playground/nuxt                      the same app on Nuxt 4, through best-i18n/nuxt
+playground/nuxt-i18n                 the same app in @nuxtjs/i18n
 scripts/bench-size.mjs               builds each playground and weighs what a browser loads
 ```
 
@@ -47,7 +49,8 @@ pnpm bench          # client JS a browser downloads, best-i18n vs next-intl
 
 ## Playgrounds
 
-Ten playgrounds cover Next.js, TanStack Start, SvelteKit and SolidStart. In
+Twelve playgrounds cover Next.js, TanStack Start, SvelteKit, SolidStart and
+Nuxt. In
 each family the apps share the same two pages, the same messages and the same
 URLs, so a comparison is between libraries rather than between apps.
 
@@ -63,6 +66,8 @@ URLs, so a comparison is between libraries rather than between apps.
 | [`playground/solid-start`](./playground/solid-start#readme)                           | best-i18n on SolidStart v2             |
 | [`playground/solid-start-paraglide`](./playground/solid-start-paraglide#readme)       | the same app in Paraglide              |
 | [`playground/solid-start-primitives`](./playground/solid-start-primitives#readme)     | the same app in @solid-primitives/i18n |
+| [`playground/nuxt`](./playground/nuxt#readme)                                         | best-i18n on Nuxt 4                    |
+| [`playground/nuxt-i18n`](./playground/nuxt-i18n#readme)                               | the same app in @nuxtjs/i18n           |
 
 ```bash
 pnpm build          # the playgrounds consume the built package
@@ -70,6 +75,7 @@ pnpm dev:next       # http://localhost:3000 and /zh
 pnpm dev:tanstack
 pnpm dev:sveltekit
 pnpm dev:solid-start
+pnpm dev:nuxt
 pnpm dev:paraglide
 ```
 
@@ -156,6 +162,20 @@ its two lazy dictionary chunks are counted even though a visitor downloads
 one. Paraglide's runtime chunk is 15.8 kB gzip here against 8.7 kB in the
 SvelteKit build - the same code, bundled without SvelteKit's chunk sharing.
 
+### Nuxt 4
+
+| variant                            | client JS (gzip) | raw      |
+| ---------------------------------- | ---------------- | -------- |
+| best-i18n                          | 73.7 kB          | 199.0 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 73.5 kB          | 198.5 kB |
+| @nuxtjs/i18n                       | 100.5 kB         | 279.3 kB |
+
+All JavaScript under `.output/public/_nuxt`. @nuxtjs/i18n's extra 27 kB is
+vue-i18n: the message compiler and formatter that turn `$t('key', { count })`
+into text in the browser, plus the module's own routing and detection
+runtime. best-i18n ships neither, so the gap is the whole of what a message
+runtime weighs on Nuxt.
+
 ### What the two gaps are made of
 
 They are not the same kind of gap, and the difference matters more than the
@@ -221,12 +241,18 @@ carry the full numbers and the caveats.
 
 ## Thanks
 
-The ideas here are inherited, not invented: [GNU
-gettext](https://www.gnu.org/software/gettext/) for the PO workflow,
-[Lingui](https://lingui.dev/) for the macro shape and the `<0>...</0>` markup
-convention, [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJS)
-for proving compile-time i18n with per-locale tree-shaking, and
-[next-intl](https://next-intl.dev/) as the reference for a complete Next.js
-integration. The last two also serve as the honest halves of the size
-comparison above. The full list lives in
+The ideas here are inherited, not invented:
+
+- [oxc-parser](https://oxc.rs/docs/guide/usage/parser) — the parser under
+  every transform, fast enough to parse each file on every build.
+- [GNU gettext](https://www.gnu.org/software/gettext/) — the PO workflow.
+- [Lingui](https://lingui.dev/) — the macro shape and the `<0>...</0>` markup
+  convention.
+- [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJS) —
+  proof that compile-time i18n with per-locale tree-shaking is viable.
+- [next-intl](https://next-intl.dev/) — the reference for a complete Next.js
+  integration.
+
+Paraglide and next-intl also serve as the honest halves of the size comparison
+above. The full list lives in
 [`packages/best-i18n`](./packages/best-i18n#thanks).

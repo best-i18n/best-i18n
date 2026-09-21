@@ -12,6 +12,8 @@ export default defineConfig({
     'solid-macro': 'src/frameworks/solid/macro.ts',
     'svelte': 'src/frameworks/svelte/index.ts',
     'svelte-macro': 'src/frameworks/svelte/macro.ts',
+    'vue': 'src/frameworks/vue/index.ts',
+    'vue-macro': 'src/frameworks/vue/macro.ts',
     'runtime': 'src/runtime/index.ts',
     'server': 'src/runtime/server.ts',
     'client': 'src/client.ts',
@@ -25,6 +27,9 @@ export default defineConfig({
     'next-navigation': 'src/integrations/next/navigation.ts',
     'next-proxy': 'src/integrations/next/proxy.ts',
     'next-server': 'src/integrations/next/server.ts',
+    'nuxt': 'src/integrations/nuxt/index.ts',
+    'nuxt-plugin': 'src/integrations/nuxt/plugin.ts',
+    'nuxt-server-plugin': 'src/integrations/nuxt/server-plugin.ts',
     'transform': 'src/compiler/transform.ts',
     'po': 'src/compiler/po.ts',
     'cli-extract': 'src/cli/extract.ts',
@@ -34,7 +39,15 @@ export default defineConfig({
   // to `next/link.js` on disk - and Next's own compiler keys its client/server
   // boundaries off the specifier as written. Keep them verbatim.
   deps: {
-    neverBundle: [/^next(\/|$)/],
+    // The same goes for Nuxt and Nitro: their runtime is resolved by the app's
+    // build, not ours, and `nuxt/app` in particular must stay a specifier.
+    neverBundle: [
+      /^next(\/|$)/,
+      /^nuxt(\/|$)/,
+      /^@nuxt\//,
+      /^nitropack(\/|$)/,
+      /^h3$/,
+    ],
   },
   sourcemap: true,
   dts: { sourcemap: true },

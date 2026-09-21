@@ -114,6 +114,7 @@ export function transform(
     // has to travel.
     reactModule: options.reactModule,
     solid: options.solid,
+    vue: options.vue,
   })
   // A configuration the file cannot be compiled under is an error here, not
   // in extraction, which has no such configuration.

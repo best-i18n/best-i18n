@@ -22,19 +22,19 @@ reproducible rather than remembered.
 | Per-locale build                             | `staticLocale` — pure literals                      | no                              | no                      | yes, per-locale bundles  |
 | Localized pathnames (`/about` → `/de/ueber`) | no                                                  | no                              | yes                     | yes                      |
 
-The Svelte and Solid families add two runtime libraries that have no
-compile step at all:
+The Svelte, Solid and Nuxt families add three runtime libraries that have no
+compile step of their own:
 
-|                            | svelte-i18n                                   | @solid-primitives/i18n                    |
-| -------------------------- | --------------------------------------------- | ----------------------------------------- |
-| The message is             | a key (`$_('greeting')`)                      | a key (`t('greeting')`)                   |
-| Ships at runtime           | ICU formatter (`intl-messageformat`) + stores | flattened dictionary + `{{ }}` templating |
-| Catalog format             | JSON                                          | JSON or any object                        |
-| Plurals                    | ICU, at runtime                               | none built in                             |
-| Markup in messages         | strings only                                  | strings only                              |
-| Per-locale build           | no                                            | no                                        |
-| Locale resolution, routing | none — bring your own                         | none — bring your own                     |
-| Per-request SSR binding    | none — one global store                       | none — a signal you provide               |
+|                            | svelte-i18n                                   | @solid-primitives/i18n                    | @nuxtjs/i18n (vue-i18n)                      |
+| -------------------------- | --------------------------------------------- | ----------------------------------------- | -------------------------------------------- |
+| The message is             | a key (`$_('greeting')`)                      | a key (`t('greeting')`)                   | a key (`$t('greeting')`)                     |
+| Ships at runtime           | ICU formatter (`intl-messageformat`) + stores | flattened dictionary + `{{ }}` templating | vue-i18n message compiler + formatter        |
+| Catalog format             | JSON                                          | JSON or any object                        | JSON / YAML per locale                       |
+| Plurals                    | ICU, at runtime                               | none built in                             | `\|`-separated forms, at runtime             |
+| Markup in messages         | strings only                                  | strings only                              | `<i18n-t>` component with slots, per render  |
+| Per-locale build           | no                                            | no                                        | no (lazy per-locale chunks)                  |
+| Locale resolution, routing | none — bring your own                         | none — bring your own                     | yes — strategies, `useLocalePath`, detection |
+| Per-request SSR binding    | none — one global store                       | none — a signal you provide               | yes — per app instance                       |
 
 Two of these are best-i18n's direct ancestors: the macro shape and the
 `<0>...</0>` markup convention are Lingui's, and Paraglide proved that
@@ -49,7 +49,7 @@ The apps in a family are measured the same way — on Next.js, every
 `/_next/static/*.js` the HTML of `/zh`, `/zh/about` and `/zh/long` references;
 on TanStack Start, the emitted client assets; on SvelteKit, everything under
 `.svelte-kit/output/client`; on SolidStart, everything under
-`.output/public/_build`. `/zh/long` is the text-heavy
+`.output/public/_build`; on Nuxt, everything under `.output/public/_nuxt`. `/zh/long` is the text-heavy
 case: a deliberately long article of ~30 server-rendered messages — full
 paragraphs, plurals, context, markup — mirrored across both Next twins.
 
@@ -87,6 +87,14 @@ paragraphs, plurals, context, markup — mirrored across both Next twins.
 | best-i18n, `I18N_STATIC_LOCALE=zh` | 16.4 kB          | 41.3 kB |
 | @solid-primitives/i18n             | 18.2 kB          | 44.8 kB |
 | paraglide                          | 26.0 kB          | 69.8 kB |
+
+### Nuxt 4 — against @nuxtjs/i18n
+
+| variant                            | client JS (gzip) | raw      |
+| ---------------------------------- | ---------------- | -------- |
+| best-i18n                          | 73.7 kB          | 199.0 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 73.5 kB          | 198.5 kB |
+| @nuxtjs/i18n                       | 100.5 kB         | 279.3 kB |
 
 The two HTML columns of the Next table tell the story. Both home pages render the same handful
 of messages, yet `/zh` reads 2.4 kB against 4.9 kB: the difference is the
@@ -127,6 +135,15 @@ It also brings no locale resolution, no routing and no per-request binding;
 the playground adds all three by hand, and on the server the library's one
 global store is written per request, which its own SvelteKit guide does and
 which concurrent requests in different languages can race on.
+
+**@nuxtjs/i18n's ~27 kB is vue-i18n** — the message compiler and formatter
+that turn `$t('key', { count })` into text in the browser, plus the module's
+routing strategies and browser-language detection. It is the largest gap
+measured, and the most complete alternative: it brings the routing and the
+per-request binding the other runtime libraries leave to you, and its
+`<i18n-t>` component handles markup in a message — at runtime, per render,
+the way Lingui's `<Trans>` does. best-i18n's Nuxt module covers the routing
+and the binding without a message runtime.
 
 **@solid-primitives/i18n's ~1.5 kB is barely a runtime** — a flattened
 dictionary and a `{{ name }}` template fill — which is why it lands closest to
@@ -202,5 +219,6 @@ The rest of the honest list — no ICU `select`, the Next.js private API, where
 [`playground/sveltekit-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-paraglide),
 [`playground/sveltekit-svelte-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/sveltekit-svelte-i18n),
 [`playground/solid-start-paraglide`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-paraglide),
-[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives))
+[`playground/solid-start-primitives`](https://github.com/best-i18n/best-i18n/tree/main/playground/solid-start-primitives),
+[`playground/nuxt-i18n`](https://github.com/best-i18n/best-i18n/tree/main/playground/nuxt-i18n))
 carry the full numbers and the caveats.

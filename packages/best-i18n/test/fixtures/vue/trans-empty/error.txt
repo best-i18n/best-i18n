@@ -1,0 +1,1 @@
+best-i18n: <Trans /> is empty (Page.vue offset 79). A message needs content.

@@ -1,0 +1,195 @@
+---
+title: Vue
+description: Vue 3 on the Vite plugin with vue:true, and Nuxt 4 through the best-i18n/nuxt module
+---
+
+Vue runs on [`best-i18n/vite`](/docs/integrations/vite) with one extra option,
+`vue: true`, which lets the plugin compile macros inside `.vue` components
+and makes every compiled locale read go through `best-i18n/vue`, so a
+composable's `computed` tracks it too. Two small entry points cover what Vue
+itself needs: `best-i18n/vue` for the reactive locale, and
+`best-i18n/vue/macro` for `<Trans>`. Nuxt gets a module, `best-i18n/nuxt`,
+that wires all of it. A full Nuxt app is in
+[`playground/nuxt`](https://github.com/best-i18n/best-i18n/tree/main/playground/nuxt).
+
+## Setup with Vite
+
+Install `vue@^3.3` — an optional peer dependency — then put `i18n(...)`
+**before** `vue()` in the plugins array. The macros have to be compiled away
+before Vue compiles the component.
+
+```ts
+// vite.config.ts
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
+import { i18n } from 'best-i18n/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    i18n({
+      messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+      staticLocale: process.env.I18N_STATIC_LOCALE,
+      vue: true,
+    }),
+    vue(),
+  ],
+})
+```
+
+`vue: true` does two things: it widens the default file filter to `.vue`,
+and it selects `best-i18n/vue` as the runtime for every file the plugin
+compiles, `.ts` composables included. If you pass your own `include`, that
+pattern is the whole filter.
+
+## Writing messages in a component
+
+`t`, `plural` and aliased imports come from `best-i18n/macro`, exactly as in
+JS/TS. They work in `<script setup>`, in a plain `<script>`, in `{{ }}`
+interpolations, in `:prop` bindings and in `@event` handlers:
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { plural, t } from 'best-i18n/macro'
+
+const props = defineProps<{ name: string; count: number }>()
+// Script text that should follow the locale lives in a computed; a plain
+// `const` is evaluated once.
+const title = computed(() => t`Welcome`)
+</script>
+
+<template>
+  <h1 :title="t`Welcome`">{{ title }}</h1>
+  <p>{{ t`Hello ${props.name}` }}</p>
+  <p>{{ plural(props.count, `One item`, `${props.count} items`) }}</p>
+</template>
+```
+
+A sentence with markup in it uses `<Trans>` from `best-i18n/vue/macro`. The
+catalog stores the elements as named placeholders — `Read the <a>docs</a>` —
+so a translation can move the link without ever seeing an attribute:
+
+```vue
+<script setup lang="ts">
+import { Trans } from 'best-i18n/vue/macro'
+
+defineProps<{ docsUrl: string }>()
+</script>
+
+<template>
+  <p>
+    <Trans>Read the <a :href="docsUrl">documentation</a> to learn more.</Trans>
+  </p>
+  <p><Trans ctx="verb">Open</Trans></p>
+</template>
+```
+
+The compiler rebuilds ordinary template markup per locale: `<template v-if>`
+blocks over the locale branches, or just the one locale's markup under
+`staticLocale`. Text becomes `{{ }}` interpolations, so what Vue renders is
+exactly what the translator saw. `<Trans>` takes no props other than `ctx`
+(a string literal) — wrap it in an element if you need a class or an event —
+and its children must be text, `{{ }}` interpolations, elements and
+components. `<template>`, `<slot>` and `<component>` have no place in a
+sentence and are rejected at build time.
+
+Only `<script setup>` imports are visible to the template, which is where
+the macros have to be imported for template use. A component with only a
+plain `<script>` can still use `t` inside that script.
+
+## Reactivity
+
+Every compiled message reads the locale through `best-i18n/vue`, where it is
+a `shallowRef` the render tracks. That means:
+
+- Template expressions — `{{ t`...` }}`, `:title="t`...`"`, a compiled
+  `<Trans>` — update when the locale changes, with no extra code.
+- In a script, an ordinary initializer runs once. Text that should follow the
+  locale goes in `computed(() => t`...`)`.
+- A `.ts` composable compiled with `vue: true` uses the same reactive read,
+  so its `computed` values follow the locale too.
+
+Your own code reads the locale through the same entry point. `useLocale()`
+returns a computed ref, the shape Vue composables have; `getLocale()` is the
+same read as a function, tracked in exactly the same places:
+
+```vue
+<script setup lang="ts">
+import { switchLocale } from 'best-i18n/client'
+import { useLocale } from 'best-i18n/vue'
+import { i18n } from '@/i18n'
+
+const locale = useLocale()
+</script>
+
+<template>
+  <button
+    v-for="item in i18n.locales"
+    :key="item"
+    :disabled="item === locale"
+    @click="switchLocale(item, i18n)"
+  >
+    {{ item }}
+  </button>
+</template>
+```
+
+`best-i18n/vue` also re-exports `configure`, `getLocales` and `setLocale`.
+React's `useI18n` macro is not supported in Vue files and is rejected at
+build time; `computed` is the Vue answer to the same problem.
+
+## Nuxt
+
+Nuxt adds server rendering and file routing. The module does the wiring:
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ['best-i18n/nuxt'],
+  bestI18n: {
+    locales: ['en', 'zh'],
+    baseLocale: 'en',
+    staticLocale: process.env.I18N_STATIC_LOCALE || undefined,
+  },
+})
+```
+
+`bestI18n` takes the same shape as the URL config elsewhere — `locales`,
+`baseLocale`, `cookieName` — plus `messagesDir` (default `messages`, relative
+to the project) and `staticLocale`. `exclude` is accepted too, but Nuxt
+rarely needs it: nothing is rewritten here, so its only effect is to pin the
+paths it matches to the base locale — set it only if some server routes must
+never be localized. With that, the module:
+
+- adds the Vite plugin with `vue: true`;
+- adds a copy of every page under each non-base locale prefix, so `/zh/about`
+  is a real route and nothing is rewritten at request time;
+- turns on `experimental.asyncContext` and installs a Nitro plugin that
+  resolves the locale per request — URL prefix, cookie, `Accept-Language` —
+  and hands it to every `getLocale()` in that request, in components,
+  composables and server routes alike, through Nitro's async context;
+- installs a Nuxt plugin that stamps `<html lang>` on the server and reads it
+  back on the client before hydration, so the first client render agrees
+  with the HTML.
+
+Links go through `localizePathname` so `/about` becomes `/zh/about` while
+Chinese is active; `switchLocale` from `best-i18n/client` remembers the
+choice in a cookie and navigates. Nothing in the pages is Nuxt-specific.
+
+A per-locale build — `I18N_STATIC_LOCALE=zh nuxt build` — collapses every
+message to its Chinese literal and makes the server answer every request in
+Chinese, whatever the URL or headers say. Deploy one such build per locale
+behind locale-aware routing.
+
+## Extraction
+
+`i18n-extract` scans `.vue` files alongside `.ts`; in a Nuxt project point it
+at `app`:
+
+```bash
+i18n-extract --locales en,zh --src app --messages messages
+```

@@ -17,8 +17,9 @@ export interface I18nPluginOptions extends Omit<
   staticLocale?: string | undefined
   /**
    * Files to compile. Defaults to JS/TS, plus `.svelte` when `svelte` is
-   * set. Query-string virtual modules (`*.svelte?type=style`) are skipped
-   * even when they match.
+   * set and `.vue` when `vue` is set. Query-string virtual modules
+   * (`*.svelte?type=style`, `*.vue?vue&type=style`) are skipped even when
+   * they match.
    */
   include?: RegExp
   /**
@@ -29,6 +30,13 @@ export interface I18nPluginOptions extends Omit<
    * the whole filter.
    */
   svelte?: boolean
+  /**
+   * Compile macros in `.vue` files, and read the locale through
+   * `best-i18n/vue` in every file so composables track it too. Requires the
+   * `vue` package. Off by default so a project that never uses Vue does not
+   * match those files. Has no effect on the filter when `include` is set.
+   */
+  vue?: boolean
 }
 
 /**
@@ -37,11 +45,13 @@ export interface I18nPluginOptions extends Omit<
  * `best-i18n/next`, because it does not run on Vite.
  */
 export function i18n(options: I18nPluginOptions): Plugin {
+  const extensions = [
+    '[cm]?[jt]sx?',
+    ...(options.svelte === true ? ['svelte'] : []),
+    ...(options.vue === true ? ['vue'] : []),
+  ]
   const include =
-    options.include ??
-    (options.svelte === true
-      ? /\.(?:[cm]?[jt]sx?|svelte)$/
-      : /\.(?:[cm]?[jt]sx?)$/)
+    options.include ?? new RegExp(`\\.(?:${extensions.join('|')})$`)
   const load = () =>
     loadCatalog({
       messagesDir: options.messagesDir,
@@ -89,8 +99,13 @@ export function i18n(options: I18nPluginOptions): Plugin {
 
     transform(code, id) {
       const [filename, query] = id.split('?')
-      // Virtual style/raw/url modules are not Svelte component source.
-      if (filename?.endsWith('.svelte') && query !== undefined) return null
+      // Virtual style/raw/url modules are not component source.
+      if (
+        (filename?.endsWith('.svelte') || filename?.endsWith('.vue')) &&
+        query !== undefined
+      ) {
+        return null
+      }
       if (!include.test(filename ?? id)) return null
 
       const result = transform(code, id, {
