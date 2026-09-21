@@ -124,6 +124,8 @@ export function createEmitter(input: {
   const repeats = new Map<string, number>()
   if (options.staticLocale === undefined && others.length > 0) {
     for (const message of messages) {
+      // A literal locale folds to one locale's text and calls nothing.
+      if (message.explicitLocale?.literal !== undefined) continue
       const key = signatureOf(message)
       repeats.set(key, (repeats.get(key) ?? 0) + 1)
     }
@@ -150,6 +152,8 @@ export function createEmitter(input: {
     message: Message,
     localeExpr: string,
     refs?: string[],
+    /** A locale named at the call site: render it and nothing else. */
+    fixedLocale?: string,
   ): string => {
     const describe = (locale: string) =>
       `${filename}:${message.line} (${locale}) "${message.text}"`
@@ -243,7 +247,16 @@ export function createEmitter(input: {
       )
     }
 
-    if (options.staticLocale !== undefined) {
+    if (fixedLocale !== undefined) {
+      return render(valueFor(fixedLocale), fixedLocale)
+    }
+
+    // A call site that names its locale keeps its branches in a per-locale
+    // build: the build fixes the current locale, not the ones asked for.
+    if (
+      options.staticLocale !== undefined &&
+      message.explicitLocale === undefined
+    ) {
       return render(valueFor(options.staticLocale), options.staticLocale)
     }
 
@@ -403,14 +416,38 @@ export function createEmitter(input: {
     // rather than a value to be interpolated.
     let isElement = false
 
+    // A locale named at the call site - `t.locale(lang)`, `<Trans locale>` -
+    // is not the current one: nothing to subscribe to, nothing to bind, and
+    // a literal compiles to that locale's text alone.
+    const explicit = message.explicitLocale
+    if (explicit?.literal !== undefined) {
+      if (!options.locales.includes(explicit.literal)) {
+        throw new Error(
+          `best-i18n: ${filename}:${message.line} names locale ` +
+            `${JSON.stringify(explicit.literal)}, which is not one of ` +
+            `${options.locales.join(', ')}.`,
+        )
+      }
+    }
+    const localeRead =
+      explicit?.source ?? message.localeVar ?? `${localGetLocale}()`
+
     // Nothing to bind when the locale cannot vary: a per-locale build and a
     // single-locale config both compile to a bare literal.
     const unbound =
+      explicit === undefined &&
       message.localeVar === undefined &&
       options.staticLocale === undefined &&
       others.length > 0
 
-    if (unbound && isClientModule && message.elementOk === true) {
+    if (explicit?.literal !== undefined) {
+      replacement = compileMessage(
+        message,
+        localeRead,
+        undefined,
+        explicit.literal,
+      )
+    } else if (unbound && isClientModule && message.elementOk === true) {
       const params = paramsFor(message)
       const attributes = [
         ...params.expressions.map(
@@ -428,7 +465,7 @@ export function createEmitter(input: {
       // Hook-bound call sites pass the variable that already holds the
       // locale; others read it at call time, so one function serves both.
       const args = [
-        message.localeVar ?? `${localGetLocale}()`,
+        localeRead,
         ...message.expressions,
         ...(message.elements ?? []).map(elementProp),
       ]
@@ -438,10 +475,7 @@ export function createEmitter(input: {
       }
       replacement = `${sharedFunction(message)}(${args.join(', ')})`
     } else {
-      replacement = compileMessage(
-        message,
-        message.localeVar ?? `${localGetLocale}()`,
-      )
+      replacement = compileMessage(message, localeRead)
       if (unbound) {
         needsRuntime = true
         if (isClientModule) clientUnbound.push(pointAt(message))

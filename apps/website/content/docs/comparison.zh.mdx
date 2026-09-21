@@ -20,6 +20,7 @@ best-i18n 最好的想法正是从这些被拿来对比的库继承来的，所�
 | 消息内嵌标记                         | `<Trans>`，构建期重组为 JSX / Svelte 标记 | `<Trans>`，每次渲染遍历消息树 | `t.rich()` 运行时      | 仅字符串              |
 | 按语言构建                           | `staticLocale`——纯字面量                  | 无                            | 无                     | 有，按语言出包        |
 | 本地化路径（`/about` → `/de/ueber`） | 无                                        | 无                            | 有                     | 有                    |
+| 单条消息指定语言                     | `t.locale()`、`<Trans locale>`            | 无                            | 仅服务端               | `{ locale }` 选项     |
 
 Svelte、Solid 和 Nuxt 三族还各有一个自身没有编译步骤的运行时库：
 

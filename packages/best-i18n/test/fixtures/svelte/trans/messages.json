@@ -145,5 +145,58 @@
     "start": 677,
     "end": 685,
     "line": 31
+  },
+  {
+    "text": "Just words.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 694,
+    "end": 732,
+    "line": 32,
+    "braced": true,
+    "elementOk": false,
+    "svelte": true,
+    "explicitLocale": {
+      "source": "\"zh\"",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "Read the <a>docs</a> to learn more.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={url}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 740,
+    "end": 815,
+    "line": 33,
+    "braced": false,
+    "elementOk": false,
+    "svelte": true,
+    "explicitLocale": {
+      "source": "name"
+    }
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 824,
+    "end": 845,
+    "line": 34,
+    "explicitLocale": {
+      "source": "'zh'",
+      "literal": "zh"
+    }
   }
 ]

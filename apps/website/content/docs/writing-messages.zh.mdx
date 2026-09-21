@@ -62,6 +62,30 @@ const sign = t.ctx('adjective')`Open` // 营业中
 const markup = <Trans ctx='verb'>Open</Trans>
 ```
 
+## 指定语言
+
+调用处可以自己指定语言，而不读取当前语言：给收件人写他语言的邮件、预览另一种
+语言、某个标签必须保持源语言。`locale` 是 `t` 和 `plural` 的一个修饰，也是
+`<Trans>` 的一个 prop：
+
+```tsx
+const zh = t.locale('zh')`Hello` // 永远是 你好
+const theirs = t.locale(user.locale)`Hello` // 用户选的那个
+const count = plural.locale(user.locale)(n, `One item`, `${n} items`)
+const rich = (
+  <Trans locale={user.locale}>
+    Read the <a href={url}>docs</a>
+  </Trans>
+)
+```
+
+修饰可以任意顺序链式调用：`t.ctx('verb').locale('zh')` 和 `t.locale('zh').ctx('verb')`
+是同一条消息。传字符串字面量时编译成那个语言的文本本身，没有分支也不读 locale，
+字面量不在配置的语言列表里会在构建时报错。传其他表达式时编译成对它运行时取值的
+分支。两种情况下这条消息都不订阅当前语言，用户切换语言时它不会变，在 Next.js
+的 `'use client'` 模块里也不需要 hook 和生成组件。按语言构建会保留这些分支：
+构建固定的是当前语言，不是调用处点名要的语言。
+
 ## 给翻译者的注释
 
 紧贴消息上方（或同一行）的 `// i18n:` 注释会变成 catalog 里的 `#.` 提取注释：

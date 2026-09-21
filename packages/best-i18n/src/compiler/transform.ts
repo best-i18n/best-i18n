@@ -189,7 +189,7 @@ export function transform(
   }
   for (const statement of emitter.prologue()) inject(statement)
 
-  adapter.finalize?.(source, code, parsed, injected)
+  adapter.finalize?.(source, code, parsed, injected, messages)
 
   return {
     code: source.toString(),

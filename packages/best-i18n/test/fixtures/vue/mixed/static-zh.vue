@@ -16,4 +16,7 @@ const title = computed(() => `你好`)
   <p>{{ `打开` }}</p>
   <p>{{ `第一行` }}<br />{{ `第二行` }}</p>
   <button @click="log(`你好`)">{{ `你好` }}</button>
+  <p>{{ `打开` }}</p>
+  <p><template v-if="props.name === 'zh'">{{ `阅读` }}<a href="/docs">{{ `文档` }}</a>{{ `了解` }}<b>{{ `更多` }}</b>{{ `。` }}</template><template v-else>{{ `Read the ` }}<a href="/docs">{{ `docs` }}</a>{{ ` to learn ` }}<b>{{ `more` }}</b>{{ `.` }}</template></p>
+  <p>{{ `你好` }}</p>
 </template>

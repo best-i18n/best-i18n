@@ -18,4 +18,7 @@ const title = computed(() => __i18nM1(__i18nGetLocale()))
   <p>{{ (__i18nGetLocale() === "zh" ? `打开` : `Open`) }}</p>
   <p><template v-if="__i18nGetLocale() === 'zh'">{{ `第一行` }}<br />{{ `第二行` }}</template><template v-else>{{ `Line one` }}<br />{{ `line two` }}</template></p>
   <button @click="log(__i18nM1(__i18nGetLocale()))">{{ __i18nM1(__i18nGetLocale()) }}</button>
+  <p>{{ `打开` }}</p>
+  <p><template v-if="props.name === 'zh'">{{ `阅读` }}<a href="/docs">{{ `文档` }}</a>{{ `了解` }}<b>{{ `更多` }}</b>{{ `。` }}</template><template v-else>{{ `Read the ` }}<a href="/docs">{{ `docs` }}</a>{{ ` to learn ` }}<b>{{ `more` }}</b>{{ `.` }}</template></p>
+  <p>{{ `你好` }}</p>
 </template>

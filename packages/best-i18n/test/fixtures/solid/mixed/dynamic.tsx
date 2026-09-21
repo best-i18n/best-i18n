@@ -21,3 +21,6 @@ export function Details(props) {
 export function Attribute(props) {
   return <img alt={__i18nM1(__i18nGetLocale())} src={props.src} />;
 }
+export function Named(props) {
+  return <p>{`你好`}{__i18nM2(props.lang, (__i18nChild) => <a href={props.href}>{__i18nChild}</a>)}{`你好`}</p>;
+}

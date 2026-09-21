@@ -7,7 +7,7 @@
  * to be statically visible. Doing so is a build error, not a runtime surprise.
  */
 
-/** The tagged-template shape shared by `t` and `t.ctx(...)`. */
+/** The tagged-template shape shared by `t` and its modifiers. */
 export type TranslateTag = (
   strings: TemplateStringsArray,
   ...values: Array<string | number>
@@ -22,7 +22,25 @@ export interface TranslateMacro extends TranslateTag {
    *   t.ctx('verb')`Open`     // "Open the file"
    *   t.ctx('adjective')`Open` // "The shop is open"
    */
-  ctx: (context: string) => TranslateTag
+  ctx: (context: string) => TranslateMacro
+  /**
+   * Render in a named locale instead of the current one. A string literal
+   * compiles to that locale's text alone; any other expression compiles to a
+   * locale branch over its value at runtime. Either way nothing subscribes
+   * to the current locale, which is what makes this right for an email in
+   * the recipient's language or a preview of another locale.
+   *
+   * @example
+   *   t.locale('zh')`Hello`        // always 你好
+   *   t.locale(user.locale)`Hello` // whatever the user chose
+   */
+  locale: (locale: string) => TranslateMacro
+}
+
+export interface PluralMacro {
+  (count: number, one: string, other: string): string
+  /** Render in a named locale instead of the current one; see `t.locale`. */
+  locale: (locale: string) => PluralMacro
 }
 
 function unreachable(): never {
@@ -50,7 +68,10 @@ export const t: TranslateMacro = Object.assign(
         'which means this file was never transformed. Is the bundler plugin installed?',
     )
   },
-  { ctx: (): TranslateTag => unreachable() },
+  {
+    ctx: (): TranslateMacro => unreachable(),
+    locale: (): TranslateMacro => unreachable(),
+  },
 )
 
 /**
@@ -69,9 +90,12 @@ export const t: TranslateMacro = Object.assign(
  *
  *   plural(n, `One item`, `${n} items`)
  */
-export function plural(count: number, one: string, other: string): string {
-  void count
-  void one
-  void other
-  return unreachable()
-}
+export const plural: PluralMacro = Object.assign(
+  (count: number, one: string, other: string): string => {
+    void count
+    void one
+    void other
+    return unreachable()
+  },
+  { locale: (): PluralMacro => unreachable() },
+)

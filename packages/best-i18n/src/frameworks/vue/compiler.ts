@@ -13,7 +13,7 @@ import type {
   TransContext,
   TransMatch,
 } from '../../compiler/adapter.ts'
-import type { Message } from '../../compiler/message.ts'
+import type { ExplicitLocale, Message } from '../../compiler/message.ts'
 import type { TransElement, TransMessage } from '../../compiler/trans.ts'
 import type { VueExpression, VueScript, VueTemplateNode } from './parse.ts'
 
@@ -144,7 +144,33 @@ function matchVueTrans(
 
   const { start } = element
   let context = ''
+  let explicitLocale: ExplicitLocale | undefined
   for (const prop of element.props ?? []) {
+    if (prop.kind === 'attribute' && prop.name === 'locale') {
+      if (prop.value === undefined || prop.value === '') {
+        throw new Error(
+          `best-i18n: <${component} locale> needs a value ` +
+            `(${filename} offset ${start}).`,
+        )
+      }
+      explicitLocale = {
+        source: JSON.stringify(prop.value),
+        literal: prop.value,
+      }
+      continue
+    }
+    if (
+      prop.kind === 'directive' &&
+      prop.name === 'bind' &&
+      prop.arg === 'locale' &&
+      prop.expression !== undefined
+    ) {
+      const source = prop.expression
+      const quoted = /^(['"])(.*)\1$/.exec(source)
+      explicitLocale =
+        quoted === null ? { source } : { source, literal: quoted[2]! }
+      continue
+    }
     if (prop.kind === 'attribute' && prop.name === 'ctx') {
       if (prop.value === undefined || prop.value === '') {
         throw new Error(
@@ -190,6 +216,7 @@ function matchVueTrans(
     braced: false,
     elementOk: false,
     vue: true,
+    ...(explicitLocale === undefined ? {} : { explicitLocale }),
   }
 }
 
@@ -281,7 +308,7 @@ export const vue: FrameworkAdapter<VueParsedFile> = {
     return replacement
   },
 
-  finalize(source: MagicString, _code, parsed, injected) {
+  finalize(source: MagicString, _code, parsed, injected, messages) {
     // Without a `<script setup>` the injected statements were prepended to
     // the file. Give them the block the template can see them from: setup
     // bindings, imports included, are what a template resolves against.
@@ -296,6 +323,18 @@ export const vue: FrameworkAdapter<VueParsedFile> = {
     // Vue decodes before it reads the expression.
     for (const { start, end, quote } of parsed.expressions) {
       if (quote === undefined) continue
+      // An expression inside a replaced <Trans> - its `:locale` - is gone.
+      // One that *is* a message, or holds one, is still there to re-quote.
+      if (
+        messages.some(
+          (m) =>
+            m.start <= start &&
+            m.end >= end &&
+            !(m.start === start && m.end === end),
+        )
+      ) {
+        continue
+      }
       const text = source.slice(start, end)
       if (!text.includes(quote)) continue
       source.overwrite(

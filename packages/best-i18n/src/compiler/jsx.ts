@@ -2,6 +2,7 @@ import { parseSync } from 'oxc-parser'
 import { serializeTrans } from './trans.ts'
 import type { ParsedFile, TransContext, TransMatch } from './adapter.ts'
 import type { StaticImport } from './bindings.ts'
+import type { ExplicitLocale } from './message.ts'
 
 /**
  * The JSX half of the compiler, shared by every framework whose components
@@ -122,9 +123,20 @@ export function matchJsxTrans(
   // <Trans> in the element that needs it. `ctx` is the one exception: it is
   // message metadata, not a prop.
   let context = ''
+  let explicitLocale: ExplicitLocale | undefined
   for (const attribute of opening.attributes ?? []) {
     const attributeName = (attribute.name as { name?: string } | undefined)
       ?.name
+    if (attribute.type === 'JSXAttribute' && attributeName === 'locale') {
+      explicitLocale = jsxLocaleValue(attribute.value, code)
+      if (explicitLocale === undefined) {
+        throw new Error(
+          `best-i18n: <${component} locale> needs a value ` +
+            `(${filename} offset ${start}).`,
+        )
+      }
+      continue
+    }
     if (attribute.type === 'JSXAttribute' && attributeName === 'ctx') {
       const value = attribute.value as
         | { type?: string; value?: unknown }
@@ -179,5 +191,32 @@ export function matchJsxTrans(
       ? { attribute: true }
       : {}),
     elementOk: takesElement(node),
+    ...(explicitLocale === undefined ? {} : { explicitLocale }),
   }
+}
+
+/** `locale="zh"` or `locale={expr}` on a JSX `<Trans>`. */
+function jsxLocaleValue(
+  value: unknown,
+  code: string,
+): ExplicitLocale | undefined {
+  const node = value as
+    | { type?: string; value?: unknown; expression?: Record<string, unknown> }
+    | null
+    | undefined
+  if (node?.type === 'Literal' && typeof node.value === 'string') {
+    return { source: JSON.stringify(node.value), literal: node.value }
+  }
+  if (node?.type === 'JSXExpressionContainer' && node.expression) {
+    const expression = node.expression
+    if (expression.type === 'JSXEmptyExpression') return undefined
+    const source = code.slice(
+      expression.start as number,
+      expression.end as number,
+    )
+    return expression.type === 'Literal' && typeof expression.value === 'string'
+      ? { source, literal: expression.value }
+      : { source }
+  }
+  return undefined
 }

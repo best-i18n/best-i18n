@@ -20,3 +20,6 @@
 <p>{`D `}<i><b>{`C`}</b>{` B`}</i>{` A`}</p>
 <p>{`第一行`}<br />{`第二行`}</p>
 <p>{`你好`}</p>
+<p>{`只有文字。`}</p>
+<p>{#if name === "zh"}{`阅读`}<a href={url}>{`文档`}</a>{`了解更多。`}{:else}{`Read the `}<a href={url}>{`docs`}</a>{` to learn more.`}{/if}</p>
+<p>{`你好`}</p>

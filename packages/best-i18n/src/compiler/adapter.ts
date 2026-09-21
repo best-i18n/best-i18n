@@ -3,7 +3,7 @@
 // for parse() and finalize() and still sit in a FrameworkAdapter[] list.
 import type { MagicString } from 'magic-string'
 import type { StaticImport } from './bindings.ts'
-import type { Message, TransformOptions } from './message.ts'
+import type { ExplicitLocale, Message, TransformOptions } from './message.ts'
 import type { TransElement } from './trans.ts'
 
 /**
@@ -61,6 +61,8 @@ export interface TransMatch {
   svelte?: boolean
   /** See `Message.vue`. */
   vue?: boolean
+  /** See `Message.explicitLocale`. */
+  explicitLocale?: ExplicitLocale
 }
 
 /** What the core hands an adapter alongside a candidate `<Trans>` node. */
@@ -152,5 +154,7 @@ export interface FrameworkAdapter<P extends ParsedFile = ParsedFile> {
     code: string,
     parsed: P,
     injected: boolean,
+    /** The ranges the edits replaced. */
+    messages: readonly Message[],
   ): void
 }

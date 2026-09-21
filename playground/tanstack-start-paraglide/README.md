@@ -66,7 +66,8 @@ inlines the locale ternary at each call site. So a message used many times in
 one module is emitted many times here and once there - one message used 100
 times costs +17.6 kB raw against +3.7 kB, and **+0.5 kB gzip either way**. The
 dispatcher also reads `options.locale`, so paraglide can render one message in
-an explicit language at the call site; best-i18n has no way to say that. And
+an explicit language at the call site; best-i18n does the same with
+`t.locale()` and `<Trans locale>`, folding a literal to that locale's text. And
 `experimentalStaticLocale` is paraglide's `staticLocale`, so that one is a
 draw, not an advantage.
 

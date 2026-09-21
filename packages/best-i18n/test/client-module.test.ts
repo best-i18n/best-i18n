@@ -146,3 +146,18 @@ describe('a <Trans> in a Client Component', () => {
     )
   })
 })
+
+describe('a locale named at the call site in a Client Component', () => {
+  it('is bound by definition, whatever the module graph', async () => {
+    expect(check('explicit-locale')).toBeUndefined()
+    const { code } = compile('explicit-locale')
+
+    // Neither message reads the current locale, so nothing imports the
+    // runtime and no generated component wraps the <Trans>.
+    expect(code).not.toContain('best-i18n/runtime')
+    expect(code).not.toContain('useLocale')
+    await expect(code).toMatchFileSnapshot(
+      'fixtures/client-module/explicit-locale/output.tsx',
+    )
+  })
+})

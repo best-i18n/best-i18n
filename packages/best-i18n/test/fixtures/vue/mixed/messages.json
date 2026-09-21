@@ -124,5 +124,64 @@
     "start": 689,
     "end": 697,
     "line": 23
+  },
+  {
+    "text": "Open",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "verb",
+    "start": 715,
+    "end": 757,
+    "line": 24,
+    "braced": false,
+    "elementOk": false,
+    "vue": true,
+    "explicitLocale": {
+      "source": "\"zh\"",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "Read the <a>docs</a> to learn <b>more</b>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href=\"/docs\">",
+        "close": "</a>",
+        "selfClosing": false
+      },
+      {
+        "token": "b",
+        "open": "<b>",
+        "close": "</b>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 767,
+    "end": 858,
+    "line": 25,
+    "braced": false,
+    "elementOk": false,
+    "vue": true,
+    "explicitLocale": {
+      "source": "props.name"
+    }
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 871,
+    "end": 892,
+    "line": 26,
+    "explicitLocale": {
+      "source": "'zh'",
+      "literal": "zh"
+    }
   }
 ]

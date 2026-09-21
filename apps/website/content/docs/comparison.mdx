@@ -21,6 +21,7 @@ reproducible rather than remembered.
 | Markup in messages                           | `<Trans>`, rebuilt to JSX or Svelte markup at build | `<Trans>`, tree walk per render | `t.rich()` at runtime   | strings only             |
 | Per-locale build                             | `staticLocale` — pure literals                      | no                              | no                      | yes, per-locale bundles  |
 | Localized pathnames (`/about` → `/de/ueber`) | no                                                  | no                              | yes                     | yes                      |
+| One message in a named locale                | `t.locale()`, `<Trans locale>`                      | no                              | server only             | `{ locale }` option      |
 
 The Svelte, Solid and Nuxt families add three runtime libraries that have no
 compile step of their own:

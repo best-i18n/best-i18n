@@ -165,5 +165,56 @@
     "braced": false,
     "attribute": true,
     "elementOk": false
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [],
+    "context": "",
+    "start": 1030,
+    "end": 1062,
+    "line": 23,
+    "braced": true,
+    "elementOk": true,
+    "explicitLocale": {
+      "source": "\"zh\"",
+      "literal": "zh"
+    }
+  },
+  {
+    "text": "Read <a>docs</a>.",
+    "expressions": [],
+    "placeholders": [],
+    "elements": [
+      {
+        "token": "a",
+        "open": "<a href={props.href}>",
+        "close": "</a>",
+        "selfClosing": false
+      }
+    ],
+    "context": "",
+    "start": 1062,
+    "end": 1132,
+    "line": 23,
+    "braced": true,
+    "elementOk": true,
+    "explicitLocale": {
+      "source": "props.lang"
+    }
+  },
+  {
+    "text": "Hello",
+    "expressions": [],
+    "placeholders": [],
+    "context": "",
+    "start": 1133,
+    "end": 1154,
+    "line": 23,
+    "explicitLocale": {
+      "source": "'zh'",
+      "literal": "zh"
+    }
   }
 ]

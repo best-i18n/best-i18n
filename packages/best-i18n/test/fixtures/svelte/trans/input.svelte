@@ -29,3 +29,6 @@
 <p><Trans>A <i>b <b>c</b></i> d</Trans></p>
 <p><Trans>Line one<br />line two</Trans></p>
 <p>{t`Hello`}</p>
+<p><Trans locale="zh">Just words.</Trans></p>
+<p><Trans locale={name}>Read the <a href={url}>docs</a> to learn more.</Trans></p>
+<p>{t.locale('zh')`Hello`}</p>

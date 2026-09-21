@@ -21,4 +21,7 @@ const title = computed(() => t`Hello`)
   <p><Trans ctx="verb">Open</Trans></p>
   <p><Trans>Line one<br />line two</Trans></p>
   <button @click="log(t`Hello`)">{{ t`Hello` }}</button>
+  <p><Trans ctx="verb" locale="zh">Open</Trans></p>
+  <p><Trans :locale="props.name">Read the <a href="/docs">docs</a> to learn <b>more</b>.</Trans></p>
+  <p>{{ t.locale('zh')`Hello` }}</p>
 </template>

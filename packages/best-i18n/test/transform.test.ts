@@ -285,3 +285,68 @@ describe('transform: edge cases', () => {
     ).toThrow(/nested/)
   })
 })
+
+describe('a locale named at the call site', () => {
+  const options = {
+    ...OPTIONS,
+    catalog: {
+      ...OPTIONS.catalog,
+      'verb\u0004Open': { zh: '打开' },
+      'One item\u0005{count} items': { zh: ['{count} 项'] },
+      'Read the <a>docs</a>': { zh: '阅读<a>文档</a>' },
+    },
+    plurals: { zh: { nplurals: 1, formula: '0' } },
+  }
+
+  it('compiles a literal to that locale alone and an expression to a branch', async () => {
+    const source = fixture('transform/explicit-locale/input.tsx')
+    await expect(json(extract(source, 'a.tsx'))).toMatchFileSnapshot(
+      'fixtures/transform/explicit-locale/messages.json',
+    )
+    const result = transform(source, 'a.tsx', options)!
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/explicit-locale/output.tsx',
+    )
+    // Nothing here reads the current locale.
+    expect(result.code).not.toContain('best-i18n/runtime')
+    expect(result.missing).toEqual([])
+  })
+
+  it('keeps its branches in a per-locale build', async () => {
+    const result = transform(
+      fixture('transform/explicit-locale/input.tsx'),
+      'a.tsx',
+      { ...options, staticLocale: 'en' },
+    )!
+    await expect(result.code).toMatchFileSnapshot(
+      'fixtures/transform/explicit-locale/output-static-en.tsx',
+    )
+  })
+
+  it('rejects a literal that is not a configured locale', () => {
+    expect(() =>
+      transform(src("const x = t.locale('fr')`About`"), 'a.ts', options),
+    ).toThrow('names locale "fr", which is not one of en, zh')
+  })
+
+  it('rejects a modifier given twice, or given nothing', () => {
+    expect(() => extract(src('t.locale(a).locale(b)`x`'), 'a.ts')).toThrow(
+      '.locale() is given twice',
+    )
+    expect(() => extract(src('t.locale()`x`'), 'a.ts')).toThrow(
+      '.locale() takes exactly one argument',
+    )
+    expect(() => extract(src('t.ctx(name)`x`'), 'a.ts')).toThrow(
+      '.ctx() takes exactly one non-empty string literal',
+    )
+  })
+
+  it('leaves an unrelated binding with the same shape alone', () => {
+    expect(
+      extract(
+        "const other = { locale: (l: string) => (s: unknown) => l }\nother.locale('zh')`x`",
+        'a.ts',
+      ),
+    ).toEqual([])
+  })
+})
