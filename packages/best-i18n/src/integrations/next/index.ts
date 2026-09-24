@@ -14,6 +14,49 @@ export type { I18nLoaderOptions }
 export interface NextConfigLike {
   turbopack?: { rules?: Record<string, any> } | undefined
   webpack?: ((config: any, context: any) => any) | null | undefined
+  output?: string | undefined
+  pageExtensions?: string[] | undefined
+}
+
+/** What a plugin is handed: everything `createI18nPlugin` was given. */
+export interface NextI18nPluginContext {
+  options: NextI18nPluginOptions
+}
+
+/**
+ * A step to run while Next loads the config, with the i18n config in hand.
+ * This is how something that needs the locales and the URL shape - a route
+ * mirror for static exports, say - hooks in without best-i18n knowing about
+ * it, and without the app repeating its locales for a second package.
+ */
+export interface NextI18nPlugin {
+  name: string
+  /**
+   * Runs once per wrapped config, in order, before the loader is registered.
+   * Return a config to replace it; return nothing to leave it as is.
+   */
+  config?: (
+    nextConfig: NextConfigLike,
+    context: NextI18nPluginContext,
+  ) => NextConfigLike | undefined | void
+}
+
+export interface NextI18nPluginOptions extends I18nLoaderOptions {
+  /**
+   * Name of the dynamic segment holding the locale, as in `app/[locale]`.
+   * Spread in from `defineI18nConfig`, for plugins that need it.
+   *
+   * @default 'locale'
+   */
+  localeParam?: string
+  /** Spread in from `defineI18nConfig`, for plugins that need it. */
+  prefixBase?: boolean
+  /**
+   * Steps to run while Next loads the config - see `NextI18nPlugin`. For a
+   * static export with the base locale unprefixed, that is `staticExport()`
+   * from `@best-i18n/next-unprefixed-locale`.
+   */
+  plugins?: NextI18nPlugin[]
 }
 
 /**
@@ -101,21 +144,44 @@ const WEBPACK_TEST = /\.[cm]?[jt]sx?$/
  *   })
  *
  *   export default withI18n({})
+ *
+ * @example
+ *   // A static export with the base locale unprefixed: /docs beside /zh/docs,
+ *   // and no proxy to strip the prefix, so the files have to exist.
+ *   import { staticExport } from '@best-i18n/next-unprefixed-locale'
+ *
+ *   const withI18n = createI18nPlugin({
+ *     ...i18n,
+ *     messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+ *     plugins: [staticExport()],
+ *   })
+ *
+ *   export default withI18n({ output: 'export' })
  */
-export function createI18nPlugin(options: I18nLoaderOptions) {
+export function createI18nPlugin(options: NextI18nPluginOptions) {
+  // Plugins run at config load, not in the loader; Turbopack would otherwise
+  // try to serialize them into the loader's cache key.
+  const { plugins = [], ...loaderOptions } = options
+
   const use = {
     loader: LOADER,
-    options: { ...serializable(options), version: packageVersion() },
+    options: { ...serializable(loaderOptions), version: packageVersion() },
   }
 
   return function withI18n<T extends NextConfigLike>(nextConfig: T): T {
+    const context: NextI18nPluginContext = { options }
+    const config = plugins.reduce<T>(
+      (current, plugin) => (plugin.config?.(current, context) as T) ?? current,
+      nextConfig,
+    )
+
     return {
-      ...nextConfig,
+      ...config,
 
       turbopack: {
-        ...nextConfig.turbopack,
+        ...config.turbopack,
         rules: {
-          ...nextConfig.turbopack?.rules,
+          ...config.turbopack?.rules,
           [TURBOPACK_GLOB]: {
             // `foreign` is Turbopack's name for node_modules and its own
             // internals; running a macro transform over those is pure cost.
@@ -125,8 +191,9 @@ export function createI18nPlugin(options: I18nLoaderOptions) {
         },
       },
 
-      webpack(config: any, context: any) {
-        const merged = nextConfig.webpack?.(config, context) ?? config
+      webpack(webpackConfig: any, webpackContext: any) {
+        const merged =
+          config.webpack?.(webpackConfig, webpackContext) ?? webpackConfig
 
         merged.module.rules.push({
           test: WEBPACK_TEST,
