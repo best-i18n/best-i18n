@@ -137,8 +137,8 @@ importers:
   apps/website:
     dependencies:
       '@best-i18n/next-unprefixed-locale':
-        specifier: link:../../../next-unprefixed-locale
-        version: link:../../../next-unprefixed-locale
+        specifier: 0.0.0
+        version: 0.0.0(next@16.3.4(@babel/core@7.29.7(supports-color@10.2.2))(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
       best-i18n:
         specifier: workspace:*
         version: link:../../packages/best-i18n
@@ -765,6 +765,17 @@ packages:
       react-dom: ^17 || ^18 || ^19
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+
+  '@best-i18n/next-unprefixed-locale@0.0.0':
+    resolution: {integrity: sha512-FXdO0yg+LkUKTVrPS1+j++jsOzl2Pr9NfWjDRBdC0eDewI16JxNcTcRbH96K+Er/9zsHijD5eLa3kQQ4PC1b3Q==}
+    engines: {node: '>=20'}
+    hasBin: true
+    peerDependencies:
+      next: '>=15'
+      react: '>=18'
+    peerDependenciesMeta:
+      next:
         optional: true
 
   '@bomb.sh/tab@0.0.19':
@@ -8813,6 +8824,14 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.3.0)
     optionalDependencies:
       '@types/react': 19.3.0
+
+  '@best-i18n/next-unprefixed-locale@0.0.0(next@16.3.4(@babel/core@7.29.7(supports-color@10.2.2))(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      cac: 7.0.0
+      oxc-parser: 0.149.0
+      react: 19.3.0
+    optionalDependencies:
+      next: 16.3.4(@babel/core@7.29.7(supports-color@10.2.2))(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
   '@bomb.sh/tab@0.0.19(citty@0.2.2)':
     optionalDependencies:

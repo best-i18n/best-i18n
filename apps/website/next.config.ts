@@ -22,11 +22,6 @@ const withI18n = createI18nPlugin({
 const config: NextConfig = {
   output: 'export',
   reactStrictMode: true,
-  // `@best-i18n/next-unprefixed-locale` is a sibling checkout linked in by
-  // path until it is published, and Turbopack refuses to resolve through a
-  // symlink that leaves the inferred root. Widen the root to the directory
-  // holding both repositories. Drop this once the dependency comes from npm.
-  turbopack: { root: fileURLToPath(new URL('../../..', import.meta.url)) },
 }
 
 export default withI18n(withMDX(config))
