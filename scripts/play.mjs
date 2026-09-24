@@ -4,6 +4,7 @@
 //   pnpm play                 # pick from the list, then `dev`
 //   pnpm play nextjs          # `dev` in playground/nextjs
 //   pnpm play nextjs build    # any script that playground defines
+//   pnpm play nextjs dev --port 4000
 //   pnpm play solid           # a partial name narrows the list, then picks
 //
 // The playgrounds consume the built package, so `pnpm build` comes first.
@@ -32,7 +33,7 @@ const playgrounds = readdirSync(dir, { withFileTypes: true })
   })
   .sort((a, b) => a.name.localeCompare(b.name))
 
-const [query, script = 'dev'] = process.argv.slice(2)
+const [query, script = 'dev', ...scriptArgs] = process.argv.slice(2)
 
 // An exact name wins over the substring it is a prefix of: `solid-start` runs,
 // where `solid` offers the three that contain it.
@@ -60,13 +61,35 @@ if (!(script in playground.scripts)) {
   )
 }
 
-const child = spawn('pnpm', [script], {
+const child = spawnPnpm([script, ...scriptArgs], {
   cwd: path.join(dir, playground.name),
   stdio: 'inherit',
+})
+child.on('error', (error) => {
+  process.stderr.write(`Failed to start pnpm: ${error.message}\n`)
+  process.exit(1)
 })
 child.on('exit', (code, signal) => {
   process.exit(signal ? 1 : (code ?? 0))
 })
+
+// `spawn('pnpm')` cannot run `pnpm.cmd` on Windows. Hand cmd.exe one already
+// quoted command line so arguments are not parsed as shell syntax.
+function spawnPnpm(args, options) {
+  if (process.platform !== 'win32') return spawn('pnpm', args, options)
+
+  const command = ['pnpm', ...args].map(quoteCmdArg).join(' ')
+  return spawn(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', command], {
+    ...options,
+    windowsVerbatimArguments: true,
+  })
+}
+
+function quoteCmdArg(arg) {
+  if (arg === '') return '""'
+  if (!/[\s"&()<>^|!]/.test(arg)) return arg
+  return `"${arg.replaceAll('"', '""')}"`
+}
 
 // Each playground's package.json description is the hint, so the list explains
 // itself the way the README table does.

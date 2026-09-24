@@ -61,6 +61,20 @@ describe('createI18nPlugin', () => {
       expect(Object.keys(config.turbopack.rules)).toHaveLength(1)
     })
 
+    it('runs the incoming webpack hook before adding the loader', () => {
+      const config = createI18nPlugin(BASE)({
+        webpack(webpackConfig: any) {
+          webpackConfig.module.rules.push({ test: /app/ })
+          return webpackConfig
+        },
+      }) as any
+
+      const webpackConfig = config.webpack({ module: { rules: [] } }, {})
+      expect(webpackConfig.module.rules).toHaveLength(2)
+      expect(webpackConfig.module.rules[0].test).toEqual(/app/)
+      expect(webpackConfig.module.rules[1].exclude).toEqual(/node_modules/)
+    })
+
     it('keeps the config when a plugin returns nothing, and keeps plugins out of the loader', () => {
       const config = createI18nPlugin({
         ...BASE,

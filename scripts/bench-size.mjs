@@ -25,7 +25,13 @@
 //            Nuxt builds through `nuxt build` and is measured under _nuxt.
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  readdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
@@ -247,11 +253,16 @@ function versionsOf(variant, cwd) {
 }
 
 function readBaseline() {
+  let text
   try {
-    return JSON.parse(readFileSync(BASELINE, 'utf8'))
-  } catch {
-    return { variants: {} }
+    text = readFileSync(BASELINE, 'utf8')
+  } catch (error) {
+    // A missing file is a first recording. A read failure is not: treating it
+    // as empty would let `--write` drop every variant this run did not measure.
+    if (error?.code === 'ENOENT') return { variants: {} }
+    throw error
   }
+  return JSON.parse(text)
 }
 
 function run(command, args, options) {
@@ -505,10 +516,19 @@ if (write) {
       .sort()
       .map((key) => [key, variants[key]]),
   )
-  writeFileSync(
-    BASELINE,
-    `${JSON.stringify({ recordedAt: new Date().toISOString().slice(0, 10), node: process.version, variants: sorted }, null, 2)}\n`,
-  )
+  const contents = `${JSON.stringify({ recordedAt: new Date().toISOString().slice(0, 10), node: process.version, variants: sorted }, null, 2)}\n`
+  const temporary = `${BASELINE}.${process.pid}.tmp`
+  try {
+    writeFileSync(temporary, contents)
+    renameSync(temporary, BASELINE)
+  } catch (error) {
+    try {
+      unlinkSync(temporary)
+    } catch {
+      // The temp file may not exist if the write itself failed.
+    }
+    throw error
+  }
   process.stdout.write(`\nwrote ${path.relative(root, BASELINE)}\n`)
 }
 
