@@ -1,6 +1,6 @@
 {
   "name": "best-i18n",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
   "keywords": [
     "compile-time",
@@ -142,6 +142,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "prepare": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "spike": "node ./spike/run.mjs"
