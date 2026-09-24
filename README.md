@@ -32,6 +32,7 @@ playground/solid-start-paraglide     the same app in Paraglide
 playground/solid-start-primitives    the same app in @solid-primitives/i18n
 playground/nuxt                      the same app on Nuxt 4, through best-i18n/nuxt
 playground/nuxt-i18n                 the same app in @nuxtjs/i18n
+scripts/play.mjs                     runs one playground: `pnpm play [name] [script]`
 scripts/bench-size.mjs               builds each playground and weighs what a browser loads
 ```
 
@@ -73,16 +74,15 @@ URLs, so a comparison is between libraries rather than between apps.
 | [`playground/nuxt-i18n`](./playground/nuxt-i18n#readme)                               | the same app in @nuxtjs/i18n           |
 
 ```bash
-pnpm build          # the playgrounds consume the built package
-pnpm dev:next       # http://localhost:3000 and /zh
-pnpm dev:tanstack
-pnpm dev:sveltekit
-pnpm dev:solid-start
-pnpm dev:nuxt
-pnpm dev:paraglide
+pnpm build                  # the playgrounds consume the built package
+pnpm play                   # pick one from the list, then `dev`
+pnpm play nextjs            # http://localhost:3000 and /zh
+pnpm play nextjs build      # any script that playground defines
+pnpm play solid             # a partial name narrows the list, then picks
 ```
 
-Every playground has a `dev` script: `pnpm --filter playground-<name> dev`.
+`pnpm play` is the only entry point; the playground names are the directory
+names above.
 
 ## Size
 

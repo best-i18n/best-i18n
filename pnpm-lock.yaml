@@ -109,12 +109,18 @@ importers:
 
   .:
     devDependencies:
+      '@clack/prompts':
+        specifier: ^1.8.1
+        version: 1.8.1
       '@debbl/oxc-config':
         specifier: ^0.0.5
         version: 0.0.5(oxfmt@0.67.0(svelte@5.57.0(@typescript-eslint/types@8.70.0)))(oxlint@1.82.0)
       '@types/node':
         specifier: ^25.9.6
         version: 25.9.6
+      bumpp:
+        specifier: ^12.3.0
+        version: 12.3.0
       oxfmt:
         specifier: ^0.67.0
         version: 0.67.0(svelte@5.57.0(@typescript-eslint/types@8.70.0))
