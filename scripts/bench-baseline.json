@@ -1,0 +1,191 @@
+{
+  "recordedAt": "2026-09-22",
+  "node": "v24.13.0",
+  "variants": {
+    "Next.js / best-i18n": {
+      "dir": "playground/nextjs",
+      "versions": {
+        "next": "16.3.4",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 178686,
+      "raw": 578953,
+      "files": 8,
+      "pages": {
+        "/zh": 2562,
+        "/zh/about": 2462,
+        "/zh/long": 5096
+      }
+    },
+    "Next.js / best-i18n (staticLocale=zh)": {
+      "dir": "playground/nextjs",
+      "versions": {
+        "next": "16.3.4",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 178539,
+      "raw": 578556,
+      "files": 8,
+      "pages": {
+        "/zh": 2560,
+        "/zh/about": 2461,
+        "/zh/long": 5095
+      }
+    },
+    "Next.js / next-intl": {
+      "dir": "playground/nextjs-intl",
+      "versions": {
+        "next": "16.3.4",
+        "next-intl": "4.14.4"
+      },
+      "gzip": 191875,
+      "raw": 622007,
+      "files": 9,
+      "pages": {
+        "/zh": 5049,
+        "/zh/about": 5009,
+        "/zh/long": 5622
+      }
+    },
+    "Nuxt 4 / @nuxtjs/i18n": {
+      "dir": "playground/nuxt-i18n",
+      "versions": {
+        "nuxt": "4.5.2",
+        "@nuxtjs/i18n": "10.6.0"
+      },
+      "gzip": 102906,
+      "raw": 285966,
+      "files": 6
+    },
+    "Nuxt 4 / best-i18n": {
+      "dir": "playground/nuxt",
+      "versions": {
+        "nuxt": "4.5.2",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 75498,
+      "raw": 203764,
+      "files": 6
+    },
+    "Nuxt 4 / best-i18n (staticLocale=zh)": {
+      "dir": "playground/nuxt",
+      "versions": {
+        "nuxt": "4.5.2",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 75313,
+      "raw": 203288,
+      "files": 6
+    },
+    "SolidStart v2 / @solid-primitives/i18n": {
+      "dir": "playground/solid-start-primitives",
+      "versions": {
+        "@solidjs/start": "2.0.5",
+        "@solid-primitives/i18n": "2.2.1"
+      },
+      "gzip": 18649,
+      "raw": 45842,
+      "files": 6
+    },
+    "SolidStart v2 / best-i18n": {
+      "dir": "playground/solid-start",
+      "versions": {
+        "@solidjs/start": "2.0.5",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 17108,
+      "raw": 42858,
+      "files": 4
+    },
+    "SolidStart v2 / best-i18n (staticLocale=zh)": {
+      "dir": "playground/solid-start",
+      "versions": {
+        "@solidjs/start": "2.0.5",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 16827,
+      "raw": 42255,
+      "files": 4
+    },
+    "SolidStart v2 / paraglide": {
+      "dir": "playground/solid-start-paraglide",
+      "versions": {
+        "@solidjs/start": "2.0.5",
+        "@inlang/paraglide-js": "2.25.1"
+      },
+      "gzip": 26606,
+      "raw": 71475,
+      "files": 5
+    },
+    "SvelteKit / best-i18n": {
+      "dir": "playground/sveltekit",
+      "versions": {
+        "@sveltejs/kit": "2.70.3",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 32905,
+      "raw": 81272,
+      "files": 14
+    },
+    "SvelteKit / best-i18n (staticLocale=zh)": {
+      "dir": "playground/sveltekit",
+      "versions": {
+        "@sveltejs/kit": "2.70.3",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 32215,
+      "raw": 80135,
+      "files": 12
+    },
+    "SvelteKit / paraglide": {
+      "dir": "playground/sveltekit-paraglide",
+      "versions": {
+        "@sveltejs/kit": "2.70.3",
+        "@inlang/paraglide-js": "2.25.1"
+      },
+      "gzip": 40278,
+      "raw": 105241,
+      "files": 12
+    },
+    "SvelteKit / svelte-i18n": {
+      "dir": "playground/sveltekit-svelte-i18n",
+      "versions": {
+        "@sveltejs/kit": "2.70.3",
+        "svelte-i18n": "4.0.1"
+      },
+      "gzip": 50620,
+      "raw": 139939,
+      "files": 14
+    },
+    "TanStack Start / best-i18n": {
+      "dir": "playground/tanstack-start",
+      "versions": {
+        "@tanstack/react-start": "1.168.52",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 110299,
+      "raw": 347201,
+      "files": 3
+    },
+    "TanStack Start / best-i18n (staticLocale=zh)": {
+      "dir": "playground/tanstack-start",
+      "versions": {
+        "@tanstack/react-start": "1.168.52",
+        "best-i18n": "0.1.0"
+      },
+      "gzip": 110038,
+      "raw": 346647,
+      "files": 3
+    },
+    "TanStack Start / paraglide": {
+      "dir": "playground/tanstack-start-paraglide",
+      "versions": {
+        "@tanstack/react-start": "1.168.52",
+        "@inlang/paraglide-js": "2.25.1"
+      },
+      "gzip": 118243,
+      "raw": 372073,
+      "files": 3
+    }
+  }
+}

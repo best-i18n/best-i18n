@@ -44,22 +44,6 @@ export default defineConfig({
       },
     },
     {
-      files: ['apps/website/src/app/**/*.with.tsx'],
-      rules: {
-        // These modules pair translated server components with their metadata
-        // and static-params helpers.
-        'react/only-export-components': [
-          'warn',
-          {
-            allowExportNames: [
-              'withGenerateMetadata',
-              'withGenerateStaticParams',
-            ],
-          },
-        ],
-      },
-    },
-    {
       files: ['playground/nextjs-intl/**'],
       rules: {
         // The arrows passed to `t.rich` are next-intl's markup API - tag

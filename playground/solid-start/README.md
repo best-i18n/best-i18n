@@ -6,10 +6,10 @@ reads, request-scoped SSR and locale-prefixed routes (`/`, `/about`, `/zh`,
 
 ```sh
 pnpm build                 # from the repository root: build best-i18n
-pnpm dev:solid-start
-pnpm --filter playground-solid-start extract
-pnpm --filter playground-solid-start build
-pnpm --filter playground-solid-start start
+pnpm play solid-start
+pnpm play solid-start extract
+pnpm play solid-start build
+pnpm play solid-start start
 ```
 
 Edit `messages/zh.po` for Chinese translations. `src/i18n.ts` is shared by Vite,

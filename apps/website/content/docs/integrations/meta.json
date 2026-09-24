@@ -9,6 +9,7 @@
     "vue",
     "rolldown",
     "nextjs",
+    "nextjs-static-export",
     "plain-javascript"
   ]
 }

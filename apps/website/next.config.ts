@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { staticExport } from '@best-i18n/next-unprefixed-locale'
 import { createI18nPlugin } from 'best-i18n/next'
 import { createMDX } from 'fumadocs-mdx/next'
 import { i18nConfig } from './src/lib/best-i18n'
@@ -11,6 +12,11 @@ const withI18n = createI18nPlugin({
   // time - spreading src/lib/best-i18n.ts is what keeps them defined once.
   ...i18nConfig,
   messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  // English is served unprefixed - /docs beside /zh/docs - and a static export
+  // has no proxy to strip the prefix, so the files have to exist. This mirrors
+  // `app/[lang]` into `app/(unprefixed)` with English pinned, and the route
+  // tree is written once. See docs/integrations/nextjs-static-export.
+  plugins: [staticExport()],
 })
 
 const config: NextConfig = {

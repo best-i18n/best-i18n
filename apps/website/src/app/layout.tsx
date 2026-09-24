@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 }
 
-// The real <html> layouts live one level down: `(main)` renders the
-// unprefixed English tree, `[lang]` the locale-prefixed one.
+// The real <html> layouts live one level down: `[lang]` is the tree we
+// write, `(unprefixed)` the English mirror generated from it.
 export default function RootLayout({
   children,
 }: {

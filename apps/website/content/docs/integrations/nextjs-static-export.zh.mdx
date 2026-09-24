@@ -1,0 +1,220 @@
+---
+title: 静态导出
+description: 没有 proxy 也让基础语言不带前缀——@best-i18n/next-unprefixed-locale，单独使用或通过 createI18nPlugin 使用
+---
+
+放在 `app/[locale]` 下的路由，每种语言都带前缀。想让基础语言不带前缀——
+`/about` 和 `/zh/about` 并排——通常要靠一个 proxy 在请求时把 `/about` 改写到
+`/en/about`。静态导出（`output: 'export'`）没有「请求时」：只有磁盘上存在的
+文件会被 serve，所以 `/about` 必须是一个文件。
+
+常见做法是手写第二棵路由树——一个路由组，每个路由一个文件，import
+`[locale]` 里的版本再把 locale 硬编码进去。能用，但会漂移：每加一个路由都得补
+一份孪生文件，漏掉的那份就是一个上线前没人看见的 404。
+
+`@best-i18n/next-unprefixed-locale` 替你写这第二棵树。每个生成文件 import 原
+模块，把 locale 塞进 `params`，再把调用转交出去。逻辑只住在 `[locale]` 树里；
+镜像在每次加载配置时重新生成，`next dev` 期间持续保持同步。
+
+```text
+app/
+  [lang]/            你写的
+    layout.tsx
+    docs/[[...slug]]/page.tsx
+  (unprefixed)/      生成的，已被 gitignore
+    layout.tsx       → import [lang]/layout，params.lang 钉死为 'en'
+    docs/[[...slug]]/page.tsx
+```
+
+这个包对 best-i18n 一无所知。它读一个目录、写另一个目录，所以搭配 fumadocs、
+next-intl 或者完全不用 i18n 库都行。best-i18n 多提供的是一个钩子：
+`createI18nPlugin` 接受一组插件，在加载配置时带着 i18n 配置运行，而这个包自带
+一个这样的插件。
+
+## 结合 best-i18n
+
+```ts
+// next.config.ts
+import { fileURLToPath } from 'node:url'
+import { staticExport } from '@best-i18n/next-unprefixed-locale'
+import { createI18nPlugin } from 'best-i18n/next'
+import { i18n } from './src/i18n'
+
+const withI18n = createI18nPlugin({
+  ...i18n, // locales、baseLocale、localeParam
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  plugins: [staticExport()],
+})
+
+export default withI18n({ output: 'export' })
+```
+
+`staticExport()` 从 best-i18n 那里拿到 `baseLocale` 和 `localeParam`，所以语言
+只描述一次。它接受和下面单独使用时相同的选项，只是少了这两个——路由组名字、
+app 目录、是否监听：
+
+```ts
+plugins: [staticExport({ group: '(default)', watch: false })]
+```
+
+做成插件而不是选项是有意的。best-i18n 不依赖这个包，甚至不知道它存在：
+`plugins` 是一个通用钩子，给那些在加载配置时需要语言列表和 URL 形态的步骤用，
+这只是其中一个。两边靠结构化类型对接，谁也不 import 谁。
+
+想让 `/en/about` 成为规范 URL 的静态导出，设 `prefixBase: true`、不加这个插件
+即可；硬加上会被拒绝并给出警告，因为带前缀的基础语言没有任何不带前缀的东西可
+镜像。没有 `output: 'export'` 却用了它也会警告：有服务端时 proxy 已经在 serve
+不带前缀的 URL，镜像只会重复它们。
+
+本站就是这样构建的：一棵 `[lang]` 树，里面有一个 `'use client'` 的首页、文档页，
+以及每页各一个输出 Markdown 和 OpenGraph 图片的 route handler，全部被镜像。
+
+## 单独使用
+
+```bash
+pnpm add @best-i18n/next-unprefixed-locale
+```
+
+```ts
+// next.config.ts
+import { withUnprefixedLocale } from '@best-i18n/next-unprefixed-locale'
+
+const withUnprefixed = withUnprefixedLocale({
+  defaultLocale: 'en',
+  localeParam: 'lang', // app/[lang]；默认是 'locale'
+})
+
+export default withUnprefixed({ output: 'export' })
+```
+
+这个包装器原样返回配置；它存在的意义是在加载配置的那一刻运行，而 `next dev`、
+`next build`、`next typegen` 都会经过这一刻。它可以和任何其他包装器——
+`withMDX`、`withI18n`——以任意顺序组合。
+
+对 fumadocs 来说，`defineI18n({ hideLocale: 'default-locale' })` 产生的正是
+这里 serve 的 URL 形态，它的 `[lang]` 段就是 `localeParam`。
+
+包还导出了 `generate(options)`，供在配置之外调用；也有一个做同样事情的 CLI：
+
+```bash
+pnpm exec next-unprefixed-locale --locale en --param lang          # 跑一次
+pnpm exec next-unprefixed-locale --locale en --param lang --watch  # 持续监听
+```
+
+| 选项             | 默认值                                   |                                                   |
+| ---------------- | ---------------------------------------- | ------------------------------------------------- |
+| `defaultLocale`  | 必填                                     | 不带前缀 serve 的语言。                           |
+| `localeParam`    | `'locale'`                               | 路由段的名字：`[locale]`、`[lang]`。              |
+| `appDir`         | `src/app`，否则 `app`                    | 相对于工作目录。                                  |
+| `group`          | `'(unprefixed)'`                         | 镜像写到哪。必须是路由组，这样才不会多出 URL 段。 |
+| `pageExtensions` | 取自 `next.config`，否则 `tsx ts jsx js` | 哪些文件算路由。                                  |
+| `watch`          | `NODE_ENV === 'development'`             | `[locale]` 下增删文件时重新生成。                 |
+| `quiet`          | `false`                                  | 不打印那一行摘要。警告总是会打印。                |
+
+## `[locale]` 树需要做到的事
+
+两种方式生成的文件完全一样，对被镜像的那棵树也提同样的三个要求。
+
+**把基础语言排除在 `[locale]` 之外**，否则它的页面会被构建两次：
+
+```ts
+// app/[lang]/layout.tsx
+export function generateStaticParams() {
+  return i18n.locales.filter((lang) => lang !== 'en').map((lang) => ({ lang }))
+}
+
+export const dynamicParams = false
+```
+
+**从传下来的 locale 推导静态参数。** 镜像出来的路由没有 locale 段，所以包装器
+会把基础语言作为父级段的参数去调用原来的 `generateStaticParams`，再把这个 key
+从结果里去掉。page 和 layout 都能收到上层各段的参数，从那里读 locale，两棵树
+就都是对的：
+
+```ts
+// app/[lang]/docs/[[...slug]]/page.tsx
+export function generateStaticParams({ params }: { params: { lang: string } }) {
+  return source.generateParams().filter((p) => p.lang === params.lang)
+}
+```
+
+route handler 是例外。它们不在 layout 树里，Next 调用它们的
+`generateStaticParams` 时不传父级参数，要求它们自己枚举全部。有 locale 就用，
+没有就枚举：
+
+```ts
+// app/[lang]/og/[...slug]/route.tsx
+export function generateStaticParams({
+  params,
+}: {
+  params?: { lang?: string }
+}) {
+  const langs = params?.lang
+    ? [params.lang]
+    : i18n.locales.filter((lang) => lang !== 'en')
+
+  return langs.flatMap((lang) => paramsFor(lang))
+}
+```
+
+**路由段配置写成字面量。** `dynamic`、`dynamicParams`、`revalidate` 这些是
+Next 静态分析读出来的，所以镜像会把它们作为字面量重复一遍，而不是 re-export
+绑定。不是字面量的值会被跳过并给出警告。
+
+## 生成了什么
+
+| `[locale]` 里的文件                                      | 镜像里的对应物                                                                                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page`、`layout`、`template`、`default`                  | 一个渲染原组件的组件，`params` 已钉死。`generateMetadata`、`generateViewport`、`generateStaticParams` 同样包装；`metadata` 和 `viewport` 直接 re-export。 |
+| `route`                                                  | 每个 HTTP 方法一个函数，`context.params` 已钉死，外加 `generateStaticParams`。                                                                            |
+| `opengraph-image`、`twitter-image`、`icon`、`apple-icon` | 默认导出和 `generateImageMetadata` 包装；`alt`、`size`、`contentType` re-export。                                                                         |
+| `loading`、`error`、`not-found`、`global-error`          | 原样 re-export；它们不接收 params。                                                                                                                       |
+| `favicon.ico`、`icon.png`、`robots.txt`……                | 复制。                                                                                                                                                    |
+| 其他——组件、辅助模块、样式                               | 不动。包装器 import 的是原文件，原文件自己去解析它的邻居。                                                                                                |
+
+`'use client'` 的页面会得到一个 `'use client'` 的包装，这样 Next 会通过和原
+页面相同的客户端边界来渲染它。包装文件的类型是对着原文件推导出来的，所以
+`next typegen` 会像检查其他路由文件一样检查它们。一个生成出来的 page 长这样：
+
+```ts
+// Generated by @best-i18n/next-unprefixed-locale from [lang]/docs/[[...slug]]/page.tsx.
+import {
+  pin,
+  render,
+  staticParams,
+} from '@best-i18n/next-unprefixed-locale/runtime'
+import * as origin from '../../../[lang]/docs/[[...slug]]/page'
+import type {
+  Arg0,
+  Unprefixed,
+} from '@best-i18n/next-unprefixed-locale/runtime'
+
+export default function Page(
+  props: Unprefixed<Arg0<typeof origin.default>, 'lang'>,
+) {
+  return render(origin.default, pin(props, 'lang', 'en'))
+}
+
+export function generateStaticParams(props?: {
+  params?: Record<string, unknown>
+}) {
+  return staticParams(origin.generateStaticParams, props, 'lang', 'en')
+}
+
+export const dynamicParams = false
+```
+
+路由组自带 `.gitignore`，仓库自己的 `.gitignore` 不用改，尊重它的格式化工具
+也不会碰这些文件。
+
+## 限制
+
+- **`[locale]` 下面不能直接放动态段。** `[lang]/[slug]` 会镜像成 `/[slug]`，
+  和根上的 `/[lang]` 并排，而 Next 不允许同一层出现两个名字不同的动态段。放到
+  一个静态段下面。这是双树布局本身的限制，手写也一样。
+- **两个根 layout。** `[locale]/layout.tsx` 和它的镜像各自渲染 `<html>`，所以
+  切换语言是整页加载而不是客户端导航。手写版本同样如此。
+- **路由文件里的 `export *`** 会让镜像看不到它的导出；只有文件自己声明的导出
+  会被包装。
+- **`next dev` 里的新路由**要等监听器跑过一次才出现，也就是保存文件之后的一瞬。
+  删除路由时包装文件也同样被移除。

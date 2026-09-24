@@ -213,10 +213,30 @@ two.
 
 The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
 the `[locale]` segment. A deployment without one - a static export serves only
-the files that exist - sets `prefixBase: true` in the config instead:
-`/en/about` becomes the canonical form, `Link` prefixes the base locale like
-any other, and a proxy (if one runs anyway) redirects unprefixed URLs out
-rather than stripping `/en`.
+the files that exist - has two options. `prefixBase: true` in the config gives
+up on the unprefixed form: `/en/about` becomes canonical, `Link` prefixes the
+base locale like any other, and a proxy (if one runs anyway) redirects
+unprefixed URLs out rather than stripping `/en`. Or keep the URLs and make the
+files exist: the `staticExport()` plugin from
+[`@best-i18n/next-unprefixed-locale`](https://github.com/best-i18n/next-unprefixed-locale#readme)
+mirrors `app/[locale]` into a generated route group with the base locale
+pinned, and its README says what that asks of `generateStaticParams`. It goes
+in `plugins`, the hook `createI18nPlugin` offers for steps that need the
+locales and the URL shape at config load; best-i18n itself does not depend on
+it.
+
+```ts
+// next.config.ts - static export, /about beside /zh/about
+import { staticExport } from '@best-i18n/next-unprefixed-locale'
+
+const withI18n = createI18nPlugin({
+  ...i18n,
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  plugins: [staticExport()],
+})
+
+export default withI18n({ output: 'export' })
+```
 
 Why the pieces are what they are:
 
