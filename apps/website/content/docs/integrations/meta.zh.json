@@ -1,5 +1,5 @@
 {
-  "title": "集成",
+  "title": "\u96c6\u6210",
   "defaultOpen": true,
   "pages": [
     "vite",
@@ -9,6 +9,7 @@
     "vue",
     "rolldown",
     "nextjs",
+    "nextjs-static-export",
     "plain-javascript"
   ]
 }

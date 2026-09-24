@@ -96,11 +96,13 @@ function Nav() {
 是逐个导出的，只用链接的应用不会捎带另外两个。
 
 基础语言不带前缀的前提是有 proxy 把 `/about` 改写到 `[locale]` 段上。没有
-proxy 的部署——静态导出只 serve 磁盘上存在的文件——改在配置里设
-`prefixBase: true`：`/en/about` 成为规范形式，`Link` 对基础语言也照常加前缀，
-proxy（如果碰巧还在跑）会把不带前缀的 URL 重定向出去而不是剥掉 `/en`。本站
-正是这种情况：首页的「开始使用」按钮就是一个由 best-i18n 自己编译的
-`Link href='/docs'`。
+proxy 的部署——静态导出只 serve 磁盘上存在的文件——有两条路。在配置里设
+`prefixBase: true` 是放弃不带前缀的形式：`/en/about` 成为规范 URL，`Link` 对
+基础语言也照常加前缀，proxy（如果碰巧还在跑）会把不带前缀的 URL 重定向出去而
+不是剥掉 `/en`。另一条是保留 URL、让文件存在：用
+`@best-i18n/next-unprefixed-locale` 的 `staticExport()` 插件，把 `app/[locale]`
+镜像成一个基础语言已钉死的生成路由组。本站用的就是这条路——见
+[静态导出](/docs/integrations/nextjs-static-export)。
 
 ## 每个部件为什么是这样
 

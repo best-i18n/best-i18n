@@ -4,7 +4,10 @@ Compile-time i18n: the source text is the message, every translation is inlined
 at the call site, and a per-locale build collapses to plain string literals.
 
 This is the monorepo. The package and its documentation live in
-[`packages/best-i18n`](./packages/best-i18n#readme).
+[`packages/best-i18n`](./packages/best-i18n#readme). A neighbouring problem -
+the default locale served unprefixed from a Next.js static export - is solved
+by [`@best-i18n/next-unprefixed-locale`](https://github.com/best-i18n/next-unprefixed-locale#readme),
+which lives in its own repository and depends on nothing here.
 
 ```text
 packages/best-i18n     the package
