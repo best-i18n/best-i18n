@@ -237,9 +237,6 @@ importers:
       '@vue/server-renderer':
         specifier: ^3.5.43
         version: 3.5.43
-      bumpp:
-        specifier: ^12.3.0
-        version: 12.3.0
       h3:
         specifier: ^1.15.11
         version: 1.15.11
