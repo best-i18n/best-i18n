@@ -3,6 +3,13 @@
 //
 //   node scripts/bench-size.mjs
 //   node scripts/bench-size.mjs --family SvelteKit,SolidStart   # a subset
+//   node scripts/bench-size.mjs --compare                       # deltas vs the baseline
+//   node scripts/bench-size.mjs --write                         # record a new baseline
+//
+// The baseline is `scripts/bench-baseline.json`, committed. Git is the history:
+// the diff on that file is what a change costs, next to the change itself. A
+// run that moves the numbers on purpose updates it in the same commit, so the
+// file reviews itself and cannot silently go stale.
 //
 // Framework families, two methods - variants in a family are measured identically,
 // which is what makes the comparison within a table mean something:
@@ -18,7 +25,7 @@
 //            Nuxt builds through `nuxt build` and is measured under _nuxt.
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
@@ -194,6 +201,59 @@ const selected = VARIANTS.filter(
     wanted.some((name) => familyKeys(variant.family).has(name)),
 )
 
+const BASELINE = path.join(root, 'scripts', 'bench-baseline.json')
+const compare = process.argv.includes('--compare')
+const write = process.argv.includes('--write')
+
+// The packages a row's numbers actually depend on, recorded beside the bytes:
+// renovate automerges framework upgrades, so without them a jump gets blamed on
+// a commit here rather than on the upgrade that caused it.
+const FRAMEWORK = {
+  'Next.js': 'next',
+  'TanStack Start': '@tanstack/react-start',
+  'SvelteKit': '@sveltejs/kit',
+  'SolidStart v2': '@solidjs/start',
+  'Nuxt 4': 'nuxt',
+}
+const LIBRARY = {
+  'next-intl': 'next-intl',
+  'paraglide': '@inlang/paraglide-js',
+  'svelte-i18n': 'svelte-i18n',
+  '@solid-primitives/i18n': '@solid-primitives/i18n',
+  '@nuxtjs/i18n': '@nuxtjs/i18n',
+}
+
+// `family / label`: labels repeat across families, and a stable string key keeps
+// the baseline's diff readable where an array's would reorder.
+const keyOf = (variant) => `${variant.family} / ${variant.label}`
+
+function versionsOf(variant, cwd) {
+  // A label with no entry in LIBRARY is one of ours, and pnpm links the
+  // workspace package into the playground like any other dependency.
+  const names = [
+    FRAMEWORK[variant.family],
+    LIBRARY[variant.label] ?? 'best-i18n',
+  ]
+  const entries = []
+  for (const name of names.filter(Boolean)) {
+    try {
+      const manifest = path.join(cwd, 'node_modules', name, 'package.json')
+      entries.push([name, JSON.parse(readFileSync(manifest, 'utf8')).version])
+    } catch {
+      // Not installed for this playground - the row simply does not record it.
+    }
+  }
+  return Object.fromEntries(entries)
+}
+
+function readBaseline() {
+  try {
+    return JSON.parse(readFileSync(BASELINE, 'utf8'))
+  } catch {
+    return { variants: {} }
+  }
+}
+
 function run(command, args, options) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit', ...options })
@@ -345,12 +405,18 @@ for (const variant of selected) {
 
   process.stdout.write(`\nbuilding ${variant.family} / ${variant.label}\n`)
 
+  const versions = versionsOf(variant, cwd)
+
   if (variant.kind === 'next') {
     await run('pnpm', ['exec', 'next', 'build'], { cwd, env })
 
     const server = await serve(cwd, variant.env)
     try {
-      results.push({ ...variant, ...(await measureNext(cwd, server.origin)) })
+      results.push({
+        ...variant,
+        versions,
+        ...(await measureNext(cwd, server.origin)),
+      })
     } finally {
       await server.stop()
     }
@@ -359,8 +425,28 @@ for (const variant of selected) {
     const command =
       variant.kind === 'nuxt' ? ['nuxt', 'build'] : ['vite', 'build']
     await run('pnpm', ['exec', ...command], { cwd, env })
-    results.push({ ...variant, ...measureVite(cwd, variant.clientDir) })
+    results.push({
+      ...variant,
+      versions,
+      ...measureVite(cwd, variant.clientDir),
+    })
   }
+}
+
+const baseline = compare || write ? readBaseline() : undefined
+
+// Rounding a difference to `kb()` turns the few bytes two runs of the same
+// build differ by into `-0.0 kB`, which reads like a measurement rather than
+// like noise. Under a kilobyte the exact bytes say what it is.
+function delta(now, before) {
+  if (before === undefined) return 'new'
+
+  const diff = now - before
+  if (diff === 0) return '='
+
+  const sign = diff > 0 ? '+' : ''
+  const size = Math.abs(diff) < 1024 ? `${sign}${diff} B` : `${sign}${kb(diff)}`
+  return `${size} (${sign}${((diff / before) * 100).toFixed(1)}%)`
 }
 
 for (const family of new Set(results.map((r) => r.family))) {
@@ -371,12 +457,15 @@ for (const family of new Set(results.map((r) => r.family))) {
 
   process.stdout.write(`\n### ${family}\n\n`)
   process.stdout.write(
-    `| variant | client JS (gzip) | client JS (raw) |${
-      withHtml ? htmlColumns.map((p) => ` HTML ${p} (gzip) |`).join('') : ''
-    }\n`,
+    `| variant | client JS (gzip) |${compare ? ' vs baseline |' : ''}` +
+      ` client JS (raw) |${
+        withHtml ? htmlColumns.map((p) => ` HTML ${p} (gzip) |`).join('') : ''
+      }\n`,
   )
   process.stdout.write(
-    `| --- | --- | --- |${withHtml ? ' --- |'.repeat(htmlColumns.length) : ''}\n`,
+    `| --- | --- |${compare ? ' --- |' : ''} --- |${
+      withHtml ? ' --- |'.repeat(htmlColumns.length) : ''
+    }\n`,
   )
 
   for (const row of rows) {
@@ -384,11 +473,43 @@ for (const family of new Set(results.map((r) => r.family))) {
       const page = row.pages.find((p) => p.page === wanted)
       return ` ${page === undefined ? '-' : kb(page.htmlGzip)} |`
     })
+    const was = baseline?.variants[keyOf(row)]
     process.stdout.write(
-      `| ${row.label} | ${kb(row.gzip)} | ${kb(row.raw)} |` +
-        `${withHtml ? cells.join('') : ''}\n`,
+      `| ${row.label} | ${kb(row.gzip)} |` +
+        `${compare ? ` ${delta(row.gzip, was?.gzip)} |` : ''}` +
+        ` ${kb(row.raw)} |${withHtml ? cells.join('') : ''}\n`,
     )
   }
+}
+
+if (write) {
+  // Merge, never replace: `--family` measures a subset, and the rows it did not
+  // build are still true.
+  const variants = { ...baseline.variants }
+  for (const row of results) {
+    variants[keyOf(row)] = {
+      dir: row.dir,
+      versions: row.versions,
+      gzip: row.gzip,
+      raw: row.raw,
+      files: row.files,
+      // Only the Next rows serve HTML to weigh; the others would write `{}`.
+      ...(row.pages.length > 0 && {
+        pages: Object.fromEntries(row.pages.map((p) => [p.page, p.htmlGzip])),
+      }),
+    }
+  }
+
+  const sorted = Object.fromEntries(
+    Object.keys(variants)
+      .sort()
+      .map((key) => [key, variants[key]]),
+  )
+  writeFileSync(
+    BASELINE,
+    `${JSON.stringify({ recordedAt: new Date().toISOString().slice(0, 10), node: process.version, variants: sorted }, null, 2)}\n`,
+  )
+  process.stdout.write(`\nwrote ${path.relative(root, BASELINE)}\n`)
 }
 
 // `fetch` leaves keep-alive sockets open, which keeps the process alive long
