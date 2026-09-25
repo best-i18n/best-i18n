@@ -85,6 +85,31 @@ describe('vue translation macros', () => {
     expect(compileSfc(result.code, 'Page.vue')).toEqual([])
   })
 
+  it('numbers a repeated tag and rebuilds it where the translation moved it', () => {
+    const source = [
+      '<script setup>',
+      "import { Trans } from 'best-i18n/vue/macro'",
+      '</script>',
+      '<template>',
+      '  <p><Trans>See <a href="/x">terms</a> and <a href="/y">privacy</a>.</Trans></p>',
+      '</template>',
+    ].join('\n')
+    const text = 'See <a:0>terms</a:0> and <a:1>privacy</a:1>.'
+
+    expect(extract(source, 'Page.vue').map((message) => message.text)).toEqual([
+      text,
+    ])
+
+    const result = transform(source, 'Page.vue', {
+      ...options,
+      staticLocale: 'zh',
+      catalog: { [text]: { zh: '查看<a:1>隐私</a:1>和<a:0>条款</a:0>。' } },
+    })!
+    expect(result.code).toContain(
+      '<p>{{ `查看` }}<a href="/y">{{ `隐私` }}</a>{{ `和` }}<a href="/x">{{ `条款` }}</a>{{ `。` }}</p>',
+    )
+  })
+
   it('injects into a plain <script> when there is no <script setup>', async () => {
     const result = transform(
       fixture('vue/options-api/input.vue'),

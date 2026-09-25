@@ -99,18 +99,43 @@ export function tokenForExpression(
   return token
 }
 
-/** A token for an element: its tag name if usable and free, else a number. */
+/**
+ * A token for an element: its tag name if usable, numbered after the name when
+ * the tag repeats in the message (`a:0`, `a:1`), else a number.
+ *
+ * The count is per tag, so adding a `<b>` leaves the links' tokens alone, and
+ * every repeat is numbered, so none of them reads as the main one.
+ */
 export function tokenForElement(
   name: string | undefined,
   taken: string[],
+  repeated: ReadonlySet<string>,
 ): string {
-  if (name !== undefined && IDENTIFIER.test(name) && !taken.includes(name)) {
-    return name
+  if (name !== undefined && IDENTIFIER.test(name)) {
+    if (!repeated.has(name) && !taken.includes(name)) return name
+
+    let index = 0
+    while (taken.includes(`${name}:${index}`)) index++
+    return `${name}:${index}`
   }
 
   let index = taken.length
   while (taken.includes(String(index))) index++
   return String(index)
+}
+
+/** The tag names that occur more than once among `names`. */
+export function repeatedNames(
+  names: Iterable<string | undefined>,
+): Set<string> {
+  const seen = new Set<string>()
+  const repeated = new Set<string>()
+  for (const name of names) {
+    if (name === undefined) continue
+    if (seen.has(name)) repeated.add(name)
+    seen.add(name)
+  }
+  return repeated
 }
 
 /**
@@ -220,9 +245,25 @@ export function serializeTrans(
     expressions,
     placeholders,
     elements,
+    repeatedNames(jsxNames(children as JsxNode[])),
   )
 
   return { text, expressions, placeholders, elements }
+}
+
+function jsxName(node: JsxNode): string | undefined {
+  return node.openingElement?.name?.type === 'JSXIdentifier'
+    ? node.openingElement.name.name
+    : undefined
+}
+
+/** Every element's tag name, nested ones included, for `repeatedNames`. */
+function jsxNames(children: JsxNode[]): Array<string | undefined> {
+  return children.flatMap((child) =>
+    child.type === 'JSXElement' || child.type === 'JSXFragment'
+      ? [jsxName(child), ...jsxNames(child.children ?? [])]
+      : [],
+  )
 }
 
 function serializeChildren(
@@ -232,6 +273,7 @@ function serializeChildren(
   expressions: string[],
   placeholders: string[],
   elements: TransElement[],
+  repeated: ReadonlySet<string>,
 ): string {
   let out = ''
 
@@ -279,15 +321,13 @@ function serializeChildren(
         const selfClosing = child.openingElement?.selfClosing === true
 
         // The tag name where there is one - `<a>` stays `<a>` for the
-        // translator - and a number for fragments, member expressions and
-        // repeats. Reserved before recursing, so nesting reads outside-in.
-        const name =
-          child.openingElement?.name?.type === 'JSXIdentifier'
-            ? child.openingElement.name.name
-            : undefined
+        // translator, `<a:0>` and `<a:1>` when it repeats - and a number for
+        // fragments and member expressions. Reserved before recursing, so
+        // nesting reads outside-in.
         const token = tokenForElement(
-          name,
+          jsxName(child),
           elements.map((element) => element.token),
+          repeated,
         )
         const index = elements.length
         elements.push({ token, open: '', close: '', selfClosing: false })
@@ -312,6 +352,7 @@ function serializeChildren(
               expressions,
               placeholders,
               elements,
+              repeated,
             )
 
         out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`
@@ -330,6 +371,8 @@ function serializeChildren(
 }
 
 const TOKEN = String.raw`([A-Za-z0-9_$]+)`
+/** An element token may also be a repeated tag's `a:1`. */
+const ELEMENT_TOKEN = String.raw`([A-Za-z0-9_$]+(?::[0-9]+)?)`
 
 /**
  * Reads a stored message back into parts.
@@ -345,9 +388,9 @@ export function parseMessage(text: string, describe: string): MessagePart[] {
   let cursor = 0
   let literal = ''
 
-  const selfClosingRe = new RegExp(String.raw`^<${TOKEN}\s*/>`)
-  const openingRe = new RegExp(`^<${TOKEN}>`)
-  const closingRe = new RegExp(String.raw`^</${TOKEN}>`)
+  const selfClosingRe = new RegExp(String.raw`^<${ELEMENT_TOKEN}\s*/>`)
+  const openingRe = new RegExp(`^<${ELEMENT_TOKEN}>`)
+  const closingRe = new RegExp(String.raw`^</${ELEMENT_TOKEN}>`)
   const valueRe = new RegExp(String.raw`^\{${TOKEN}\}`)
 
   const flush = () => {

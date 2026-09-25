@@ -112,6 +112,43 @@ describe('<Trans>', () => {
     )
   })
 
+  it('numbers a repeated tag after its name', () => {
+    const [message] = extract(
+      file(
+        '<Trans>See <a href="/x">terms</a> and <a href="/y">privacy</a>.</Trans>',
+      ),
+      'a.tsx',
+    )
+
+    // `<a:1>`, not `<1>`: the translator still sees a link, and the number
+    // counts links only, so another element elsewhere cannot shift it. Both
+    // links are numbered, so neither reads as the main one.
+    expect(message!.text).toBe('See <a:0>terms</a:0> and <a:1>privacy</a:1>.')
+  })
+
+  it('puts each repeated tag back where its translation moved it', () => {
+    const result = transform(
+      file(
+        '<p><Trans>See <a href="/x">terms</a> and <a href="/y">privacy</a>.</Trans></p>',
+      ),
+      'a.tsx',
+      {
+        ...OPTIONS,
+        catalog: {
+          'See <a:0>terms</a:0> and <a:1>privacy</a:1>.': {
+            en: 'See <a:0>terms</a:0> and <a:1>privacy</a:1>.',
+            zh: '查看<a:1>隐私</a:1>和<a:0>条款</a:0>。',
+          },
+        },
+      },
+    )!
+
+    expect(result.missing).toEqual([])
+    expect(result.code).toContain(
+      '{`查看`}<a href="/y">{`隐私`}</a>{`和`}<a href="/x">{`条款`}</a>{`。`}',
+    )
+  })
+
   it('emits a plain template literal when the message has no markup', async () => {
     const result = transform(
       fixture('trans/no-markup-literal/input.tsx'),
