@@ -4,7 +4,11 @@ import {
   VUE_MACRO_MODULE,
   VUE_MODULE,
 } from '../../compiler/modules.ts'
-import { tokenForElement, tokenForExpression } from '../../compiler/trans.ts'
+import {
+  repeatedNames,
+  tokenForElement,
+  tokenForExpression,
+} from '../../compiler/trans.ts'
 import { parseVue } from './parse.ts'
 import type { MagicString } from 'magic-string'
 import type {
@@ -48,10 +52,22 @@ export function serializeVueTrans(
     expressions,
     placeholders,
     elements,
+    repeatedNames(vueNames(children)),
   )
 
   // The sentence's own edges: whatever indentation survived condensing.
   return { text: text.trim(), expressions, placeholders, elements }
+}
+
+/** Every element's tag, nested ones included, for `repeatedNames`. */
+function vueNames(
+  children: readonly VueTemplateNode[],
+): Array<string | undefined> {
+  return children.flatMap((child) =>
+    child.type === 'VueElement'
+      ? [child.tag, ...vueNames(child.children ?? [])]
+      : [],
+  )
 }
 
 function serializeVueChildren(
@@ -61,6 +77,7 @@ function serializeVueChildren(
   expressions: string[],
   placeholders: string[],
   elements: TransElement[],
+  repeated: ReadonlySet<string>,
 ): string {
   let out = ''
 
@@ -90,6 +107,7 @@ function serializeVueChildren(
         const token = tokenForElement(
           child.tag,
           elements.map((element) => element.token),
+          repeated,
         )
         const index = elements.length
         elements.push({ token, open: '', close: '', selfClosing: false })
@@ -115,6 +133,7 @@ function serializeVueChildren(
               expressions,
               placeholders,
               elements,
+              repeated,
             )
 
         out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`

@@ -6,6 +6,7 @@ import {
 } from '../../compiler/modules.ts'
 import {
   decodeEntities,
+  repeatedNames,
   tokenForElement,
   tokenForExpression,
 } from '../../compiler/trans.ts'
@@ -62,6 +63,7 @@ export function serializeSvelteTrans(
     expressions,
     placeholders,
     elements,
+    repeatedNames(svelteNames(children as SvelteTemplateNode[])),
   )
 
   return { text, expressions, placeholders, elements }
@@ -93,6 +95,30 @@ function cleanSvelteText(nodes: SvelteTemplateNode[], index: number): string {
   return text
 }
 
+function svelteName(node: SvelteTemplateNode): string | undefined {
+  return node.type === 'RegularElement' || node.type === 'Component'
+    ? node.name
+    : undefined
+}
+
+/** Every element's tag, nested ones included, for `repeatedNames`. */
+const SVELTE_ELEMENTS = new Set([
+  'RegularElement',
+  'Component',
+  'SvelteElement',
+  'SvelteFragment',
+])
+
+function svelteNames(
+  children: SvelteTemplateNode[],
+): Array<string | undefined> {
+  return children.flatMap((child) =>
+    SVELTE_ELEMENTS.has(child.type as string)
+      ? [svelteName(child), ...svelteNames(child.fragment?.nodes ?? [])]
+      : [],
+  )
+}
+
 function serializeSvelteChildren(
   children: SvelteTemplateNode[],
   code: string,
@@ -100,6 +126,7 @@ function serializeSvelteChildren(
   expressions: string[],
   placeholders: string[],
   elements: TransElement[],
+  repeated: ReadonlySet<string>,
 ): string {
   let out = ''
   // Comments vanish before Svelte looks at whitespace, so the text on either
@@ -129,13 +156,10 @@ function serializeSvelteChildren(
       case 'SvelteElement':
       case 'SvelteFragment': {
         const nodes = child.fragment?.nodes ?? []
-        const name =
-          child.type === 'RegularElement' || child.type === 'Component'
-            ? child.name
-            : undefined
         const token = tokenForElement(
-          name,
+          svelteName(child),
           elements.map((element) => element.token),
+          repeated,
         )
         const index = elements.length
         elements.push({ token, open: '', close: '', selfClosing: false })
@@ -164,6 +188,7 @@ function serializeSvelteChildren(
               expressions,
               placeholders,
               elements,
+              repeated,
             )
 
         out += inner === '' ? `<${token}/>` : `<${token}>${inner}</${token}>`

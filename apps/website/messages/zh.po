@@ -8,58 +8,58 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/app/[lang]/(home)/page.tsx:21
+#: src/app/[lang]/(home)/page.tsx:43
 msgid "No keys"
 msgstr "没有 key"
 
-#: src/app/[lang]/(home)/page.tsx:22
+#: src/app/[lang]/(home)/page.tsx:44
 msgid ""
 "The source text is the message; ids are content hashes managed for you in "
 "PO files."
 msgstr "源文本就是消息本身；id 是内容哈希，由 PO 文件替你管理。"
 
-#: src/app/[lang]/(home)/page.tsx:25
+#: src/app/[lang]/(home)/page.tsx:47
 msgid "No runtime"
 msgstr "没有运行时"
 
-#: src/app/[lang]/(home)/page.tsx:26
+#: src/app/[lang]/(home)/page.tsx:48
 msgid ""
 "Messages compile to ternaries or plain literals. Unused messages tree-shake "
 "with the code that used them."
 msgstr "消息编译为三元表达式或纯字符串字面量。未使用的消息随使用它的代码一起被 tree-shake 掉。"
 
-#: src/app/[lang]/(home)/page.tsx:29
+#: src/app/[lang]/(home)/page.tsx:51
 msgid "PO workflow"
 msgstr "PO 工作流"
 
-#: src/app/[lang]/(home)/page.tsx:30
+#: src/app/[lang]/(home)/page.tsx:52
 msgid ""
 "messages.pot + <locale>.po — the format translators, TMSes and LLMs already "
 "understand."
 msgstr "messages.pot + <locale>.po——翻译者、TMS 和 LLM 早已熟悉的格式。"
 
-#: src/app/[lang]/(home)/page.tsx:33
+#: src/app/[lang]/(home)/page.tsx:55
 msgid "SSR-safe"
 msgstr "SSR 安全"
 
-#: src/app/[lang]/(home)/page.tsx:34
+#: src/app/[lang]/(home)/page.tsx:56
 msgid ""
 "The server locale lives in AsyncLocalStorage per request; no isolation "
 "means an error, never shared state."
 msgstr "服务端 locale 按请求存放在 AsyncLocalStorage 里；无法隔离时直接报错，绝不共享状态。"
 
-#: src/app/[lang]/(home)/page.tsx:42
+#: src/app/[lang]/(home)/page.tsx:64
 msgid ""
 "Compile-time i18n. Write the source text inline; the compiler inlines every "
 "translation at the call site — no runtime catalog, no lookup, nothing to "
 "load."
 msgstr "编译期 i18n。源文本直接写在代码里；编译器把每条翻译内联到调用处——没有运行时 catalog，没有查找，没有任何需要加载的东西。"
 
-#: src/app/[lang]/(home)/page.tsx:49
+#: src/app/[lang]/(home)/page.tsx:71
 msgid "Get started"
 msgstr "开始使用"
 
-#: src/app/[lang]/layout.tsx:23
+#: src/app/[lang]/layout.with.tsx:27
 msgid ""
 "Compile-time i18n: no keys, no runtime, no catalog to load. Translations "
 "inline at the call site."
