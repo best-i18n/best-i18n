@@ -59,7 +59,7 @@ msgstr ""
 msgid "Get started"
 msgstr ""
 
-#: src/app/[lang]/layout.with.tsx:27
+#: src/app/[lang]/layout.tsx:27
 msgid ""
 "Compile-time i18n: no keys, no runtime, no catalog to load. Translations "
 "inline at the call site."

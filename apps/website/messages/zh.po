@@ -59,7 +59,7 @@ msgstr "编译期 i18n。源文本直接写在代码里；编译器把每条翻�
 msgid "Get started"
 msgstr "开始使用"
 
-#: src/app/[lang]/layout.with.tsx:27
+#: src/app/[lang]/layout.tsx:27
 msgid ""
 "Compile-time i18n: no keys, no runtime, no catalog to load. Translations "
 "inline at the call site."

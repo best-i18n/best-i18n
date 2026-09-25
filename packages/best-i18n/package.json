@@ -1,6 +1,6 @@
 {
   "name": "best-i18n",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compile-time i18n: translations inlined at the call site, per-locale builds collapse to plain strings, PO-based workflow",
   "keywords": [
     "compile-time",
@@ -142,8 +142,8 @@
   },
   "scripts": {
     "build": "tsdown",
+    "prepare": "tsdown",
     "test": "vitest run",
-    "release": "bumpp",
     "typecheck": "tsc --noEmit",
     "spike": "node ./spike/run.mjs"
   },
@@ -161,7 +161,6 @@
     "@types/react": "^19.3.0",
     "@vitejs/plugin-vue": "^6.0.9",
     "@vue/server-renderer": "^3.5.43",
-    "bumpp": "^12.3.0",
     "h3": "^1.15.11",
     "happy-dom": "^20.14.5",
     "next": "^16.3.4",

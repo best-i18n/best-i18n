@@ -1,15 +1,35 @@
+import { t } from 'best-i18n/macro'
+import { setRequestLocale } from 'best-i18n/next/server'
+import { LocaleProvider } from 'best-i18n/react'
+import { Inter } from 'next/font/google'
+import { Provider } from '~/components/provider'
+import { i18nConfig } from '~/lib/best-i18n'
 import { i18n } from '~/lib/i18n'
-import { withGenerateMetadata, WithLayout } from './layout.with'
+import { appName } from '~/lib/shared'
 import type { Metadata } from 'next'
+
+const inter = Inter({
+  subsets: ['latin'],
+})
 
 export async function generateMetadata({
   params,
 }: LayoutProps<'/[lang]'>): Promise<Metadata> {
   const { lang } = await params
-  return withGenerateMetadata(lang)
+  setRequestLocale(lang)
+
+  return {
+    icons: [{ rel: 'icon', type: 'image/svg+xml', url: '/favicon.svg' }],
+    title: {
+      template: `%s | ${appName}`,
+      default: appName,
+    },
+    description: t`Compile-time i18n: no keys, no runtime, no catalog to load. Translations inline at the call site.`,
+  }
 }
 
-// Only the prefixed locales - English is served unprefixed by `(main)`.
+// Only the prefixed locales. English is served unprefixed by `(unprefixed)`,
+// which @best-i18n/next-unprefixed-locale generates from this tree at config load.
 export function generateStaticParams() {
   return i18n.languages
     .filter((lang) => lang !== i18n.defaultLanguage)
@@ -24,5 +44,13 @@ export default async function Layout({
 }: LayoutProps<'/[lang]'>) {
   const { lang } = await params
 
-  return WithLayout(lang, { children })
+  return (
+    <html lang={lang} className={inter.className} suppressHydrationWarning>
+      <body className='flex flex-col min-h-screen'>
+        <LocaleProvider locale={lang} config={i18nConfig}>
+          <Provider lang={lang}>{children}</Provider>
+        </LocaleProvider>
+      </body>
+    </html>
+  )
 }

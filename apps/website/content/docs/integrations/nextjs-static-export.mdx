@@ -1,0 +1,235 @@
+---
+title: Static export
+description: The base locale unprefixed without a proxy — @best-i18n/next-unprefixed-locale, on its own or through createI18nPlugin
+---
+
+Routes under `app/[locale]` give every language a prefix. Keeping the base
+locale unprefixed — `/about` beside `/zh/about` — normally takes a proxy that
+rewrites `/about` onto `/en/about` at request time. A static export
+(`output: 'export'`) has no request time: only the files that exist are served,
+so `/about` has to be a file.
+
+The usual answer is a second route tree by hand — a route group holding one
+file per route that imports the `[locale]` version and hardcodes the locale.
+It works, and it drifts: every new route needs its twin, and a forgotten twin
+is a 404 nobody sees until production.
+
+`@best-i18n/next-unprefixed-locale` writes that second tree. Each generated
+file imports the original module, adds the locale to `params`, and hands the
+call on. The `[locale]` tree stays the only place logic lives; the mirror is
+regenerated on every config load and kept current while `next dev` runs.
+
+```text
+app/
+  [lang]/            what you write
+    layout.tsx
+    docs/[[...slug]]/page.tsx
+  (unprefixed)/      what is generated, gitignored
+    layout.tsx       → imports [lang]/layout, params.lang pinned to 'en'
+    docs/[[...slug]]/page.tsx
+```
+
+The package knows nothing about best-i18n. It reads one directory and writes
+another, so it works with fumadocs, next-intl, or no i18n library at all. What
+best-i18n adds is a hook: `createI18nPlugin` takes plugins that run at config
+load with the i18n config in hand, and this package ships one.
+
+## With best-i18n
+
+```ts
+// next.config.ts
+import { fileURLToPath } from 'node:url'
+import { staticExport } from '@best-i18n/next-unprefixed-locale'
+import { createI18nPlugin } from 'best-i18n/next'
+import { i18n } from './src/i18n'
+
+const withI18n = createI18nPlugin({
+  ...i18n, // locales, baseLocale, localeParam
+  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
+  plugins: [staticExport()],
+})
+
+export default withI18n({ output: 'export' })
+```
+
+`staticExport()` is handed `baseLocale` and `localeParam` by best-i18n, so the
+locales are described once. It takes the same options as the wrapper below
+minus those two — the route group's name, the app directory, whether to watch:
+
+```ts
+plugins: [staticExport({ group: '(default)', watch: false })]
+```
+
+It is a plugin rather than an option on purpose. best-i18n does not depend on
+this package, or know it exists: `plugins` is a general hook for steps that
+need the locales and the URL shape at config load, and this is one of them.
+The two meet on a structural type, so neither imports the other.
+
+An export that wants `/en/about` as the canonical URL sets `prefixBase: true`
+and leaves the plugin out; adding it anyway is refused with a warning, since a
+prefixed base locale has nothing unprefixed to mirror. Using it without
+`output: 'export'` also warns: on a server the proxy already serves the
+unprefixed URLs, and the mirror would only duplicate them.
+
+This site is built this way: one `[lang]` tree with a `'use client'` landing
+page, the docs pages, and a route handler per page for its Markdown and its
+OpenGraph image, all mirrored.
+
+## On its own
+
+```bash
+pnpm add @best-i18n/next-unprefixed-locale
+```
+
+```ts
+// next.config.ts
+import { withUnprefixedLocale } from '@best-i18n/next-unprefixed-locale'
+
+const withUnprefixed = withUnprefixedLocale({
+  defaultLocale: 'en',
+  localeParam: 'lang', // app/[lang]; the default is 'locale'
+})
+
+export default withUnprefixed({ output: 'export' })
+```
+
+The wrapper returns the config unchanged; it exists to run at config load,
+which is the moment `next dev`, `next build` and `next typegen` all pass
+through. It composes with any other wrapper — `withMDX`, `withI18n` — in any
+order.
+
+For fumadocs, `defineI18n({ hideLocale: 'default-locale' })` produces exactly
+the URL shape this serves, and its `[lang]` segment is the `localeParam`.
+
+`generate(options)` is exported for running it outside the config, and a CLI
+does the same:
+
+```bash
+pnpm exec next-unprefixed-locale --locale en --param lang          # once
+pnpm exec next-unprefixed-locale --locale en --param lang --watch  # keep going
+```
+
+| Option           | Default                                  |                                                                          |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| `defaultLocale`  | required                                 | The locale served unprefixed.                                            |
+| `localeParam`    | `'locale'`                               | Name of the segment: `[locale]`, `[lang]`.                               |
+| `appDir`         | `src/app`, else `app`                    | Relative to the working directory.                                       |
+| `group`          | `'(unprefixed)'`                         | Where the mirror goes. Must be a route group, so it adds no URL segment. |
+| `pageExtensions` | from `next.config`, else `tsx ts jsx js` | Which files are routes.                                                  |
+| `watch`          | `NODE_ENV === 'development'`             | Regenerate when files are added to or removed from `[locale]`.           |
+| `quiet`          | `false`                                  | Skip the one-line summary. Warnings are always printed.                  |
+
+## What the `[locale]` tree has to do
+
+Both ways generate the same files and ask the same three things of the tree
+they mirror.
+
+**Keep the base locale out of `[locale]`**, or its pages are built twice:
+
+```ts
+// app/[lang]/layout.tsx
+export function generateStaticParams() {
+  return i18n.locales.filter((lang) => lang !== 'en').map((lang) => ({ lang }))
+}
+
+export const dynamicParams = false
+```
+
+**Derive static params from the locale you are handed.** A mirrored route has
+no locale segment, so the wrapper calls the original's `generateStaticParams`
+with the base locale as the parent segment's param and drops the key from the
+result. Pages and layouts receive the params of the segments above them, so
+read the locale from there and both trees are right:
+
+```ts
+// app/[lang]/docs/[[...slug]]/page.tsx
+export function generateStaticParams({ params }: { params: { lang: string } }) {
+  return source.generateParams().filter((p) => p.lang === params.lang)
+}
+```
+
+Route handlers are the exception. They sit outside the layout tree, so Next
+calls their `generateStaticParams` with no parent params and expects them to
+enumerate everything. Read the locale when it is there, enumerate when it is
+not:
+
+```ts
+// app/[lang]/og/[...slug]/route.tsx
+export function generateStaticParams({
+  params,
+}: {
+  params?: { lang?: string }
+}) {
+  const langs = params?.lang
+    ? [params.lang]
+    : i18n.locales.filter((lang) => lang !== 'en')
+
+  return langs.flatMap((lang) => paramsFor(lang))
+}
+```
+
+**Write route segment config as literals.** `dynamic`, `dynamicParams`,
+`revalidate` and the rest are read by Next through static analysis, so the
+mirror repeats them as literals rather than re-exporting the binding. A value
+that is not a literal is skipped with a warning.
+
+## What is generated
+
+| In `[locale]`                                            | In the mirror                                                                                                                                                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page`, `layout`, `template`, `default`                  | A component rendering the original with `params` pinned. `generateMetadata`, `generateViewport` and `generateStaticParams` are wrapped the same way; `metadata` and `viewport` are re-exported. |
+| `route`                                                  | One function per HTTP method, `context.params` pinned, plus `generateStaticParams`.                                                                                                             |
+| `opengraph-image`, `twitter-image`, `icon`, `apple-icon` | The default export and `generateImageMetadata` pinned; `alt`, `size`, `contentType` re-exported.                                                                                                |
+| `loading`, `error`, `not-found`, `global-error`          | Re-exported as they are; they take no params.                                                                                                                                                   |
+| `favicon.ico`, `icon.png`, `robots.txt`, …               | Copied.                                                                                                                                                                                         |
+| Anything else — components, helpers, styles              | Left alone. The wrappers import the originals, which resolve their own neighbours.                                                                                                              |
+
+A `'use client'` page gets a `'use client'` wrapper, so Next renders it through
+the same client boundary it would the original. The wrappers are typed against
+the originals, so `next typegen` checks them like any other route file. A
+generated page looks like this:
+
+```ts
+// Generated by @best-i18n/next-unprefixed-locale from [lang]/docs/[[...slug]]/page.tsx.
+import {
+  pin,
+  render,
+  staticParams,
+} from '@best-i18n/next-unprefixed-locale/runtime'
+import * as origin from '../../../[lang]/docs/[[...slug]]/page'
+import type {
+  Arg0,
+  Unprefixed,
+} from '@best-i18n/next-unprefixed-locale/runtime'
+
+export default function Page(
+  props: Unprefixed<Arg0<typeof origin.default>, 'lang'>,
+) {
+  return render(origin.default, pin(props, 'lang', 'en'))
+}
+
+export function generateStaticParams(props?: {
+  params?: Record<string, unknown>
+}) {
+  return staticParams(origin.generateStaticParams, props, 'lang', 'en')
+}
+
+export const dynamicParams = false
+```
+
+The group carries its own `.gitignore`, so nothing changes in the repo's, and
+formatters that honour it leave the files alone.
+
+## Limits
+
+- **No dynamic segment directly under `[locale]`.** `[lang]/[slug]` would
+  mirror to `/[slug]`, beside `/[lang]` at the root, and Next does not allow
+  two dynamic segments with different names at one level. Put it under a
+  static one. This is a constraint of the two-tree layout, generated or not.
+- **Two root layouts.** `[locale]/layout.tsx` and its mirror each render
+  `<html>`, so switching locale is a full page load rather than a client
+  navigation. Also true of the hand-written version.
+- **`export *`** in a route file hides its exports from the mirror; only the
+  ones the file declares itself are wrapped.
+- **New routes in `next dev`** appear once the watcher has run, a moment after
+  the file is saved. Deleting a route removes its wrapper the same way.

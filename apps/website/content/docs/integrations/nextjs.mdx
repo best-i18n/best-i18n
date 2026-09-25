@@ -99,11 +99,14 @@ two.
 
 The unprefixed base locale assumes a proxy is there to rewrite `/about` onto
 the `[locale]` segment. A deployment without one — a static export serves only
-the files that exist — sets `prefixBase: true` in the config instead:
-`/en/about` becomes the canonical form, `Link` prefixes the base locale like
-any other, and a proxy (if one runs anyway) redirects unprefixed URLs out
-rather than stripping `/en`. This site is exactly that case: its "Get started"
-button is a `Link href='/docs'` compiled by best-i18n itself.
+the files that exist — has two options. `prefixBase: true` in the config gives
+up on the unprefixed form: `/en/about` becomes canonical, `Link` prefixes the
+base locale like any other, and a proxy (if one runs anyway) redirects
+unprefixed URLs out rather than stripping `/en`. Or keep the URLs and make the
+files exist: the `staticExport()` plugin from
+`@best-i18n/next-unprefixed-locale` mirrors `app/[locale]` into a generated
+route group with the base locale pinned. That is what this site does — see
+[Static export](/docs/integrations/nextjs-static-export).
 
 ## Why the pieces are what they are
 

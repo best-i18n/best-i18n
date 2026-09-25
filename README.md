@@ -4,7 +4,10 @@ Compile-time i18n: the source text is the message, every translation is inlined
 at the call site, and a per-locale build collapses to plain string literals.
 
 This is the monorepo. The package and its documentation live in
-[`packages/best-i18n`](./packages/best-i18n#readme).
+[`packages/best-i18n`](./packages/best-i18n#readme). A neighbouring problem -
+the default locale served unprefixed from a Next.js static export - is solved
+by [`@best-i18n/next-unprefixed-locale`](https://github.com/best-i18n/next-unprefixed-locale#readme),
+which lives in its own repository and depends on nothing here.
 
 ```text
 packages/best-i18n     the package
@@ -29,7 +32,9 @@ playground/solid-start-paraglide     the same app in Paraglide
 playground/solid-start-primitives    the same app in @solid-primitives/i18n
 playground/nuxt                      the same app on Nuxt 4, through best-i18n/nuxt
 playground/nuxt-i18n                 the same app in @nuxtjs/i18n
+scripts/play.mjs                     runs one playground: `pnpm play [name] [script]`
 scripts/bench-size.mjs               builds each playground and weighs what a browser loads
+scripts/bench-baseline.json          the last recorded run, for `pnpm bench --compare`
 ```
 
 A new framework is a new folder under `src/integrations` plus its subpath in
@@ -70,22 +75,35 @@ URLs, so a comparison is between libraries rather than between apps.
 | [`playground/nuxt-i18n`](./playground/nuxt-i18n#readme)                               | the same app in @nuxtjs/i18n           |
 
 ```bash
-pnpm build          # the playgrounds consume the built package
-pnpm dev:next       # http://localhost:3000 and /zh
-pnpm dev:tanstack
-pnpm dev:sveltekit
-pnpm dev:solid-start
-pnpm dev:nuxt
-pnpm dev:paraglide
+pnpm build                  # the playgrounds consume the built package
+pnpm play                   # pick one from the list, then `dev`
+pnpm play nextjs            # http://localhost:3000 and /zh
+pnpm play nextjs build      # any script that playground defines
+pnpm play solid             # a partial name narrows the list, then picks
 ```
 
-Every playground has a `dev` script: `pnpm --filter playground-<name> dev`.
+`pnpm play` is the only entry point; the playground names are the directory
+names above.
 
 ## Size
 
 ```bash
-pnpm build && pnpm bench
+pnpm build && pnpm bench             # build everything and print the tables
+pnpm bench --compare                 # with a delta column vs the baseline
+pnpm bench --write                   # record the run as the new baseline
+pnpm bench --family SvelteKit        # one table only; --write merges it in
 ```
+
+`scripts/bench-baseline.json` is the last recorded run, committed. Git is the
+history: the diff on that file is what a change cost, sitting next to the
+change itself, so a run that moves the numbers on purpose updates it in the
+same commit. Each row records the framework and i18n library versions it was
+measured against, because renovate automerges those and an upgrade's bytes
+should not be blamed on a commit here.
+
+Run it by hand, and always on the same machine - two runs of the same build
+already differ by a few bytes, and a different OS or Node version moves the
+numbers enough to drown a real regression. Nothing in CI touches this.
 
 Four framework families, measured two ways - variants in a family use the same
 method, which is what makes a table mean something. On Next.js the numbers are
@@ -107,24 +125,24 @@ Next twins - plurals, context and markup included.
 | variant                            | client JS (gzip) | raw      | HTML /zh (gzip) | HTML /zh/long (gzip) |
 | ---------------------------------- | ---------------- | -------- | --------------- | -------------------- |
 | no i18n at all                     | 173.4 kB         | 562.0 kB | 1.9 kB          | -                    |
-| best-i18n                          | 174.3 kB         | 564.9 kB | 2.4 kB          | 5.0 kB               |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.2 kB         | 564.7 kB | 2.4 kB          | 5.0 kB               |
+| best-i18n                          | 174.5 kB         | 565.4 kB | 2.5 kB          | 5.0 kB               |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 174.4 kB         | 565.0 kB | 2.5 kB          | 5.0 kB               |
 | next-intl                          | 187.4 kB         | 607.4 kB | 4.9 kB          | 5.5 kB               |
 
 ### TanStack Start
 
 | variant                            | client JS (gzip) | raw      |
 | ---------------------------------- | ---------------- | -------- |
-| best-i18n                          | 99.1 kB          | 310.3 kB |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 98.8 kB          | 309.7 kB |
-| paraglide                          | 106.9 kB         | 334.9 kB |
+| best-i18n                          | 107.7 kB         | 339.1 kB |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 107.5 kB         | 338.5 kB |
+| paraglide                          | 115.5 kB         | 363.4 kB |
 
 The first row of the Next table is the same app with every message replaced by
 a literal. It is measured by hand rather than by `pnpm bench`, since there is
 no fourth playground for it - and it predates the `/long` page, hence the dash.
 
 The two HTML columns tell the story. Both home pages render the same handful
-of messages, yet `/zh` reads 2.4 kB against 4.9 kB: the difference is the
+of messages, yet `/zh` reads 2.5 kB against 4.9 kB: the difference is the
 catalog, which next-intl ships in every page's payload whether the page
 renders those messages or not. best-i18n's pages carry only the text they
 render - the ~30 long-page messages exist as HTML on `/zh/long` and nowhere
@@ -136,8 +154,8 @@ whoever compiled it.
 
 | variant                            | client JS (gzip) | raw      |
 | ---------------------------------- | ---------------- | -------- |
-| best-i18n                          | 32.1 kB          | 79.3 kB  |
-| best-i18n, `I18N_STATIC_LOCALE=zh` | 31.5 kB          | 78.2 kB  |
+| best-i18n                          | 32.1 kB          | 79.4 kB  |
+| best-i18n, `I18N_STATIC_LOCALE=zh` | 31.5 kB          | 78.3 kB  |
 | paraglide                          | 39.3 kB          | 102.8 kB |
 | svelte-i18n                        | 49.4 kB          | 136.7 kB |
 
@@ -187,7 +205,7 @@ has since grown plurals of its own - gettext plurals, compiled to an inlined
 per-locale formula rather than an ICU runtime - but select, dates and numbers
 it still does not do. Its catalog also travels in _every_ page's HTML by
 default: `/zh` renders none of the `/long` page's ~30 messages and still
-carries all of them - the 4.9 kB against best-i18n's 2.4 kB in the table
+carries all of them - the 4.9 kB against best-i18n's 2.5 kB in the table
 above.
 
 **paraglide's ~8 kB is a URL router** - a `URLPattern` matcher, cookie
