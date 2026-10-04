@@ -1,0 +1,139 @@
+---
+title: vinext
+description: 在 vinext 上不靠 proxy 改写也让基础语言不带前缀——@best-i18n/vinext-unprefixed-locale，让默认语言的页面切换也能命中缓存
+---
+
+有服务端时，想让基础语言不带前缀——`/about` 和 `/zh/about` 并排——通常靠一个
+proxy 把 `/about` 改写到 `/en/about`。在 [vinext](https://github.com/cloudflare/vinext)
+上，这个改写有一个在浏览器里看不出来的代价：vinext 把被改写过的请求当作
+「已解析（resolved）」而不是「原始请求（requested）」，而只有后者的 RSC 跳转
+才会被归到共享缓存键上。基础语言下的每次客户端跳转都带着路由状态指纹，不会被
+规范化，返回 `Cache-Control: no-store`。放在 Cloudflare 上，就是基础语言每次
+切换页面都是 `BYPASS`，而 `/zh/*` 能命中缓存。
+
+`@best-i18n/vinext-unprefixed-locale` 不去绕开这个改写，而是把它去掉。它把
+`app/[locale]` 镜像到一个路由组里，每个文件 import 原文件并钉死 locale，这样
+`/about` 直接匹配到路由。和[静态导出](/zh/docs/integrations/nextjs-static-export)
+那个包是同一套镜像，只是由 Vite 插件驱动、面向有服务端的场景。
+
+```text
+app/
+  [locale]/          你写的
+    layout.tsx
+    blog/[...slug]/page.tsx
+  (unprefixed)/      生成的，已被 gitignore
+    layout.tsx       → import [locale]/layout，params.locale 钉死为 'en'
+    blog/[...slug]/page.tsx
+```
+
+## 配置
+
+```bash
+pnpm add @best-i18n/vinext-unprefixed-locale
+```
+
+```ts
+// vite.config.ts
+import { unprefixedLocale } from '@best-i18n/vinext-unprefixed-locale'
+import { i18n } from 'best-i18n/vite'
+import vinext from 'vinext'
+import { defineConfig } from 'vite'
+import { i18nConfig } from './src/i18n/config'
+
+export default defineConfig({
+  plugins: [
+    unprefixedLocale({
+      defaultLocale: i18nConfig.baseLocale,
+      localeParam: i18nConfig.localeParam,
+    }),
+    i18n({ ...i18nConfig, messagesDir }),
+    vinext(),
+  ],
+})
+```
+
+插件在 Vite 解析配置时写出镜像，早于 vinext 扫描 app 目录；`vite dev` 期间，
+`[locale]` 下有文件增删或修改时会重新生成。编译器和镜像用的是同一份
+`i18nConfig`，语言只描述一次。
+
+然后把 proxy 里的改写去掉。如果 proxy 只做这一件事，直接删掉。
+
+## 有服务端时多出来的事
+
+静态导出只有构建出来的那些文件。有服务端时，根上的 `[locale]` 还在，它匹配的
+不只是语言：
+
+**`/en/...` 依然能渲染。** 把它重定向到唯一的规范 URL，写在 `next.config.ts`
+里，不需要 proxy：
+
+```ts
+// next.config.ts
+async redirects() {
+  return [
+    { source: '/en', destination: '/', permanent: true },
+    { source: '/en/:path*', destination: '/:path*', permanent: true },
+  ]
+}
+```
+
+**任何未知的单段路径都会被 `[locale]` 当成 locale。** 以前 proxy 会把 `/foo`
+变成 `/en/foo`，得到 404。现在 `/foo` 就是 `locale: 'foo'` 的 `[locale]`，返回
+404 还是 500 取决于 layout 怎么处理它。在 layout 里校验：
+
+```ts
+// app/[locale]/layout.tsx
+import { notFound } from 'next/navigation'
+
+function assertLocale(locale: string): asserts locale is Locale {
+  if (!i18nConfig.locales.includes(locale)) notFound()
+}
+
+export async function generateMetadata({ params }) {
+  const { locale } = await params
+  assertLocale(locale)
+  // …
+}
+
+export default async function Layout({ children, params }) {
+  const { locale } = await params
+  assertLocale(locale)
+  // …
+}
+```
+
+不要用 `dynamicParams = false`：它会传给下面的所有段，像 `/prompts/[id]` 这样
+的页面，构建之后新发布的内容都会 404。
+
+**在服务端读取 locale。** 如果应用是从 `[locale]` 这个根参数读 locale——best-i18n
+在 vinext 上的做法就是用 `getCurrentRootParams()`——镜像里没有这个段，读出来是
+空的。回退到基础语言即可，对每个镜像路由来说这都是正确答案：
+
+```ts
+// src/i18n/server.ts
+export function getLocale(): Locale {
+  return localeFromRender() ?? i18nConfig.baseLocale
+}
+```
+
+## 选项
+
+| 选项             | 默认值                |                                                   |
+| ---------------- | --------------------- | ------------------------------------------------- |
+| `defaultLocale`  | 必填                  | 不带前缀 serve 的语言。                           |
+| `localeParam`    | `'locale'`            | 路由段的名字：`[locale]`、`[lang]`。              |
+| `appDir`         | `src/app`，否则 `app` | 相对于 Vite 的 root。                             |
+| `group`          | `'(unprefixed)'`      | 镜像写到哪。必须是路由组，这样才不会多出 URL 段。 |
+| `pageExtensions` | `tsx ts jsx js`       | 哪些文件算路由。                                  |
+| `watch`          | `true`                | `vite dev` 期间 `[locale]` 下文件变化时重新生成。 |
+| `quiet`          | `false`               | 不打印那一行摘要。警告总是会打印。                |
+
+包还导出了 `generate(options)` 和一个 CLI，供在 Vite 之外运行：
+
+```bash
+pnpm exec vinext-unprefixed-locale --locale en          # 跑一次
+pnpm exec vinext-unprefixed-locale --locale en --watch  # 持续监听
+```
+
+生成的文件、作为字面量重复的路由段配置，以及各项限制——`[locale]` 下不能直接
+放动态段、两个根 layout 所以切换语言是整页加载、`export *` 会隐藏导出——都和
+[静态导出](/zh/docs/integrations/nextjs-static-export#生成了什么)一样。

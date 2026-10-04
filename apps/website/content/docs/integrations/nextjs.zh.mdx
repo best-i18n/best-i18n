@@ -104,6 +104,10 @@ proxy 的部署——静态导出只 serve 磁盘上存在的文件——有两�
 镜像成一个基础语言已钉死的生成路由组。本站用的就是这条路——见
 [静态导出](/docs/integrations/nextjs-static-export)。
 
+在 vinext 上 proxy 是有的，但代价是缓存：被改写过的请求，它的 RSC 跳转永远不会
+被缓存，所以基础语言下每次切换页面都绕过 CDN。同一套镜像做成 Vite 插件就能去掉
+这个改写——见 [vinext](/zh/docs/integrations/vinext)。
+
 ## 每个部件为什么是这样
 
 - **根 layout 里调一次 `getLocale()`。** 它拉入的模块教会运行时 Next 把 locale

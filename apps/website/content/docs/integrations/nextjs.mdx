@@ -108,6 +108,11 @@ files exist: the `staticExport()` plugin from
 route group with the base locale pinned. That is what this site does — see
 [Static export](/docs/integrations/nextjs-static-export).
 
+On vinext the proxy is there but costs you the cache: a rewritten request's
+RSC navigations are never cached, so every page change in the base locale
+bypasses the CDN. The same mirror, as a Vite plugin, removes the rewrite — see
+[vinext](/docs/integrations/vinext).
+
 ## Why the pieces are what they are
 
 - **`getLocale()` in the root layout, once.** It is what pulls in the module
