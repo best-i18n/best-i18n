@@ -1,0 +1,148 @@
+---
+title: vinext
+description: The base locale unprefixed on vinext without a proxy rewrite — @best-i18n/vinext-unprefixed-locale, so default-locale navigations stay cacheable
+---
+
+On a server, keeping the base locale unprefixed — `/about` beside
+`/zh/about` — is usually a proxy that rewrites `/about` onto `/en/about`. On
+[vinext](https://github.com/cloudflare/vinext) that rewrite has a cost you do
+not see in the browser: vinext treats a rewritten request as _resolved_
+rather than _requested_, and only maps requested RSC navigations onto the
+shared cache key. Every client navigation in the base locale carries the
+router's state fingerprint, is never normalized, and answers
+`Cache-Control: no-store`. On Cloudflare that is a `BYPASS` on every page
+change in the base locale, while `/zh/*` hits the cache.
+
+`@best-i18n/vinext-unprefixed-locale` removes the rewrite instead of working
+around it. It mirrors `app/[locale]` into a route group whose files import
+the originals and pin the locale, so `/about` matches a route directly. It is
+the same mirror as the [static export](/docs/integrations/nextjs-static-export)
+package, run from a Vite plugin and meant for a server.
+
+```text
+app/
+  [locale]/          what you write
+    layout.tsx
+    blog/[...slug]/page.tsx
+  (unprefixed)/      what is generated, gitignored
+    layout.tsx       → imports [locale]/layout, params.locale pinned to 'en'
+    blog/[...slug]/page.tsx
+```
+
+## Setup
+
+```bash
+pnpm add @best-i18n/vinext-unprefixed-locale
+```
+
+```ts
+// vite.config.ts
+import { unprefixedLocale } from '@best-i18n/vinext-unprefixed-locale'
+import { i18n } from 'best-i18n/vite'
+import vinext from 'vinext'
+import { defineConfig } from 'vite'
+import { i18nConfig } from './src/i18n/config'
+
+export default defineConfig({
+  plugins: [
+    unprefixedLocale({
+      defaultLocale: i18nConfig.baseLocale,
+      localeParam: i18nConfig.localeParam,
+    }),
+    i18n({ ...i18nConfig, messagesDir }),
+    vinext(),
+  ],
+})
+```
+
+The plugin writes the mirror when Vite resolves its config, before vinext
+scans the app directory, and regenerates it while `vite dev` runs whenever a
+file under `[locale]` is added, removed or changed. The same `i18nConfig`
+feeds the compiler and the mirror, so the locales are described once.
+
+Then take the rewrite out of the proxy. If the proxy did nothing else,
+delete it.
+
+## What changes on a server
+
+A static export only has the files it built. A server still has `[locale]`
+at the root, which matches more than the locales:
+
+**`/en/...` still renders.** Redirect it to the one canonical URL, in
+`next.config.ts` rather than a proxy:
+
+```ts
+// next.config.ts
+async redirects() {
+  return [
+    { source: '/en', destination: '/', permanent: true },
+    { source: '/en/:path*', destination: '/:path*', permanent: true },
+  ]
+}
+```
+
+**Any unknown single-segment path reaches `[locale]` as a locale.** Before,
+the proxy turned `/foo` into `/en/foo`, a 404. Now `/foo` is `[locale]` with
+`locale: 'foo'`, and whatever the layout does with it decides between a 404
+and a 500. Check it in the layout:
+
+```ts
+// app/[locale]/layout.tsx
+import { notFound } from 'next/navigation'
+
+function assertLocale(locale: string): asserts locale is Locale {
+  if (!i18nConfig.locales.includes(locale)) notFound()
+}
+
+export async function generateMetadata({ params }) {
+  const { locale } = await params
+  assertLocale(locale)
+  // …
+}
+
+export default async function Layout({ children, params }) {
+  const { locale } = await params
+  assertLocale(locale)
+  // …
+}
+```
+
+Not `dynamicParams = false`: it cascades to every segment below, and a page
+like `/prompts/[id]` would 404 for anything published after the build.
+
+**Reading the locale on the server.** If the app reads it from the
+`[locale]` root param, as best-i18n's vinext setup does with
+`getCurrentRootParams()`, the mirror has no such segment and the read comes
+back empty. Fall back to the base locale, which is the right answer for every
+mirrored route:
+
+```ts
+// src/i18n/server.ts
+export function getLocale(): Locale {
+  return localeFromRender() ?? i18nConfig.baseLocale
+}
+```
+
+## Options
+
+| Option           | Default               |                                                                          |
+| ---------------- | --------------------- | ------------------------------------------------------------------------ |
+| `defaultLocale`  | required              | The locale served unprefixed.                                            |
+| `localeParam`    | `'locale'`            | Name of the segment: `[locale]`, `[lang]`.                               |
+| `appDir`         | `src/app`, else `app` | Relative to the Vite root.                                               |
+| `group`          | `'(unprefixed)'`      | Where the mirror goes. Must be a route group, so it adds no URL segment. |
+| `pageExtensions` | `tsx ts jsx js`       | Which files are routes.                                                  |
+| `watch`          | `true`                | Regenerate in `vite dev` when files under `[locale]` change.             |
+| `quiet`          | `false`               | Skip the one-line summary. Warnings are always printed.                  |
+
+`generate(options)` and a CLI are exported for running it outside Vite:
+
+```bash
+pnpm exec vinext-unprefixed-locale --locale en          # once
+pnpm exec vinext-unprefixed-locale --locale en --watch  # keep going
+```
+
+The generated files, the route segment config repeated as literals and the
+limits — no dynamic segment directly under `[locale]`, two root layouts so a
+locale switch is a full page load, `export *` hiding exports — are the same as
+for the [static export](/docs/integrations/nextjs-static-export#what-is-generated).
