@@ -1,50 +1,50 @@
 {
-  "recordedAt": "2026-09-22",
+  "recordedAt": "2026-10-09",
   "node": "v24.13.0",
   "variants": {
     "Next.js / best-i18n": {
       "dir": "playground/nextjs",
       "versions": {
-        "next": "16.3.4",
-        "best-i18n": "0.1.0"
+        "next": "16.4.0",
+        "best-i18n": "0.3.0"
       },
-      "gzip": 178686,
-      "raw": 578953,
+      "gzip": 179765,
+      "raw": 579956,
       "files": 8,
       "pages": {
-        "/zh": 2562,
-        "/zh/about": 2462,
-        "/zh/long": 5096
+        "/zh": 2711,
+        "/zh/about": 2610,
+        "/zh/long": 5232
       }
     },
     "Next.js / best-i18n (staticLocale=zh)": {
       "dir": "playground/nextjs",
       "versions": {
-        "next": "16.3.4",
-        "best-i18n": "0.1.0"
+        "next": "16.4.0",
+        "best-i18n": "0.3.0"
       },
-      "gzip": 178539,
-      "raw": 578556,
+      "gzip": 179618,
+      "raw": 579559,
       "files": 8,
       "pages": {
-        "/zh": 2560,
-        "/zh/about": 2461,
-        "/zh/long": 5095
+        "/zh": 2713,
+        "/zh/about": 2611,
+        "/zh/long": 5233
       }
     },
     "Next.js / next-intl": {
       "dir": "playground/nextjs-intl",
       "versions": {
-        "next": "16.3.4",
+        "next": "16.4.0",
         "next-intl": "4.14.4"
       },
-      "gzip": 191875,
-      "raw": 622007,
+      "gzip": 192956,
+      "raw": 622890,
       "files": 9,
       "pages": {
-        "/zh": 5049,
-        "/zh/about": 5009,
-        "/zh/long": 5622
+        "/zh": 5209,
+        "/zh/about": 5162,
+        "/zh/long": 5776
       }
     },
     "Nuxt 4 / @nuxtjs/i18n": {
