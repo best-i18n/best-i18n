@@ -22,6 +22,7 @@ packages/best-i18n     the package
 apps/website                         the docs site: Next.js and fumadocs, deployed to Cloudflare
 playground/nextjs                    Next.js App Router, both locales, end to end
 playground/nextjs-intl               the same app in next-intl, for size comparison
+playground/nextjs-split              a feature-folder app with the catalog split into shards
 playground/tanstack-start            the same app on the plain Vite plugin
 playground/tanstack-start-paraglide  the same app in Paraglide
 playground/sveltekit                 the same app on SvelteKit
@@ -57,12 +58,15 @@ pnpm bench          # client JS a browser downloads, best-i18n vs next-intl
 Twelve playgrounds cover Next.js, TanStack Start, SvelteKit, SolidStart and
 Nuxt. In
 each family the apps share the same two pages, the same messages and the same
-URLs, so a comparison is between libraries rather than between apps.
+URLs, so a comparison is between libraries rather than between apps. A
+thirteenth, `nextjs-split`, sits outside the families: it shows a catalog
+split into shards by source directory, and is not part of the size tables.
 
 |                                                                                       |                                        |
 | ------------------------------------------------------------------------------------- | -------------------------------------- |
 | [`playground/nextjs`](./playground/nextjs#readme)                                     | best-i18n on the Next.js App Router    |
 | [`playground/nextjs-intl`](./playground/nextjs-intl#readme)                           | the same app in next-intl              |
+| [`playground/nextjs-split`](./playground/nextjs-split#readme)                         | best-i18n with a split catalog         |
 | [`playground/tanstack-start`](./playground/tanstack-start#readme)                     | best-i18n on the plain Vite plugin     |
 | [`playground/tanstack-start-paraglide`](./playground/tanstack-start-paraglide#readme) | the same app in Paraglide              |
 | [`playground/sveltekit`](./playground/sveltekit#readme)                               | best-i18n on SvelteKit                 |

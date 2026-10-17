@@ -10,7 +10,7 @@
     "build:zh": "I18N_STATIC_LOCALE=zh nuxt build",
     "preview": "nuxt preview",
     "start": "node .output/server/index.mjs",
-    "extract": "i18n-extract --locales en,zh --src app --messages messages",
+    "extract": "i18n-extract",
     "prepare": "nuxt prepare",
     "typecheck": "nuxt typecheck"
   },

@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url'
 import { staticExport } from '@best-i18n/next-unprefixed-locale'
 import { createI18nPlugin } from 'best-i18n/next'
 import { createMDX } from 'fumadocs-mdx/next'
@@ -8,10 +7,9 @@ import type { NextConfig } from 'next'
 const withMDX = createMDX()
 
 const withI18n = createI18nPlugin({
-  // The loader compiles per-locale ternaries, so it needs the values at build
-  // time - spreading src/lib/best-i18n.ts is what keeps them defined once.
+  // Locales and the catalog directory come from i18n.config.ts. The spread
+  // is for `localeParam`, which `staticExport()` needs to find `app/[lang]`.
   ...i18nConfig,
-  messagesDir: fileURLToPath(new URL('./messages', import.meta.url)),
   // English is served unprefixed - /docs beside /zh/docs - and a static export
   // has no proxy to strip the prefix, so the files have to exist. This mirrors
   // `app/[lang]` into `app/(unprefixed)` with English pinned, and the route

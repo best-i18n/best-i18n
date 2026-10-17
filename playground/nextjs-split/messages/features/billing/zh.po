@@ -1,0 +1,31 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/features/billing/invoice-list.tsx:13
+msgid "Invoices"
+msgstr "发票"
+
+#: src/features/billing/invoice-list.tsx:14
+msgid "One invoice"
+msgid_plural "{count} invoices"
+msgstr[0] "{count} 张发票"
+
+#: src/features/billing/plan-card.tsx:11
+msgid "Current plan"
+msgstr "当前套餐"
+
+#: src/features/billing/plan-card.tsx:12
+msgid "Team plan, billed yearly."
+msgstr "团队套餐，按年计费。"
+
+#: src/features/billing/plan-card.tsx:14
+msgid "You are using <strong>{seats}</strong> seats."
+msgstr "你正在使用 <strong>{seats}</strong> 个席位。"
