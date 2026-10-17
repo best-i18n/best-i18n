@@ -1,0 +1,23 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/app/[locale]/page.tsx:8
+msgid "Workspace"
+msgstr ""
+
+#: src/app/[locale]/page.tsx:9
+msgid "Each area of this app keeps its own translations."
+msgstr ""
+
+#: src/app/[locale]/page.tsx:11
+msgid ""
+"Open billing or settings, then look under messages/ to see which file each "
+"text came from."
+msgstr ""

@@ -9,7 +9,7 @@
     "build": "vite build",
     "build:zh": "I18N_STATIC_LOCALE=zh vite build",
     "start": "node .output/server/index.mjs",
-    "extract": "i18n-extract --locales en,zh --src src --messages messages",
+    "extract": "i18n-extract",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

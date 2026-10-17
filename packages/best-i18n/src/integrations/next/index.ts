@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { withConfigFile } from '../../compiler/config-file.ts'
 import type { I18nLoaderOptions } from './loader.ts'
 
 export type { I18nLoaderOptions }
@@ -58,6 +59,16 @@ export interface NextI18nPluginOptions extends I18nLoaderOptions {
    */
   plugins?: NextI18nPlugin[]
 }
+
+/**
+ * What `createI18nPlugin` takes: the plugin options with `locales`,
+ * `baseLocale` and `messagesDir` left to `i18n.config.ts` when not passed.
+ */
+export type NextI18nPluginInput = Omit<
+  NextI18nPluginOptions,
+  'locales' | 'baseLocale' | 'messagesDir'
+> &
+  Partial<Pick<NextI18nPluginOptions, 'locales' | 'baseLocale' | 'messagesDir'>>
 
 /**
  * Turbopack and webpack both resolve a loader by module path. Pointing at the
@@ -158,7 +169,10 @@ const WEBPACK_TEST = /\.[cm]?[jt]sx?$/
  *
  *   export default withI18n({ output: 'export' })
  */
-export function createI18nPlugin(options: NextI18nPluginOptions) {
+export function createI18nPlugin(input: NextI18nPluginInput = {}) {
+  // Resolved here, once, while Next loads its config: the loader only ever
+  // sees the finished options, which is all Turbopack can serialize anyway.
+  const options: NextI18nPluginOptions = withConfigFile('best-i18n/next', input)
   // Plugins run at config load, not in the loader; Turbopack would otherwise
   // try to serialize them into the loader's cache key.
   const { plugins = [], ...loaderOptions } = options

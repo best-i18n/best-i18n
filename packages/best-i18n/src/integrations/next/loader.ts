@@ -1,5 +1,6 @@
 import { statSync } from 'node:fs'
 import { loadCatalog } from '../../compiler/catalog.ts'
+import { findShards } from '../../compiler/shards.ts'
 import { transform } from '../../compiler/transform.ts'
 import type { LoadedCatalog } from '../../compiler/catalog.ts'
 import type { TransformOptions } from '../../compiler/transform.ts'
@@ -95,16 +96,17 @@ interface CacheEntry {
 // mtime, which is what a watch-mode edit changes.
 const cache = new Map<string, CacheEntry>()
 
-function signatureOf(files: string[]): string {
-  return files
-    .map((file) => {
-      try {
-        return `${file}:${statSync(file).mtimeMs}`
-      } catch {
-        return `${file}:missing`
-      }
-    })
-    .join('|')
+function signatureOf(messagesDir: string, files: string[]): string {
+  const stamps = files.map((file) => {
+    try {
+      return `${file}:${statSync(file).mtimeMs}`
+    } catch {
+      return `${file}:missing`
+    }
+  })
+  // The shard list too: a shard extract has just created is not among the
+  // files the previous load read, so their mtimes alone would not notice it.
+  return [...findShards(messagesDir), ...stamps].join('|')
 }
 
 function catalogFor(options: I18nLoaderOptions): LoadedCatalog {
@@ -113,7 +115,7 @@ function catalogFor(options: I18nLoaderOptions): LoadedCatalog {
 
   if (
     cached !== undefined &&
-    signatureOf(cached.loaded.files) === cached.signature
+    signatureOf(options.messagesDir, cached.loaded.files) === cached.signature
   ) {
     return cached.loaded
   }
@@ -124,7 +126,10 @@ function catalogFor(options: I18nLoaderOptions): LoadedCatalog {
     baseLocale: options.baseLocale,
   })
 
-  cache.set(key, { signature: signatureOf(loaded.files), loaded })
+  cache.set(key, {
+    signature: signatureOf(options.messagesDir, loaded.files),
+    loaded,
+  })
 
   return loaded
 }

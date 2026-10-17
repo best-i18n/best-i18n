@@ -232,7 +232,9 @@ describe('vue translation macros', () => {
           'Hello',
           'Read the <a>docs</a>.',
         ])
-        expect(catalog.entries[0]!.references).toEqual([`${input}:7`])
+        expect(catalog.entries[0]!.references).toEqual([
+          `${input.split(path.sep).join('/')}:7`,
+        ])
         catalog.entries[0]!.target = '你好'
         catalog.entries[1]!.target = '阅读<a>文档</a>。'
         writeFileSync(path.join(messagesDir, 'zh.po'), formatPo(catalog))

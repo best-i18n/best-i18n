@@ -302,7 +302,9 @@ it.each([undefined, 'zh'])(
         'zh',
       )
       expect(catalog.entries.map((entry) => entry.source)).toEqual(['Hello'])
-      expect(catalog.entries[0]!.references).toEqual([`${input}:1`])
+      expect(catalog.entries[0]!.references).toEqual([
+        `${input.split(path.sep).join('/')}:1`,
+      ])
       catalog.entries[0]!.target = '你好'
       writeFileSync(path.join(messagesDir, 'zh.po'), formatPo(catalog))
       const runtime = new URL(

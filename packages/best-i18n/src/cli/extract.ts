@@ -1,13 +1,31 @@
 #!/usr/bin/env node
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { loadConfigFile } from '../compiler/config-file.ts'
 import { mergeMessages } from '../compiler/merge.ts'
 import { formatPo, parsePo, samePo } from '../compiler/po.ts'
+import {
+  commonShard,
+  fileOfReference,
+  findShards,
+  shardDir,
+  shardOf,
+} from '../compiler/shards.ts'
 import { extract } from '../compiler/transform.ts'
 import { fail as failCli, parseCli } from './args.ts'
+import type { ResolvedConfig } from '../compiler/config-file.ts'
 import type { SourceMessage } from '../compiler/merge.ts'
 import type { PoEntry } from '../compiler/po.ts'
+import type { SplitOptions } from '../compiler/shards.ts'
 
 const NAME = 'i18n-extract'
 const MACRO_MODULE = 'best-i18n/macro'
@@ -31,18 +49,21 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.output', '.wrangler'])
 
 /** The command line, as cac hands it over. */
 interface Options {
+  config?: string
   locales?: string
   base?: string
-  src?: string[]
-  messages: string
-  tag: string
-  component: string
-  hook: string
-  from: string
-  componentFrom: string
-  hookFrom: string
+  src?: Array<string | undefined>
+  messages?: string
+  tag?: string
+  component?: string
+  hook?: string
+  from?: string
+  componentFrom?: string
+  hookFrom?: string
   check?: boolean
   force?: boolean
+  splitDepth?: string
+  splitRoot?: string
 }
 
 /** The command line, validated and with defaults applied. */
@@ -61,6 +82,8 @@ interface Config {
   check: boolean
   /** Allow a write that drops translations. */
   force: boolean
+  /** Shard the catalog by source directory; unset writes one catalog. */
+  split: SplitOptions | undefined
 }
 
 /** What the write phase learns, which decides the exit code and the summary. */
@@ -80,6 +103,18 @@ interface Report {
 const out = (line: string) => process.stdout.write(`${line}\n`)
 const fail: (message: string) => never = (message) => failCli(NAME, message)
 
+// Identified the way gettext identifies an entry: context plus text (plus
+// plural form). The build keys its catalog the same way, so the two can
+// never disagree.
+const keyOf = (context: string, text: string, pluralText?: string) =>
+  `${context}\u0004${text}${pluralText === undefined ? '' : `\u0005${pluralText}`}`
+
+const keyOfMessage = (message: SourceMessage) =>
+  keyOf(message.context, message.text, message.pluralText)
+
+const keyOfEntry = (entry: PoEntry) =>
+  keyOf(entry.context, entry.source, entry.pluralSource)
+
 function main(): number {
   const config = configure()
   const { found, scanned } = collect(config)
@@ -92,10 +127,45 @@ function main(): number {
     refused: false,
     bootstrapped: [],
   }
-  writeTemplate(config, found, report)
+
+  // Every locale is merged as one catalog, whatever the shards on disk say:
+  // a reworded message has to find its old translation even when the
+  // rewording moved it to another shard. Only the write splits it again.
+  const existing = findShards(config.messagesDir)
+  const targets = new Map(
+    found.map((message) => [keyOfMessage(message), targetOf(config, message)]),
+  )
+  const live = new Set(targets.values())
+  if (live.size === 0) live.add('')
+
+  const merged = new Map<string, LocaleShards>()
   for (const locale of config.locales.filter((item) => item !== config.base)) {
-    writeLocale(config, locale, found, report)
+    const result = mergeLocale(config, locale, found, existing, targets, report)
+    if (result === undefined) continue
+    merged.set(locale, result)
+    for (const shard of result.shards.keys()) live.add(shard)
   }
+
+  for (const shard of [...live].sort()) {
+    writeTemplate(
+      config,
+      shard,
+      found.filter((message) => targets.get(keyOfMessage(message)) === shard),
+      report,
+    )
+    for (const [locale, result] of merged) {
+      writeLocale(config, shard, locale, result, report)
+    }
+  }
+
+  // A refused locale still has translations in the old layout; removing a
+  // shard now would take them with it.
+  if (!report.refused) {
+    for (const shard of existing) {
+      if (!live.has(shard)) removeShard(config, shard, report)
+    }
+  }
+
   return summarize(config, report)
 }
 
@@ -107,9 +177,15 @@ function configure(): Config {
     'collect t`` messages into PO catalogs',
     `  Writes messages/messages.pot (the template, source texts) and merges every
   target locale's messages/<locale>.po. Hand the .po files to a translator or an
-  LLM, then run i18n-compile to produce the JSON the build consumes.`,
+  LLM, then run i18n-compile to produce the JSON the build consumes.
+
+  Options not given here are read from i18n.config.ts, when there is one.`,
     (command) =>
       command
+        .option(
+          '--config <file>',
+          'config file (default: i18n.config.{ts,mts,js,mjs})',
+        )
         .option(
           '--locales <list>',
           'comma separated, first one is the base locale',
@@ -120,34 +196,36 @@ function configure(): Config {
           'source root to scan, repeatable (default: src)',
           { type: [] },
         )
-        .option('--messages <dir>', 'catalog directory', {
-          default: 'messages',
-        })
-        .option('--tag <name>', 'macro export to collect', { default: 't' })
-        .option('--component <name>', 'component macro to collect', {
-          default: 'Trans',
-        })
-        .option('--hook <name>', 'hook macro export to collect', {
-          default: 'useI18n',
-        })
-        .option('--from <list>', 'modules exporting the macro', {
-          default: MACRO_MODULE,
-        })
+        .option('--messages <dir>', 'catalog directory (default: messages)')
+        .option('--tag <name>', 'macro export to collect (default: t)')
+        .option(
+          '--component <name>',
+          'component macro to collect (default: Trans)',
+        )
+        .option(
+          '--hook <name>',
+          'hook macro export to collect (default: useI18n)',
+        )
+        .option(
+          '--from <list>',
+          `modules exporting the macro (default: ${MACRO_MODULE})`,
+        )
         .option(
           '--component-from <list>',
-          'modules exporting the component macro',
-          {
-            default: [
-              COMPONENT_MODULE,
-              SVELTE_COMPONENT_MODULE,
-              SOLID_COMPONENT_MODULE,
-              VUE_COMPONENT_MODULE,
-            ].join(','),
-          },
+          'modules exporting the component macro (default: best-i18n/*/macro)',
         )
-        .option('--hook-from <list>', 'modules exporting the hook macro', {
-          default: COMPONENT_MODULE,
-        })
+        .option(
+          '--hook-from <list>',
+          `modules exporting the hook macro (default: ${COMPONENT_MODULE})`,
+        )
+        .option(
+          '--split-depth <n>',
+          'shard the catalog by source directory, this many levels deep',
+        )
+        .option(
+          '--split-root <dir>',
+          'directory shard paths are relative to (default: the --src root)',
+        )
         .option('--check', 'write nothing, exit 1 if out of date')
         .option(
           '--force',
@@ -155,23 +233,75 @@ function configure(): Config {
         ),
   )
 
-  const locales = options.locales?.split(',').filter(Boolean) ?? []
-  if (locales.length === 0) fail('--locales is required')
-  const roots = options.src ?? []
+  let file: ResolvedConfig | undefined
+  try {
+    file = loadConfigFile(
+      options.config === undefined ? {} : { file: options.config },
+    )?.config
+  } catch (error) {
+    fail((error as Error).message)
+  }
+  // The file's paths are absolute; references in the catalogs are written
+  // as the walk spells them, so they go back to relative to where it runs.
+  const relative = (target: string) =>
+    path.relative(process.cwd(), target) || '.'
+  const list = (value: string | undefined) => value?.split(',').filter(Boolean)
+
+  const locales = list(options.locales) ?? file?.locales ?? []
+  if (locales.length === 0) {
+    fail('--locales is required, or an i18n.config.ts that lists them')
+  }
+
+  // cac hands an unrepeated array option over as `[undefined]`.
+  const flagRoots = (options.src ?? []).filter(
+    (root): root is string => typeof root === 'string',
+  )
+  const roots =
+    flagRoots.length > 0 ? flagRoots : (file?.src.map(relative) ?? ['src'])
+
+  let split: SplitOptions | undefined
+  if (options.splitDepth !== undefined) {
+    const depth = Number(options.splitDepth)
+    if (!Number.isInteger(depth) || depth < 1) {
+      fail('--split-depth must be a whole number of levels, 1 or more')
+    }
+    // With several roots there is no one directory to measure from, short of
+    // the working directory, which then spends a level on the root's name.
+    split = {
+      root: options.splitRoot ?? (roots.length === 1 ? roots[0]! : '.'),
+      depth,
+    }
+  } else if (options.splitRoot !== undefined) {
+    fail('--split-root needs --split-depth')
+  } else if (file?.split !== undefined) {
+    split = { root: relative(file.split.root), depth: file.split.depth }
+  }
 
   return {
     locales,
-    base: options.base ?? locales[0]!,
-    roots: roots.length > 0 ? roots : ['src'],
-    messagesDir: options.messages,
-    tag: options.tag,
-    component: options.component,
-    hook: options.hook,
-    from: options.from.split(','),
-    componentFrom: options.componentFrom.split(','),
-    hookFrom: options.hookFrom.split(','),
+    base:
+      options.base ??
+      (options.locales === undefined ? file?.baseLocale : undefined) ??
+      locales[0]!,
+    roots,
+    messagesDir:
+      options.messages ??
+      (file === undefined ? 'messages' : relative(file.messagesDir)),
+    tag: options.tag ?? file?.tag ?? 't',
+    component: options.component ?? file?.component ?? 'Trans',
+    hook: options.hook ?? file?.hook ?? 'useI18n',
+    from: list(options.from) ?? file?.from ?? [MACRO_MODULE],
+    componentFrom: list(options.componentFrom) ??
+      file?.componentFrom ?? [
+        COMPONENT_MODULE,
+        SVELTE_COMPONENT_MODULE,
+        SOLID_COMPONENT_MODULE,
+        VUE_COMPONENT_MODULE,
+      ],
+    hookFrom: list(options.hookFrom) ?? file?.hookFrom ?? [COMPONENT_MODULE],
     check: options.check === true,
     force: options.force === true,
+    split,
   }
 }
 
@@ -186,6 +316,17 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+/** The shard a message is written to; the root unless the catalog is split. */
+function targetOf(config: Config, message: SourceMessage): string {
+  const { split } = config
+  if (split === undefined) return ''
+  return commonShard(
+    message.references.map((reference) =>
+      shardOf(fileOfReference(reference), split),
+    ),
+  )
+}
+
 /** Every message under the source roots, one entry per distinct message. */
 function collect(config: Config): {
   found: SourceMessage[]
@@ -195,12 +336,6 @@ function collect(config: Config): {
   const specifiers = [...from, ...componentFrom, ...hookFrom]
   const byKey = new Map<string, SourceMessage>()
   let scanned = 0
-
-  // Identified the way gettext identifies an entry: context plus text (plus
-  // plural form). The build keys its catalog the same way, so the two can
-  // never disagree.
-  const keyOf = (context: string, text: string, pluralText?: string) =>
-    `${context}\u0004${text}${pluralText === undefined ? '' : `\u0005${pluralText}`}`
 
   for (const root of config.roots) {
     for (const file of walk(root)) {
@@ -221,7 +356,9 @@ function collect(config: Config): {
         componentFrom,
       })) {
         const key = keyOf(message.context, message.text, message.plural?.other)
-        const reference = `${file}:${message.line}`
+        // Forward slashes on every platform, so a catalog reads the same
+        // wherever it was extracted.
+        const reference = `${file.split(path.sep).join('/')}:${message.line}`
         const seen = byKey.get(key)
 
         if (seen === undefined) {
@@ -281,7 +418,7 @@ function writeIfChanged(
   report.dirty = true
   out(`  ${config.check ? 'stale' : 'wrote'}:   ${file}`)
   if (!config.check) {
-    mkdirSync(config.messagesDir, { recursive: true })
+    mkdirSync(path.dirname(file), { recursive: true })
     writeFileSync(file, text)
   }
 }
@@ -289,10 +426,11 @@ function writeIfChanged(
 /** The template carries the source texts with empty msgstr. */
 function writeTemplate(
   config: Config,
+  shard: string,
   found: SourceMessage[],
   report: Report,
 ): void {
-  const file = path.join(config.messagesDir, 'messages.pot')
+  const file = path.join(shardDir(config.messagesDir, shard), 'messages.pot')
   const text = formatPo({
     locale: config.base,
     entries: found.map((message) => ({
@@ -315,22 +453,66 @@ function writeTemplate(
 }
 
 /**
+ * One locale's existing entries across every shard, each remembered with the
+ * shard it came from.
+ *
  * A missing catalog bootstraps an empty one, which is right on a first run and
  * a disaster on any later one: every translation would be rewritten as empty.
  * It is therefore reported, so an unexpected bootstrap is visible rather than
- * silent.
+ * silent. A shard without this locale's file is not a bootstrap: extract
+ * creates shards as messages move.
  */
-function readPo(config: Config, report: Report, locale: string) {
-  const file = path.join(config.messagesDir, `${locale}.po`)
-  try {
-    return parsePo(readFileSync(file, 'utf8'), locale)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      report.bootstrapped.push(file)
-      return { locale, entries: [] }
+function readLocale(
+  config: Config,
+  report: Report,
+  locale: string,
+  shards: string[],
+): {
+  entries: PoEntry[]
+  origin: Map<string, string>
+  headers: Map<string, Record<string, string>>
+} {
+  const entries: PoEntry[] = []
+  const origin = new Map<string, string>()
+  const headers = new Map<string, Record<string, string>>()
+  let read = 0
+
+  for (const shard of shards) {
+    const file = path.join(shardDir(config.messagesDir, shard), `${locale}.po`)
+    let text: string
+    try {
+      text = readFileSync(file, 'utf8')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
+      throw error
     }
-    throw error
+    read++
+    const po = parsePo(text, locale)
+    if (po.headers !== undefined) headers.set(shard, po.headers)
+    for (const entry of po.entries) {
+      entries.push(entry)
+      origin.set(keyOfEntry(entry), shard)
+    }
   }
+
+  if (read === 0) {
+    report.bootstrapped.push(path.join(config.messagesDir, `${locale}.po`))
+  }
+  return { entries, origin, headers }
+}
+
+/**
+ * Where an obsolete entry goes: the shard it was in while that shard still
+ * has live messages, otherwise the nearest one above it that does. A shard
+ * whose source is gone then goes away with it, and its translations wait in
+ * the parent in case the wording comes back.
+ */
+function obsoleteHome(shard: string, live: Set<string>): string {
+  let home = shard
+  while (home !== '' && !live.has(home)) {
+    home = home.includes('/') ? home.slice(0, home.lastIndexOf('/')) : ''
+  }
+  return home
 }
 
 /**
@@ -363,14 +545,26 @@ function placeholderIssue(source: string, target: string): string | undefined {
   )
 }
 
-/** Merges what was found into one locale's catalog and reports on it. */
-function writeLocale(
+/** One locale's merged catalog, split by shard, with each shard's headers. */
+interface LocaleShards {
+  shards: Map<string, PoEntry[]>
+  headers: Map<string, Record<string, string>>
+}
+
+/**
+ * Merges what was found into one locale's catalog, reports on it, and splits
+ * the result by shard. `undefined` when the locale refused to shrink and must
+ * not be written.
+ */
+function mergeLocale(
   config: Config,
   locale: string,
   found: SourceMessage[],
+  existingShards: string[],
+  targets: Map<string, string>,
   report: Report,
-): void {
-  const existing = readPo(config, report, locale)
+): LocaleShards | undefined {
+  const existing = readLocale(config, report, locale, existingShards)
   const merged = mergeMessages({ found, existing: existing.entries })
   const file = path.join(config.messagesDir, `${locale}.po`)
 
@@ -386,7 +580,7 @@ function writeLocale(
         `resolves, then re-run with --force if this is intended.`,
     )
     report.refused = true
-    return
+    return undefined
   }
 
   const missing = merged.entries.filter(
@@ -423,14 +617,86 @@ function writeLocale(
     out(`    ! placeholder mismatch (${issue}): "${entry.source}"`)
   }
 
+  const live = new Set(targets.values())
+  const shards = new Map<string, PoEntry[]>()
+  for (const entry of merged.entries) {
+    const key = keyOfEntry(entry)
+    const shard = entry.obsolete
+      ? obsoleteHome(existing.origin.get(key) ?? '', live)
+      : (targets.get(key) ?? '')
+    const list = shards.get(shard)
+    if (list === undefined) shards.set(shard, [entry])
+    else list.push(entry)
+  }
+  return { shards, headers: existing.headers }
+}
+
+/**
+ * Writes one shard of one locale's merged catalog. Headers a translator or a
+ * TMS set - `Plural-Forms` above all - survive the rewrite; a shard that is
+ * new takes the root's, so splitting a catalog does not lose them either.
+ */
+function writeLocale(
+  config: Config,
+  shard: string,
+  locale: string,
+  merged: LocaleShards,
+  report: Report,
+): void {
+  const entries = merged.shards.get(shard) ?? []
+  const headers =
+    merged.headers.get(shard) ??
+    merged.headers.get('') ??
+    merged.headers.values().next().value
   writeIfChanged(
     config,
     report,
-    file,
+    path.join(shardDir(config.messagesDir, shard), `${locale}.po`),
     locale,
-    merged.entries,
-    formatPo({ locale, entries: merged.entries }),
+    entries,
+    formatPo({
+      locale,
+      entries,
+      ...(headers === undefined ? {} : { headers }),
+    }),
   )
+}
+
+/**
+ * Deletes a shard nothing is written to any more: its template and the
+ * configured locales' catalogs, then every directory left empty up to the
+ * catalog root. Files it does not own stay, and so does their directory.
+ */
+function removeShard(config: Config, shard: string, report: Report): void {
+  const dir = shardDir(config.messagesDir, shard)
+  const names = [
+    'messages.pot',
+    ...config.locales
+      .filter((locale) => locale !== config.base)
+      .map((locale) => `${locale}.po`),
+  ]
+
+  for (const name of names) {
+    const file = path.join(dir, name)
+    if (!existsSync(file)) continue
+    report.dirty = true
+    out(`  ${config.check ? 'stale' : 'removed'}: ${file}`)
+    if (!config.check) rmSync(file)
+  }
+  if (config.check) return
+
+  const root = path.resolve(config.messagesDir)
+  for (
+    let current = path.resolve(dir);
+    current !== root && current.startsWith(root);
+    current = path.dirname(current)
+  ) {
+    try {
+      rmdirSync(current)
+    } catch {
+      return
+    }
+  }
 }
 
 /** The closing lines, and the exit code they justify. */

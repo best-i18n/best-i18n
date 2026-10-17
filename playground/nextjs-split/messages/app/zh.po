@@ -1,0 +1,24 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/app/[locale]/page.tsx:8
+msgid "Workspace"
+msgstr "工作区"
+
+#: src/app/[locale]/page.tsx:9
+msgid "Each area of this app keeps its own translations."
+msgstr "这个应用的每个区域都有自己的翻译文件。"
+
+#: src/app/[locale]/page.tsx:11
+msgid ""
+"Open billing or settings, then look under messages/ to see which file each "
+"text came from."
+msgstr "打开账单或设置页面，再到 messages/ 下看看每段文字来自哪个文件。"

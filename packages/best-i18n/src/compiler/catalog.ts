@@ -2,12 +2,17 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { pluralRuleFor } from './plural.ts'
 import { parsePo } from './po.ts'
+import { findShards, shardDir } from './shards.ts'
 import { catalogKey } from './transform.ts'
 import type { PluralRule } from './plural.ts'
+import type { PoFile } from './po.ts'
 import type { TransformOptions } from './transform.ts'
 
 export interface CatalogOptions {
-  /** Directory holding `messages.pot` and `<locale>.po`. */
+  /**
+   * Directory holding `messages.pot` and `<locale>.po`, and any shards
+   * `i18n-extract --split-depth` wrote below it.
+   */
   messagesDir: string
   locales: string[]
   baseLocale: string
@@ -35,20 +40,39 @@ export function loadCatalog(options: CatalogOptions): LoadedCatalog {
   const plurals: Record<string, PluralRule> = {}
   const files: string[] = []
 
-  const templateFile = path.join(messagesDir, 'messages.pot')
-  files.push(templateFile)
+  // A catalog split by `i18n-extract --split-depth` is several directories
+  // laid out like this one; an unsplit one is the root alone. Reading the
+  // root even when nothing was found keeps the error for a missing catalog
+  // pointing at the file people expect.
+  const found = findShards(messagesDir)
+  const shards = found.length > 0 ? found : ['']
+  const read = (file: string, locale: string) => {
+    files.push(file)
+    return parsePo(readFileSync(file, 'utf8'), locale)
+  }
+  // Shards are one catalog: the first one that states `Plural-Forms` speaks
+  // for the locale, the root before any other.
+  const ruleOf = (locale: string, headers: Array<PoFile['headers']>) =>
+    pluralRuleFor(
+      locale,
+      headers.find((header) => header?.['Plural-Forms'] !== undefined)?.[
+        'Plural-Forms'
+      ],
+    )
 
-  const template = parsePo(readFileSync(templateFile, 'utf8'), baseLocale)
-  plurals[baseLocale] = pluralRuleFor(
+  const templates = shards.map((shard) =>
+    read(path.join(shardDir(messagesDir, shard), 'messages.pot'), baseLocale),
+  )
+  plurals[baseLocale] = ruleOf(
     baseLocale,
-    template.headers?.['Plural-Forms'],
+    templates.map((template) => template.headers),
   )
 
   // The set of keys the source actually contains, so a stale entry in a
   // locale file cannot invent a message.
   const known = new Set<string>()
 
-  for (const entry of template.entries) {
+  for (const entry of templates.flatMap((template) => template.entries)) {
     if (entry.obsolete) continue
     const key = catalogKey(entry.context, entry.source, entry.pluralSource)
     known.add(key)
@@ -62,14 +86,16 @@ export function loadCatalog(options: CatalogOptions): LoadedCatalog {
   for (const locale of locales) {
     if (locale === baseLocale) continue
 
-    const file = path.join(messagesDir, `${locale}.po`)
-    files.push(file)
-
-    const po = parsePo(readFileSync(file, 'utf8'), locale)
-    const rule = pluralRuleFor(locale, po.headers?.['Plural-Forms'])
+    const po = shards.map((shard) =>
+      read(path.join(shardDir(messagesDir, shard), `${locale}.po`), locale),
+    )
+    const rule = ruleOf(
+      locale,
+      po.map((file) => file.headers),
+    )
     plurals[locale] = rule
 
-    for (const entry of po.entries) {
+    for (const entry of po.flatMap((file) => file.entries)) {
       // A fuzzy translation was written for a different wording - the merge
       // flagged it for review, so shipping it verbatim would be wrong in a
       // way nobody would see. Standard gettext behaviour: fuzzy does not

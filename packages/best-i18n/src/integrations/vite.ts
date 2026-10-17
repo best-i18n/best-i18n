@@ -1,15 +1,28 @@
 import path from 'node:path'
 import { loadCatalog } from '../compiler/catalog.ts'
+import { withConfigFile } from '../compiler/config-file.ts'
 import { transform } from '../compiler/transform.ts'
 import type { Plugin } from 'vite'
 import type { TransformOptions } from '../compiler/transform.ts'
 
 export interface I18nPluginOptions extends Omit<
   TransformOptions,
-  'catalog' | 'plurals' | 'staticLocale'
+  'catalog' | 'plurals' | 'staticLocale' | 'locales' | 'baseLocale'
 > {
-  /** Directory holding `messages.pot` and `<locale>.po`. */
-  messagesDir: string
+  /** Every locale. Read from `i18n.config.ts` when not passed. */
+  locales?: string[]
+  /**
+   * The fallback for missing translations. Read from `i18n.config.ts` when
+   * not passed, and the first locale when neither says.
+   */
+  baseLocale?: string
+  /**
+   * Directory holding `messages.pot` and `<locale>.po`. Read from
+   * `i18n.config.ts` when not passed.
+   *
+   * @default 'messages'
+   */
+  messagesDir?: string
   /**
    * Emit only this locale and drop the runtime lookup (per-locale build).
    * Typically driven by an env var so one config can build every locale.
@@ -44,7 +57,8 @@ export interface I18nPluginOptions extends Omit<
  * Router, SvelteKit, Astro. Next.js has its own integration in
  * `best-i18n/next`, because it does not run on Vite.
  */
-export function i18n(options: I18nPluginOptions): Plugin {
+export function i18n(input: I18nPluginOptions = {}): Plugin {
+  const options = withConfigFile('best-i18n', input)
   const extensions = [
     '[cm]?[jt]sx?',
     ...(options.svelte === true ? ['svelte'] : []),

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "extract": "i18n-extract --locales en,zh --src src --messages messages",
+    "extract": "i18n-extract",
     "start": "serve out",
     "typecheck": "next typegen && tsc --noEmit",
     "deploy": "pnpm build && wrangler deploy",

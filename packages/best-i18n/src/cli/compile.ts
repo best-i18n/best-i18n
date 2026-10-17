@@ -2,16 +2,20 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { loadConfigFile } from '../compiler/config-file.ts'
 import { parsePo } from '../compiler/po.ts'
+import { findShards, shardDir } from '../compiler/shards.ts'
 import { fail as failCli, parseCli } from './args.ts'
+import type { ResolvedConfig } from '../compiler/config-file.ts'
 
 const NAME = 'i18n-compile'
 
 /** The command line, as cac hands it over. */
 interface Options {
+  config?: string
   locales?: string
   base?: string
-  messages: string
+  messages?: string
   outdir?: string
   format: string
   skipFuzzy?: boolean
@@ -50,17 +54,21 @@ function configure(): Config {
     NAME,
     'turn the PO catalogs into what the build consumes',
     `  Reads messages/messages.pot (source texts) and messages/<locale>.po, and
-  writes one catalog per locale. The output is a build artifact: edit the .po.`,
+  writes one catalog per locale. The output is a build artifact: edit the .po.
+
+  Options not given here are read from i18n.config.ts, when there is one.`,
     (command) =>
       command
+        .option(
+          '--config <file>',
+          'config file (default: i18n.config.{ts,mts,js,mjs})',
+        )
         .option(
           '--locales <list>',
           'comma separated, first one is the base locale',
         )
         .option('--base <locale>', 'override the base locale')
-        .option('--messages <dir>', 'catalog directory', {
-          default: 'messages',
-        })
+        .option('--messages <dir>', 'catalog directory (default: messages)')
         .option(
           '--outdir <dir>',
           'output directory (default: same as --messages)',
@@ -72,16 +80,36 @@ function configure(): Config {
         ),
   )
 
-  const locales = options.locales?.split(',').filter(Boolean) ?? []
-  if (locales.length === 0) fail('--locales is required')
+  let file: ResolvedConfig | undefined
+  try {
+    file = loadConfigFile(
+      options.config === undefined ? {} : { file: options.config },
+    )?.config
+  } catch (error) {
+    fail((error as Error).message)
+  }
+
+  const flagLocales = options.locales?.split(',').filter(Boolean)
+  const locales = flagLocales ?? file?.locales ?? []
+  if (locales.length === 0) {
+    fail('--locales is required, or an i18n.config.ts that lists them')
+  }
   const { format } = options
   if (format !== 'json' && format !== 'js') fail(`unknown --format ${format}`)
+  const messagesDir =
+    options.messages ??
+    (file === undefined
+      ? 'messages'
+      : path.relative(process.cwd(), file.messagesDir) || '.')
 
   return {
     locales,
-    base: options.base ?? locales[0]!,
-    messagesDir: options.messages,
-    outdir: options.outdir ?? options.messages,
+    base:
+      options.base ??
+      (flagLocales === undefined ? file?.baseLocale : undefined) ??
+      locales[0]!,
+    messagesDir,
+    outdir: options.outdir ?? messagesDir,
     format,
     skipFuzzy: options.skipFuzzy === true,
   }
@@ -100,6 +128,19 @@ function readPo(file: string, locale: string) {
   }
 }
 
+/**
+ * One file's entries across every shard `i18n-extract --split-depth` wrote,
+ * or from the catalog directory alone when it was never split.
+ */
+function readShards(config: Config, name: string, locale: string) {
+  const shards = findShards(config.messagesDir)
+  return (shards.length > 0 ? shards : ['']).flatMap(
+    (shard) =>
+      readPo(path.join(shardDir(config.messagesDir, shard), name), locale)
+        .entries,
+  )
+}
+
 // Keyed the way gettext identifies entries: the source text, prefixed by
 // the context when there is one. Plural entries map to their msgstr array.
 const keyOf = (entry: { context: string; source: string }) =>
@@ -107,12 +148,8 @@ const keyOf = (entry: { context: string; source: string }) =>
 
 /** The base locale's catalog: every source text, keyed like the build does. */
 function readTemplate(config: Config): Catalog {
-  const template = readPo(
-    path.join(config.messagesDir, 'messages.pot'),
-    config.base,
-  )
   const sources: Catalog = {}
-  for (const entry of template.entries) {
+  for (const entry of readShards(config, 'messages.pot', config.base)) {
     if (entry.obsolete) continue
     sources[keyOf(entry)] =
       entry.pluralSource === undefined
@@ -131,11 +168,10 @@ function compileLocale(
   locale: string,
   sources: Catalog,
 ): Catalog {
-  const po = readPo(path.join(config.messagesDir, `${locale}.po`), locale)
   const catalog: Catalog = {}
   let fuzzySkipped = 0
 
-  for (const entry of po.entries) {
+  for (const entry of readShards(config, `${locale}.po`, locale)) {
     if (entry.obsolete) continue
     if (!(keyOf(entry) in sources)) continue
     if (entry.target === '') continue

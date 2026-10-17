@@ -35,6 +35,7 @@ export default defineConfig({
         'apps/website/**',
         'playground/nextjs/**',
         'playground/nextjs-intl/**',
+        'playground/nextjs-split/**',
       ],
       plugins: ['nextjs'],
       rules: {

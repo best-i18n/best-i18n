@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/features/settings/notifications.tsx:6
+msgid "Notifications"
+msgstr "通知"
+
+#: src/features/settings/notifications.tsx:8
+msgid "Email me when an invoice is ready"
+msgstr "发票开出时给我发邮件"
+
+#: src/features/settings/profile-form.tsx:11
+msgid "Profile"
+msgstr "个人资料"
+
+#: src/features/settings/profile-form.tsx:13
+msgid "Display name"
+msgstr "显示名称"

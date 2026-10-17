@@ -25,6 +25,72 @@ mismatch when it merges, so a bad TMS import is visible before anyone builds.
 Comments, flags, plural entries and headers written by translators or a TMS
 survive a rewrite untouched.
 
+## Config file
+
+The CLIs and the bundler plugins take the same facts - locales, the catalog
+directory, re-exported macro modules. Write them once in `i18n.config.ts` and
+every one of them reads it:
+
+```ts
+// i18n.config.ts
+import { defineConfig } from 'best-i18n/config'
+
+export default defineConfig({
+  locales: ['en', 'zh'], // the first is the base locale unless baseLocale says
+  messagesDir: 'messages',
+  src: ['src'],
+  hookFrom: ['~/i18n'],
+  split: { depth: 2 },
+})
+```
+
+```bash
+i18n-extract   # no flags needed
+```
+
+An option passed explicitly - a flag, a plugin option - wins over the file,
+and without a file everything works from options as before. Paths are
+relative to the file. It is looked up in the working directory as
+`i18n.config.{ts,mts,js,mjs}`, or named with `--config`. A `.ts` config is
+loaded by Node itself, so it needs Node 22.18+ (or 23.6+) and erasable
+TypeScript only; `i18n.config.mjs` works on any version.
+
+This file is build-time only. What the running app needs - cookie, proxy,
+`exclude` - stays in `defineI18nConfig`.
+
+## Splitting a large catalog
+
+One `.po` per locale stops scaling once a project has thousands of messages:
+the file is hard to review and every team edits the same one. Pass
+`--split-depth` and the catalog is sharded by source directory instead.
+
+```bash
+i18n-extract --locales en,zh --src src --split-depth 2
+```
+
+```text
+messages/
+  messages.pot  zh.po          # messages shared across shards
+  components/
+    messages.pot  zh.po
+  features/billing/
+    messages.pot  zh.po
+```
+
+- A file's messages go to its directory under `--split-root` (default: the
+  `--src` root), cut after `--split-depth` levels. Route segments - `[param]`,
+  `(group)`, `@slot` - are not counted, so `app/[locale]/about/page.tsx` at
+  depth 2 is `app/[locale]/about`.
+- A message used from several shards lives in their deepest common directory,
+  so shared texts rise toward the root on their own.
+- The merge still runs over the whole catalog: a reworded message keeps its
+  translation even when it moves shard, a deleted page's translations stay as
+  obsolete entries in the nearest shard above it, and empty shards are
+  removed.
+- Nothing else is configured: the bundler plugins and `i18n-compile` read
+  every shard under `messagesDir`. Run without `--split-depth` (or `split` in
+  the config file) and the shards fold back into one catalog.
+
 ## Re-exported macros
 
 `from`/`hookFrom` match import specifiers as written in the source, so if you

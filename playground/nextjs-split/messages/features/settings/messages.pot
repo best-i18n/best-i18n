@@ -1,0 +1,25 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/features/settings/notifications.tsx:6
+msgid "Notifications"
+msgstr ""
+
+#: src/features/settings/notifications.tsx:8
+msgid "Email me when an invoice is ready"
+msgstr ""
+
+#: src/features/settings/profile-form.tsx:11
+msgid "Profile"
+msgstr ""
+
+#: src/features/settings/profile-form.tsx:13
+msgid "Display name"
+msgstr ""
