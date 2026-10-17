@@ -356,7 +356,9 @@ function collect(config: Config): {
         componentFrom,
       })) {
         const key = keyOf(message.context, message.text, message.plural?.other)
-        const reference = `${file}:${message.line}`
+        // Forward slashes on every platform, so a catalog reads the same
+        // wherever it was extracted.
+        const reference = `${file.split(path.sep).join('/')}:${message.line}`
         const seen = byKey.get(key)
 
         if (seen === undefined) {
