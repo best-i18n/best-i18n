@@ -455,6 +455,7 @@ Whitespace follows JSX's own rules, so the stored message matches what renders
 ```bash
 i18n-extract --locales en,zh          # writes messages/messages.pot + zh.po
 i18n-extract --locales en,zh --check  # CI: exit 1 when stale or untranslated
+i18n-extract --locales en,zh --split-depth 2  # shard a large catalog by source directory
 i18n-compile --locales en,zh --outdir out --format json   # optional JSON/JS export
 ```
 
@@ -462,6 +463,19 @@ The `.po` files are the source of truth — the vite plugin reads them directly,
 no compile step in between. Editing a message file in dev triggers a full
 reload. An extract run never reduces the number of translations; if it would,
 it refuses and asks for `--force`.
+
+The CLIs and the bundler plugins read `i18n.config.ts` (or `.mts`/`.js`/`.mjs`)
+from the working directory when there is one, so locales, `messagesDir`,
+re-exported macro modules and `split` are written once; an explicit flag or
+plugin option still wins. Define it with `defineConfig` from
+`best-i18n/config`; paths are relative to the file. A `.ts` config needs Node
+22.18+ or 23.6+ (Node strips the types itself).
+
+`--split-depth <n>` shards the catalog by source directory: each shard is a
+subdirectory of `messages/` with its own `messages.pot` and `<locale>.po`, a
+message used from several shards lives in their common parent, and the merge
+still runs over the whole catalog. The plugins and `i18n-compile` read every
+shard with no extra option; running without the flag folds them back into one.
 
 Fuzzy translations do not build — standard gettext behaviour. A carried-over
 translation stays in the catalog marked `fuzzy`, the message falls back to the

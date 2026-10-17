@@ -6,6 +6,7 @@ import { defineConfig } from 'tsdown'
 export default defineConfig({
   entry: {
     'macro': 'src/macro.ts',
+    'config': 'src/config.ts',
     'react': 'src/frameworks/react/index.ts',
     'react-macro': 'src/frameworks/react/macro.ts',
     'solid': 'src/frameworks/solid/index.ts',

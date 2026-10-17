@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -127,5 +127,38 @@ describe('loadCatalog', () => {
     })
 
     expect(catalog['One item\u0005{n} items']!.zh).toBeUndefined()
+  })
+
+  it('reads a catalog split into shards as one', () => {
+    const dir = writeCatalog({
+      template: [entry({ source: 'Shared' })],
+      zh: [entry({ source: 'Shared', target: '共享' })],
+      zhHeaders: { 'Plural-Forms': 'nplurals=1; plural=0;' },
+    })
+    const shard = path.join(dir, 'app', 'about')
+    mkdirSync(shard, { recursive: true })
+    writeFileSync(
+      path.join(shard, 'messages.pot'),
+      formatPo({ locale: 'en', entries: [entry({ source: 'About us' })] }),
+    )
+    writeFileSync(
+      path.join(shard, 'zh.po'),
+      formatPo({
+        locale: 'zh',
+        entries: [entry({ source: 'About us', target: '关于我们' })],
+      }),
+    )
+
+    const { catalog, plurals, files } = loadCatalog({
+      messagesDir: dir,
+      locales: ['en', 'zh'],
+      baseLocale: 'en',
+    })
+
+    expect(catalog.Shared).toEqual({ en: 'Shared', zh: '共享' })
+    expect(catalog['About us']).toEqual({ en: 'About us', zh: '关于我们' })
+    // A shard without `Plural-Forms` does not override the root's.
+    expect(plurals.zh).toEqual({ nplurals: 1, formula: '0' })
+    expect(files).toHaveLength(4)
   })
 })

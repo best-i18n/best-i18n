@@ -21,6 +21,64 @@ Fuzzy 翻译不参与构建——标准 gettext 行为。改写消息时带过�
 `i18n-extract` 在合并时报告同样的不匹配，所以一次糟糕的 TMS 导入在任何人构建之前
 就能被看到。翻译者或 TMS 写入的注释、标志、复数条目和头部在重写后原样保留。
 
+## 配置文件
+
+CLI 和打包器插件需要的是同一组信息——locales、catalog 目录、重导出的宏模块。把它们
+写在 `i18n.config.ts` 里，所有工具都会读取：
+
+```ts
+// i18n.config.ts
+import { defineConfig } from 'best-i18n/config'
+
+export default defineConfig({
+  locales: ['en', 'zh'], // 第一个是基础语言，除非另写 baseLocale
+  messagesDir: 'messages',
+  src: ['src'],
+  hookFrom: ['~/i18n'],
+  split: { depth: 2 },
+})
+```
+
+```bash
+i18n-extract   # 不用再写参数
+```
+
+显式传入的选项——命令行参数、插件选项——优先于配置文件；没有配置文件时一切照旧。
+路径相对于配置文件所在目录。默认在工作目录查找 `i18n.config.{ts,mts,js,mjs}`，
+也可以用 `--config` 指定。`.ts` 配置由 Node 自己加载，所以需要 Node 22.18+（或
+23.6+），并且只能用可擦除的 TypeScript 语法；`i18n.config.mjs` 在任何版本都能用。
+
+这个文件只用于构建期。运行时需要的配置——cookie、proxy、`exclude`——仍然放在
+`defineI18nConfig` 里。
+
+## 拆分大型 catalog
+
+消息数量到了几千条，每个语言一个 `.po` 就不好用了：文件难以 review，所有团队都在
+改同一个文件。传入 `--split-depth`，catalog 就按源码目录拆成多个分片。
+
+```bash
+i18n-extract --locales en,zh --src src --split-depth 2
+```
+
+```text
+messages/
+  messages.pot  zh.po          # 被多个分片共用的消息
+  components/
+    messages.pot  zh.po
+  features/billing/
+    messages.pot  zh.po
+```
+
+- 一个文件的消息归入它在 `--split-root`（默认是 `--src` 根目录）下的目录，截断到
+  `--split-depth` 层。路由段——`[param]`、`(group)`、`@slot`——不计层数，所以深度
+  为 2 时 `app/[locale]/about/page.tsx` 归入 `app/[locale]/about`。
+- 被多个分片用到的消息放在它们最深的公共目录里，共享文案会自动上移到根。
+- 合并依然在整个 catalog 上进行：改写的消息换了分片也保留翻译，被删除页面的翻译
+  作为 obsolete 条目留在上层最近的分片里，空分片会被删除。
+- 别的地方都不用配置：打包器插件和 `i18n-compile` 会读取 `messagesDir` 下的所有
+  分片。不带 `--split-depth`（也不在配置文件里写 `split`）再运行一次，分片就合并回单个
+  catalog。
+
 ## 重导出的宏
 
 `from`/`hookFrom` 按源码里写下的 import 说明符匹配，所以如果你重导出了宏，把你

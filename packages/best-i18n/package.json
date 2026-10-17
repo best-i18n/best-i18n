@@ -39,6 +39,10 @@
       "types": "./dist/macro.d.mts",
       "default": "./dist/macro.mjs"
     },
+    "./config": {
+      "types": "./dist/config.d.mts",
+      "default": "./dist/config.mjs"
+    },
     "./react": {
       "types": "./dist/react.d.mts",
       "default": "./dist/react.mjs"
