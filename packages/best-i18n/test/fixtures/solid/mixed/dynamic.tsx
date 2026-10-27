@@ -7,7 +7,7 @@ export function Words() { return <>{__i18nM1(__i18nGetLocale())}</>; }
 export function Rich(props) { return <>{__i18nM2(__i18nGetLocale(), (__i18nChild) => <a href={props.href}>{__i18nChild}</a>)}</>; }
 export function Page(props) {
   const title = () => __i18nM3(__i18nGetLocale());
-  return <section><h1>{title()}</h1><span>{(__i18nGetLocale() === "zh" ? ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${props.count} items` : `One item`)(props.count) : ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${props.count} items` : `One item`)(props.count))}</span><Rich href="/docs" /></section>;
+  return <section><h1>{title()}</h1><span>{(__i18nGetLocale() === "zh" ? ((__i18nN) => ((__i18nI) => __i18nI === 1 ? `${props.count} items` : `One item`)(+(__i18nN != 1)))(props.count) : ((__i18nN) => ((__i18nI) => __i18nI === 1 ? `${props.count} items` : `One item`)(+(__i18nN != 1)))(props.count))}</span><Rich href="/docs" /></section>;
 }
 
 export function Stored() { const content = <>{__i18nM1(__i18nGetLocale())}</>; return content; }

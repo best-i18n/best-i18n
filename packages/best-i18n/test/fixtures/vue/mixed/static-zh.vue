@@ -9,7 +9,7 @@ const title = computed(() => `你好`)
   <h1 :title="`说“嗨”`">{{ title }}</h1>
   <!-- i18n: greets the signed-in user -->
   <p>{{ `你好 ${props.name}` }}</p>
-  <p>{{ ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${props.count} items` : `One item`)(props.count) }}</p>
+  <p>{{ ((__i18nN) => ((__i18nI) => __i18nI === 1 ? `${props.count} items` : `One item`)(+(__i18nN != 1)))(props.count) }}</p>
   <p>
     {{ `阅读` }}<a href="/docs">{{ `文档` }}</a>{{ `了解` }}<b>{{ `更多` }}</b>{{ `。` }}
   </p>

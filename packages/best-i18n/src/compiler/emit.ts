@@ -224,9 +224,13 @@ export function createEmitter(input: {
           .map((form, index) => `${localI} === ${index + 1} ? ${form} : `)
           .join('')
 
+        // The form index is an argument of an inner call, not a default
+        // parameter: React Compiler skips any component holding a default
+        // parameter it can't reorder (`+(…)` or a call), so a plural in a
+        // component would cost it its memoization.
         return (
-          `((${localN}, ${localI} = +(${formula})) => ` +
-          `${branches}${rendered[0]!})(${message.plural.count})`
+          `((${localN}) => ((${localI}) => ` +
+          `${branches}${rendered[0]!})(+(${formula})))(${message.plural.count})`
         )
       }
 

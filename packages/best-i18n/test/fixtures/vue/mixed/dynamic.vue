@@ -11,7 +11,7 @@ const title = computed(() => __i18nM1(__i18nGetLocale()))
   <h1 :title="(__i18nGetLocale() === &quot;zh&quot; ? `说“嗨”` : `Say 'hi'`)">{{ title }}</h1>
   <!-- i18n: greets the signed-in user -->
   <p>{{ (__i18nGetLocale() === "zh" ? `你好 ${props.name}` : `Hi ${props.name}`) }}</p>
-  <p>{{ (__i18nGetLocale() === "zh" ? ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${props.count} items` : `One item`)(props.count) : ((__i18nN, __i18nI = +(__i18nN != 1)) => __i18nI === 1 ? `${props.count} items` : `One item`)(props.count)) }}</p>
+  <p>{{ (__i18nGetLocale() === "zh" ? ((__i18nN) => ((__i18nI) => __i18nI === 1 ? `${props.count} items` : `One item`)(+(__i18nN != 1)))(props.count) : ((__i18nN) => ((__i18nI) => __i18nI === 1 ? `${props.count} items` : `One item`)(+(__i18nN != 1)))(props.count)) }}</p>
   <p>
     <template v-if="__i18nGetLocale() === 'zh'">{{ `阅读` }}<a href="/docs">{{ `文档` }}</a>{{ `了解` }}<b>{{ `更多` }}</b>{{ `。` }}</template><template v-else>{{ `Read the ` }}<a href="/docs">{{ `docs` }}</a>{{ ` to learn ` }}<b>{{ `more` }}</b>{{ `.` }}</template>
   </p>
