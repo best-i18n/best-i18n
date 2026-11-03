@@ -409,10 +409,10 @@ importers:
     dependencies:
       '@solidjs/router':
         specifier: ^1.0.0
-        version: 1.0.0(solid-js@1.9.15)
+        version: 1.0.1(solid-js@1.9.15)
       '@solidjs/start':
         specifier: ^2.0.5
-        version: 2.0.5(@solidjs/router@1.0.0(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
+        version: 2.0.5(@solidjs/router@1.0.1(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
       best-i18n:
         specifier: workspace:*
         version: link:../../packages/best-i18n
@@ -434,10 +434,10 @@ importers:
     dependencies:
       '@solidjs/router':
         specifier: ^1.0.0
-        version: 1.0.0(solid-js@1.9.15)
+        version: 1.0.1(solid-js@1.9.15)
       '@solidjs/start':
         specifier: ^2.0.5
-        version: 2.0.5(@solidjs/router@1.0.0(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
+        version: 2.0.5(@solidjs/router@1.0.1(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -462,10 +462,10 @@ importers:
         version: 2.2.1(solid-js@1.9.15)
       '@solidjs/router':
         specifier: ^1.0.0
-        version: 1.0.0(solid-js@1.9.15)
+        version: 1.0.1(solid-js@1.9.15)
       '@solidjs/start':
         specifier: ^2.0.5
-        version: 2.0.5(@solidjs/router@1.0.0(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
+        version: 2.0.5(@solidjs/router@1.0.1(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -3660,8 +3660,8 @@ packages:
     peerDependencies:
       solid-js: '>=1.8.4'
 
-  '@solidjs/router@1.0.0':
-    resolution: {integrity: sha512-cCSk1hvgCowiMa9bzzYWHiLu1U4E22+DfJe6/rOwAyECKrxc3jrd5QnoW3sDDJtW+e077cz/M67bPl3DqOBw1Q==}
+  '@solidjs/router@1.0.1':
+    resolution: {integrity: sha512-JxY0+Y8RMZZjk3pATfY5f9ANbFa26+aOf3X7KtpRC9yCuy7f2UWDL8ukx6pVot2OYOJyUfTH7LYG2bbMPZ3WDw==}
     peerDependencies:
       solid-js: ^1.8.6
 
@@ -11756,11 +11756,11 @@ snapshots:
     dependencies:
       solid-js: 1.9.15
 
-  '@solidjs/router@1.0.0(solid-js@1.9.15)':
+  '@solidjs/router@1.0.1(solid-js@1.9.15)':
     dependencies:
       solid-js: 1.9.15
 
-  '@solidjs/start@2.0.5(@solidjs/router@1.0.0(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))':
+  '@solidjs/start@2.0.5(@solidjs/router@1.0.1(solid-js@1.9.15))(crossws@0.4.12(srvx@1.0.4))(ocache@0.3.0)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@10.2.2)
       '@babel/traverse': 7.29.8(supports-color@10.2.2)
@@ -11789,7 +11789,7 @@ snapshots:
       vite: 8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0)
       vite-plugin-solid: 2.11.14(solid-js@1.9.15)(supports-color@10.2.2)(vite@8.3.0(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
     optionalDependencies:
-      '@solidjs/router': 1.0.0(solid-js@1.9.15)
+      '@solidjs/router': 1.0.1(solid-js@1.9.15)
     transitivePeerDependencies:
       - '@testing-library/jest-dom'
       - crossws
